@@ -1,0 +1,38 @@
+# STL-10 dataset configuration for MIA watermark experiments
+# Resolution: 96x96, Train size: 5,000 (labeled), Watermark K: 1,000
+
+dataset:
+  name: stl10
+  root: data/stl10
+  download: true
+  image_shape: [3, 96, 96]
+  normalization:
+    mean: [0.4467, 0.4398, 0.4066]
+    std: [0.2603, 0.2566, 0.2713]
+  num_workers: 8
+
+splits:
+  seed: 20251030
+  watermark_size: 1000  # K = 1000 (smaller due to dataset size)
+  paths:
+    watermark_private: data/splits/stl10/watermark_private.json
+    eval_nonmember: data/splits/stl10/eval_nonmember.json
+    member_train: data/splits/stl10/member_train.json
+    manifest: data/splits/stl10/manifest.json
+    # Legacy paths for checkpoint selection (uses member_train as aux, eval_nonmember as eval_out)
+    aux: data/splits/stl10/member_train.json
+    eval_in: data/splits/stl10/watermark_private.json
+    eval_out: data/splits/stl10/eval_nonmember.json
+
+watermark:
+  injection_ratio: 0.05  # Higher ratio due to smaller dataset
+  min_exposure: 50  # Lower threshold due to fewer iterations
+
+training:
+  batch_size: 64  # Smaller batch due to larger images
+  shuffle: true
+
+misc:
+  torch_seed: 20251030
+  numpy_seed: 20251030
+  python_seed: 20251030

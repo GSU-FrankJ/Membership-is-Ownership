@@ -1,0 +1,23 @@
+base:
+  model_config: configs/model_ddim.yaml
+  data_config: configs/data_cifar10.yaml
+  checkpoint: experiments/production/model_a/best_for_mia.ckpt  # Production Model A (400k iter)
+
+finetune:
+  iterations: 500
+  batch_size: 128
+  lr: 5.0e-6
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  ema_decay: 0.9999
+  checkpoint_interval: 50
+  log_interval: 10
+  amp: true
+  grad_clip: 1.0
+
+sampler:
+  steps: 10
+  t_start: 900
+
+seed: 20251216
+output_dir: experiments/production/model_b

@@ -1,0 +1,37 @@
+# CelebA dataset configuration for MIA watermark experiments
+# Resolution: 64x64, Train size: ~162,770, Watermark K: 5,000
+
+dataset:
+  name: celeba
+  root: data/celeba
+  download: true
+  image_shape: [3, 64, 64]
+  normalization:
+    mean: [0.5, 0.5, 0.5]
+    std: [0.5, 0.5, 0.5]
+  num_workers: 8
+  # CelebA specific settings
+  split: train
+  target_type: attr
+
+splits:
+  seed: 20251030
+  watermark_size: 5000  # K = 5000 private member samples
+  paths:
+    watermark_private: data/splits/celeba/watermark_private.json
+    eval_nonmember: data/splits/celeba/eval_nonmember.json
+    member_train: data/splits/celeba/member_train.json
+    manifest: data/splits/celeba/manifest.json
+
+watermark:
+  injection_ratio: 0.02  # r_wm = 2% of batches contain watermark samples
+  min_exposure: 100  # Minimum times each watermark sample should be seen
+
+training:
+  batch_size: 64  # Smaller batch due to 64x64 resolution
+  shuffle: true
+
+misc:
+  torch_seed: 20251030
+  numpy_seed: 20251030
+  python_seed: 20251030

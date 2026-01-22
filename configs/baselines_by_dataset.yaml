@@ -1,0 +1,52 @@
+# Baseline model registry by dataset
+# Maps each dataset to its relevant public baseline models for ownership comparison
+
+# CIFAR-10 (32x32) - Reference dataset
+cifar10:
+  - name: ddpm-cifar10
+    model_id: google/ddpm-cifar10-32
+    resolution: 32
+    type: ddpm
+    description: "DDPM trained on CIFAR-10 (native resolution match)"
+
+# CIFAR-100 (32x32) - Same resolution as CIFAR-10, use CIFAR-10 baseline
+cifar100:
+  - name: ddpm-cifar10
+    model_id: google/ddpm-cifar10-32
+    resolution: 32
+    type: ddpm
+    description: "DDPM trained on CIFAR-10 (same resolution, different classes)"
+
+# STL-10 (96x96) - Use bedroom model with resizing
+stl10:
+  - name: ddpm-bedroom
+    model_id: google/ddpm-ema-bedroom-256
+    resolution: 256
+    type: ddpm
+    description: "DDPM trained on LSUN Bedrooms (requires 96->256 resize)"
+
+# CelebA (64x64) - Face-specific baselines
+celeba:
+  - name: ddpm-celebahq
+    model_id: google/ddpm-celebahq-256
+    resolution: 256
+    type: ddpm
+    description: "DDPM trained on CelebA-HQ faces (requires 64->256 resize)"
+  - name: ldm-celebahq
+    model_id: CompVis/ldm-celebahq-256
+    resolution: 256
+    type: ldm
+    description: "Latent Diffusion on CelebA-HQ (VAE encoder required)"
+
+# Default normalization parameters per model type
+model_defaults:
+  ddpm:
+    # Most HuggingFace DDPM models expect [-1, 1] input
+    normalization:
+      mean: [0.5, 0.5, 0.5]
+      std: [0.5, 0.5, 0.5]
+  ldm:
+    # LDM typically uses same normalization
+    normalization:
+      mean: [0.5, 0.5, 0.5]
+      std: [0.5, 0.5, 0.5]

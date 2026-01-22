@@ -1,0 +1,26 @@
+# MMD finetuning config for CIFAR-10
+# Theft simulation: ModelB from ModelA
+
+base:
+  model_config: configs/model_ddim_cifar10.yaml
+  data_config: configs/data_cifar10.yaml
+  checkpoint: runs/ddim_cifar10/main/best_for_mia.ckpt  # ModelA checkpoint
+
+finetune:
+  iterations: 500
+  batch_size: 128
+  lr: 5.0e-6
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  ema_decay: 0.9999
+  checkpoint_interval: 50
+  log_interval: 10
+  amp: true
+  grad_clip: 1.0
+
+sampler:
+  steps: 10
+  t_start: 900
+
+seed: 20251216
+output_dir: runs/mmd_finetune/cifar10/model_b

@@ -1,0 +1,38 @@
+# CIFAR-100 dataset configuration for MIA watermark experiments
+# Resolution: 32x32, Train size: 50,000, Watermark K: 5,000
+
+dataset:
+  name: cifar100
+  root: data/cifar100
+  download: true
+  image_shape: [3, 32, 32]
+  normalization:
+    mean: [0.5071, 0.4867, 0.4408]
+    std: [0.2675, 0.2565, 0.2761]
+  num_workers: 8
+
+splits:
+  seed: 20251030
+  watermark_size: 5000  # K = 5000 private member samples
+  paths:
+    watermark_private: data/splits/cifar100/watermark_private.json
+    eval_nonmember: data/splits/cifar100/eval_nonmember.json
+    member_train: data/splits/cifar100/member_train.json
+    manifest: data/splits/cifar100/manifest.json
+    # Legacy paths for checkpoint selection (uses member_train as aux, eval_nonmember as eval_out)
+    aux: data/splits/cifar100/member_train.json
+    eval_in: data/splits/cifar100/watermark_private.json
+    eval_out: data/splits/cifar100/eval_nonmember.json
+
+watermark:
+  injection_ratio: 0.02  # r_wm = 2% of batches contain watermark samples
+  min_exposure: 100  # Minimum times each watermark sample should be seen
+
+training:
+  batch_size: 128
+  shuffle: true
+
+misc:
+  torch_seed: 20251030
+  numpy_seed: 20251030
+  python_seed: 20251030

@@ -1,0 +1,39 @@
+# CIFAR-10 dataset configuration for MIA watermark experiments
+# Resolution: 32x32, Train size: 50,000, Watermark K: 5,000
+
+dataset:
+  name: cifar10
+  root: data/cifar10
+  download: true
+  image_shape: [3, 32, 32]
+  normalization:
+    mean: [0.4914, 0.4822, 0.4465]
+    std: [0.2470, 0.2435, 0.2616]
+  num_workers: 8
+
+splits:
+  seed: 20251030
+  watermark_size: 5000  # K = 5000 private member samples
+  paths:
+    watermark_private: data/splits/cifar10/watermark_private.json
+    eval_nonmember: data/splits/cifar10/eval_nonmember.json
+    member_train: data/splits/cifar10/member_train.json
+    manifest: data/splits/cifar10/manifest.json
+    # Legacy paths (backward compatibility)
+    aux: data/splits/aux.json
+    eval_in: data/splits/eval_in.json
+    eval_out: data/splits/eval_out.json
+
+watermark:
+  injection_ratio: 0.02  # r_wm = 2% of batches contain watermark samples
+  min_exposure: 100  # Minimum times each watermark sample should be seen
+
+training:
+  batch_size: 128
+  shuffle: true
+
+misc:
+  torch_seed: 20251030
+  numpy_seed: 20251030
+  python_seed: 20251030
+

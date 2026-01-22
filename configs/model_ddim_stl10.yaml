@@ -1,0 +1,45 @@
+# DDIM model config for STL-10 (96x96)
+# Scaled architecture for higher resolution
+
+experiment:
+  name: ddim_stl10
+  output_dir: runs/ddim_stl10
+  resume: null
+
+model:
+  channels: 128
+  channel_mults: [1, 2, 2, 2, 4]  # Extra level for 96x96
+  num_res_blocks: 2
+  attention_resolutions: [24, 12]  # Attention at 24x24 and 12x12
+  dropout: 0.0
+  in_channels: 3
+  out_channels: 3
+  # Resolution: 96 -> 48 -> 24 -> 12 -> 6 (5 downsamples)
+  image_size: 96
+
+diffusion:
+  timesteps: 1000
+  schedule: cosine
+  ddim_eta: 0.0
+
+training:
+  iterations:
+    main: 200000  # Fewer iterations due to smaller dataset
+    fastdev: 50000
+  batch_size: 64  # Smaller batch due to larger images
+  lr: 0.0002
+  weight_decay: 0.0
+  optimizer: adamw
+  betas: [0.9, 0.999]
+  grad_clip: 1.0
+  ema_decay: 0.9999
+  ema_update_every: 1
+  amp: true
+  log_interval: 250
+  checkpoint_interval: 5000
+  fastdev_limit: 1000
+
+data:
+  config: configs/data_stl10.yaml
+
+seed: 20251030
