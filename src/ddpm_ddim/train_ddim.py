@@ -33,12 +33,12 @@ from torchvision import datasets, transforms
 from torchvision.utils import make_grid
 import yaml
 
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]  # Go up to project root (from src/ddpm_ddim/train_ddim.py)
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from mia_logging import get_winston_logger
-from ddpm_ddim import select_checkpoints
+from src.ddpm_ddim import select_checkpoints
 from src.ddpm_ddim.models.unet import UNetModel, build_unet
 from src.ddpm_ddim.schedulers.betas import build_cosine_schedule
 
@@ -673,7 +673,13 @@ def main() -> None:
     write_run_metadata(run_dir, model_cfg, data_cfg, seed, args.mode, determinism_state)
 
     tb_dir = run_dir / "tb"
+    # #region agent log
+    import io; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:675','message':'tb_dir path before SummaryWriter','data':{'tb_dir':str(tb_dir),'exists':tb_dir.exists(),'parent_exists':tb_dir.parent.exists()},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,D'})+'\n')
+    # #endregion
     tb_writer = SummaryWriter(log_dir=str(tb_dir))
+    # #region agent log
+    import io, os; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:676','message':'SummaryWriter created','data':{'tb_dir':str(tb_dir),'exists':tb_dir.exists(),'files':os.listdir(tb_dir) if tb_dir.exists() else []},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,D'})+'\n')
+    # #endregion
     csv_path = run_dir / "train_log.csv"
     csv_exists = csv_path.exists()
     csv_file = csv_path.open("a", newline="", encoding="utf-8")
@@ -732,6 +738,9 @@ def main() -> None:
                     csv_writer.writerow([step, current_lr, loss, ema_mse])
                     csv_file.flush()
                 if sample_grid_size > 0 and step % sample_interval == 0:
+                    # #region agent log
+                    import io, os; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:734','message':'Before sample_ddim_grid','data':{'step':step,'tb_dir_exists':tb_dir.exists(),'tb_files':os.listdir(tb_dir) if tb_dir.exists() else []},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,D,E'})+'\n')
+                    # #endregion
                     grid = sample_ddim_grid(
                         ema.ema_model,
                         alphas_bar,
@@ -743,10 +752,28 @@ def main() -> None:
                         nrow=sample_grid_cols,
                         image_size=image_size,
                     )
-                    tb_writer.add_image("samples/ddim", grid, step)
-                    tb_writer.flush()
+                    # #region agent log
+                    import io, os; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:746','message':'Before tb_writer.add_image','data':{'step':step,'tb_dir_exists':tb_dir.exists(),'tb_files':os.listdir(tb_dir) if tb_dir.exists() else [],'grid_shape':list(grid.shape)},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,D,E'})+'\n')
+                    # #endregion
+                    try:
+                        tb_writer.add_image("samples/ddim", grid, step)
+                        tb_writer.flush()
+                        # #region agent log
+                        import io; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:747','message':'tb_writer.add_image SUCCESS','data':{'step':step},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,D,E'})+'\n')
+                        # #endregion
+                    except Exception as e:
+                        # #region agent log
+                        import io, os; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:747','message':'tb_writer.add_image FAILED','data':{'step':step,'error':str(e),'error_type':type(e).__name__,'tb_dir_exists':tb_dir.exists(),'tb_files':os.listdir(tb_dir) if tb_dir.exists() else []},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,B,D,E'})+'\n')
+                        # #endregion
+                        raise
                 if step % checkpoint_interval == 0:
+                    # #region agent log
+                    import io, os; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:748','message':'Before save_checkpoint','data':{'step':step,'tb_dir_exists':tb_dir.exists(),'run_dir_exists':run_dir.exists()},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,C,D'})+'\n')
+                    # #endregion
                     save_checkpoint(model, ema, optimizer, step, run_dir)
+                    # #region agent log
+                    import io, os; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:749','message':'After save_checkpoint','data':{'step':step,'tb_dir_exists':tb_dir.exists()},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,C,D'})+'\n')
+                    # #endregion
                     # Save watermark exposure stats at each checkpoint
                     if hasattr(dataset, 'get_watermark_exposure'):
                         save_watermark_exposure(dataset, run_dir, step)
@@ -759,10 +786,22 @@ def main() -> None:
             save_watermark_exposure(dataset, run_dir, step)
         LOGGER.info("Training finished at step %d", step)
     finally:
+        # #region agent log
+        import io, os; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:762','message':'In finally block before cleanup','data':{'tb_dir_exists':tb_dir.exists(),'tb_files':os.listdir(tb_dir) if tb_dir.exists() else []},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,D'})+'\n')
+        # #endregion
         csv_file.flush()
         csv_file.close()
-        tb_writer.flush()
-        tb_writer.close()
+        try:
+            tb_writer.flush()
+            tb_writer.close()
+            # #region agent log
+            import io; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:764','message':'tb_writer cleanup SUCCESS','data':{},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,D,E'})+'\n')
+            # #endregion
+        except Exception as e:
+            # #region agent log
+            import io, os; io.open('/home/fjiang4/mia_ddpm_qr copy/.cursor/debug.log', 'a').write(__import__('json').dumps({'location':'train_ddim.py:764','message':'tb_writer cleanup FAILED','data':{'error':str(e),'error_type':type(e).__name__,'tb_dir_exists':tb_dir.exists()},'timestamp':__import__('time').time()*1000,'sessionId':'debug-session','hypothesisId':'A,B,D,E'})+'\n')
+            # #endregion
+            raise
 
     if args.select_best:
         selection_path = select_checkpoints.run_selection(

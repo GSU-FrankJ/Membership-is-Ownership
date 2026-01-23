@@ -3,8 +3,8 @@
 
 dataset:
   name: celeba
-  root: data/celeba
-  download: true
+  root: /data/short/fjiang4/mia_ddpm_qr/data/celeba
+  download: false  # Using existing dataset from /data/short/
   image_shape: [3, 64, 64]
   normalization:
     mean: [0.5, 0.5, 0.5]
@@ -18,10 +18,14 @@ splits:
   seed: 20251030
   watermark_size: 5000  # K = 5000 private member samples
   paths:
-    watermark_private: data/splits/celeba/watermark_private.json
-    eval_nonmember: data/splits/celeba/eval_nonmember.json
-    member_train: data/splits/celeba/member_train.json
-    manifest: data/splits/celeba/manifest.json
+    watermark_private: /data/short/fjiang4/mia_ddpm_qr/data/splits/celeba/watermark_private.json
+    eval_nonmember: /data/short/fjiang4/mia_ddpm_qr/data/splits/celeba/eval_nonmember.json
+    member_train: /data/short/fjiang4/mia_ddpm_qr/data/splits/celeba/member_train.json
+    manifest: /data/short/fjiang4/mia_ddpm_qr/data/splits/celeba/manifest.json
+    # Legacy paths for checkpoint selection (uses member_train as aux, eval_nonmember as eval_out)
+    aux: /data/short/fjiang4/mia_ddpm_qr/data/splits/celeba/member_train.json
+    eval_in: /data/short/fjiang4/mia_ddpm_qr/data/splits/celeba/watermark_private.json
+    eval_out: /data/short/fjiang4/mia_ddpm_qr/data/splits/celeba/eval_nonmember.json
 
 watermark:
   injection_ratio: 0.02  # r_wm = 2% of batches contain watermark samples

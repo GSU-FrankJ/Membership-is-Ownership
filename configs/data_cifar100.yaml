@@ -3,8 +3,8 @@
 
 dataset:
   name: cifar100
-  root: data/cifar100
-  download: true
+  root: /data/short/fjiang4/mia_ddpm_qr/data/cifar100
+  download: false  # Using existing dataset from /data/short/
   image_shape: [3, 32, 32]
   normalization:
     mean: [0.5071, 0.4867, 0.4408]
@@ -15,10 +15,10 @@ splits:
   seed: 20251030
   watermark_size: 5000  # K = 5000 private member samples
   paths:
-    watermark_private: data/splits/cifar100/watermark_private.json
-    eval_nonmember: data/splits/cifar100/eval_nonmember.json
-    member_train: data/splits/cifar100/member_train.json
-    manifest: data/splits/cifar100/manifest.json
+    watermark_private: /data/short/fjiang4/mia_ddpm_qr/data/splits/cifar100/watermark_private.json
+    eval_nonmember: /data/short/fjiang4/mia_ddpm_qr/data/splits/cifar100/eval_nonmember.json
+    member_train: /data/short/fjiang4/mia_ddpm_qr/data/splits/cifar100/member_train.json
+    manifest: /data/short/fjiang4/mia_ddpm_qr/data/splits/cifar100/manifest.json
     # Legacy paths for checkpoint selection (uses member_train as aux, eval_nonmember as eval_out)
     aux: data/splits/cifar100/member_train.json
     eval_in: data/splits/cifar100/watermark_private.json

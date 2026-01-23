@@ -35,8 +35,9 @@ MAX_SAMPLES_SMOKE="100"
 
 # 输出目录
 SPLITS_DIR="data/splits"
-RUNS_DIR="runs"
-REPORTS_DIR="runs/attack_qr/reports"
+# Use absolute path to match the updated configs that point to /data/short/
+RUNS_DIR="/data/short/fjiang4/mia_ddpm_qr/runs"
+REPORTS_DIR="${RUNS_DIR}/attack_qr/reports"
 
 # 日志目录
 LOG_DIR="logs/$(date +%Y%m%d_%H%M%S)"

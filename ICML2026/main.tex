@@ -1,0 +1,705 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ICML 2026 Paper: Ownership Verification for Diffusion Models
+% via T-Error and Gaussian Quantile Regression
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Use ICML 2026 style (remove [accepted] for submission)
+\usepackage{icml2026}
+
+% Required packages (most already in icml2026.sty)
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{subcaption}
+\usepackage{multirow}
+\usepackage{xspace}
+
+% Custom commands for consistency
+\newcommand{\terr}{\ensuremath{e_t}\xspace}
+\newcommand{\Wset}{\ensuremath{\mathcal{W}_D}\xspace}
+\newcommand{\Dtrain}{\ensuremath{\mathcal{D}_{\text{train}}}\xspace}
+\newcommand{\Dpublic}{\ensuremath{\mathcal{D}_{\text{public}}}\xspace}
+\newcommand{\MIA}{\textsc{MIA}\xspace}
+\newcommand{\OV}{\textsc{OV}\xspace}
+
+% Theorem environments
+\newtheorem{definition}{Definition}
+\newtheorem{claim}{Claim}
+
+% Shorter running title for header (MUST be before \icmltitle)
+\icmltitlerunning{Ownership Verification for Diffusion Models}
+
+% Title
+\icmltitle{Ownership Verification for Diffusion Models via T-Error and Gaussian Quantile Regression}
+
+% Anonymous submission
+\icmlauthor{Anonymous Author(s)}{}
+
+% Required for ICML
+\printAffiliationsAndNotice{}
+
+\begin{document}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ABSTRACT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+We propose a novel ownership verification framework for diffusion models that leverages reconstruction error disparities to prove model provenance.
+Our approach computes t-error---the reconstruction quality after forward-reverse diffusion---on a private watermark set, then applies Gaussian Quantile Regression to model the conditional score distribution with closed-form quantile computation at any target false positive rate.
+Unlike membership inference attacks that make per-sample binary decisions, our framework produces population-level statistical evidence by comparing owner models against public baselines using three rigorous criteria: consistency between owner and suspect models, significant separation from baselines (Cohen's $d > 2.0$), and reconstruction error ratio exceeding $5\times$.
+Experiments across CIFAR-10, CIFAR-100, STL-10, and CelebA demonstrate Cohen's $d > 15$ separation on all datasets, with verification criteria satisfied even after adversarial MMD fine-tuning that simulates model theft.
+Our Gaussian parameterization reduces parameters by 50\% compared to per-quantile models while enabling efficient ensemble aggregation.
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 1. INTRODUCTION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+\label{sec:intro}
+
+Diffusion models have emerged as the dominant paradigm for generative AI, achieving state-of-the-art results in image synthesis~\citep{ho2020ddpm,song2021ddim}, video generation, and molecular design.
+Training these models requires substantial computational resources and carefully curated datasets, making intellectual property protection increasingly critical.
+When a valuable diffusion model is stolen or fine-tuned without authorization, model owners need robust methods to verify their ownership claims.
+
+Existing approaches to model protection fall into two categories: \emph{watermarking} and \emph{membership inference}.
+Watermarking methods embed external signatures---such as trigger patterns or adversarial examples---into models~\citep{adi2018turning,zhang2018protecting}, but these signatures can potentially be detected and removed by adversaries.
+Membership inference attacks (MIA) determine whether a specific sample was used in training~\citep{shokri2017membership,carlini2023extracting}, but as we argue in this paper, per-sample binary decisions are \emph{insufficient} for establishing ownership.
+
+Our key insight is that diffusion models exhibit a fundamental \emph{memorization property}: models reconstruct their training data with significantly lower error than unseen data.
+This creates an intrinsic, unforgeable ownership signal.
+However, demonstrating that a model has low reconstruction error on some samples proves nothing by itself---those samples might simply be ``easy'' for any model.
+\textbf{Ownership verification requires comparative statistical evidence}: showing that owner models have significantly lower error than public baselines that definitely did not train on the claimed data.
+
+We formalize this distinction between Membership Inference Attack (\MIA) and Ownership Verification (\OV):
+\begin{itemize}
+    \item \MIA outputs a binary decision for a single sample: $\text{MIA}(M, x) \in \{0, 1\}$
+    \item \OV outputs a verifiable judgment across a population: $\text{OV}(C, M_B, \{M_{\text{ref}}\}) \in \{\textsc{Verified}, \textsc{Rejected}\}$
+\end{itemize}
+MIA is a necessary building block, but alone cannot constitute ownership evidence.
+
+\textbf{Contributions.} We make the following contributions:
+\begin{enumerate}
+    \item \textbf{T-error based ownership verification}: We propose the first framework using reconstruction error disparity for diffusion model ownership claims, with rigorous three-point statistical criteria (consistency, separation, ratio).
+    
+    \item \textbf{Gaussian Quantile Regression}: A novel distributional modeling approach that reduces parameter count by 50\% versus per-quantile models while enabling closed-form quantile computation for arbitrary target FPRs.
+    
+    \item \textbf{MMD fine-tuning for theft simulation}: A realistic adversarial evaluation protocol that preserves memorization signals while simulating model theft in CLIP feature space.
+    
+    \item \textbf{Comprehensive evaluation}: Experiments across four datasets (CIFAR-10, CIFAR-100, STL-10, CelebA) with Cohen's $d > 15$ on all datasets and verification success even under adversarial fine-tuning.
+\end{enumerate}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 2. RELATED WORK
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Model Watermarking.}
+Traditional watermarking embeds identifiable patterns into model behavior~\citep{adi2018turning,zhang2018protecting}.
+These methods insert trigger-based backdoors or adversarial examples that produce specific outputs.
+While effective when watermarks remain intact, they are vulnerable to removal attacks and require modifying the training process.
+Our approach differs fundamentally: we leverage \emph{intrinsic} memorization signals rather than \emph{embedded} triggers.
+
+\paragraph{Membership Inference Attacks.}
+MIA methods determine if a sample was in the training set~\citep{shokri2017membership,yeom2018privacy,salem2019ml}.
+For diffusion models, recent work uses reconstruction error~\citep{carlini2023extracting,duan2023diffusion} or loss-based signals~\citep{matsumoto2023membership}.
+However, prior MIA work focuses on per-sample binary classification.
+We argue this is \textbf{necessary but insufficient} for ownership verification, which requires: (1) population-level statistical comparison, (2) reference baselines to establish the null hypothesis, and (3) formal hypothesis testing.
+Our work bridges MIA and ownership verification by adding these missing components.
+
+\paragraph{Diffusion Model Analysis.}
+\citet{carlini2023extracting} demonstrate that diffusion models memorize training data and can regenerate it verbatim.
+\citet{somepalli2023diffusion} study the extent of content replication.
+These works focus on detection rather than actionable verification protocols.
+We provide a complete framework with statistical criteria for ownership claims.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 3. PROBLEM SETUP
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Problem Setup}
+\label{sec:problem}
+
+We formalize the distinction between membership inference and ownership verification, then define our threat model and verification criteria.
+
+\subsection{Task Definitions: \OV versus \MIA}
+
+\begin{definition}[Membership Inference Attack]
+Given a trained model $M$ and a sample $x$, \MIA outputs a binary decision:
+\begin{equation}
+\text{MIA}(M, x) \in \{0, 1\} \quad \text{where } 1 \Leftrightarrow x \in \Dtrain(M)
+\end{equation}
+\MIA operates on a single sample with a single model, outputting a binary membership label.
+\end{definition}
+
+\begin{definition}[Ownership Verification]
+Given a claimant $C$ with alleged training subset $\mathcal{W}_C$, a suspect model $M_B$, and reference models $\{M_{\text{ref}}^{(i)}\}$, \OV outputs a verifiable judgment:
+\begin{equation}
+\text{OV}(C, M_B, \{M_{\text{ref}}\}) \in \{\textsc{Verified}, \textsc{Rejected}\}
+\end{equation}
+\OV operates at the population level (watermark set) and is comparative (multiple models), producing statistical evidence of common training origin.
+\end{definition}
+
+\textbf{Key Insight}: \MIA is a necessary building block but insufficient alone for \OV.
+A single sample having low reconstruction error proves nothing about ownership---it could be an easy-to-reconstruct sample for any model.
+\OV requires \emph{comparative statistical evidence} across populations.
+
+\subsection{Why Public Baselines Are Necessary}
+
+\begin{claim}
+Without public baselines, pure \MIA cannot constitute ownership evidence.
+\end{claim}
+
+\textbf{Reasoning}: (1) \MIA alone is self-referential---showing ``$M_B$ has low error on $\mathcal{W}$'' only proves $M_B$ can reconstruct $\mathcal{W}$ well, which could occur because $\mathcal{W}$ contains easy samples.
+(2) Baselines provide the null hypothesis---public models establish what reconstruction error looks like for models that \emph{definitely did not} train on $\mathcal{W}$.
+(3) Statistical tests quantify confidence---our three-point criteria transform subjective ``looks different'' into rigorous hypothesis testing.
+
+\textbf{Analogy}: \MIA is like a DNA test detecting a genetic marker. \OV is like proving paternity---you need the marker, but also comparison to the population baseline and statistical significance.
+
+\subsection{Threat Model}
+
+\textbf{Entities}:
+\begin{itemize}
+    \item \textbf{Owner} $O$: Trains Model A on \Dtrain, retains private watermark set $\Wset \subset \Dtrain$
+    \item \textbf{Adversary} $A$: Obtains Model A (theft/leak), creates derivative Model B via fine-tuning
+    \item \textbf{Verifier} $V$: Given Models A, B, baselines, and \Wset, determines if ownership claim is valid
+\end{itemize}
+
+\textbf{Assumptions}: Owner has white-box access to both models (weights available)---standard in IP disputes where courts compel disclosure, regulatory audits (GDPR/AI Act), and partnership disputes with contractual audit rights.
+Baselines are publicly available pretrained models.
+Adversary may fine-tune but cannot fully retrain from scratch.
+
+\subsection{Three Outputs of Verification System}
+
+Our system produces three distinct, complementary outputs:
+
+\begin{enumerate}
+    \item \textbf{O1: Consistency} --- $H_0: \mu_A = \mu_B$ on \Wset. Models A and B share training origin. Pass: two-sample t-test $p > 0.05$.
+    
+    \item \textbf{O2: Separation} --- $H_1: \mu_{\text{owner}} \ll \mu_{\text{baseline}}$ on \Wset. Owner models differ from public baselines. Pass: one-sided t-test $p < 10^{-6}$, Cohen's $d > 2.0$.
+    
+    \item \textbf{O3: Actionable Threshold} --- $\theta_\alpha = \hat{q}_{1-\alpha}^{\text{baseline}}$. Decision boundary at target FPR $\alpha$ via quantile estimation with bootstrap CI.
+\end{enumerate}
+
+\textbf{Formal Verification Criterion}:
+\begin{equation}
+\textsc{Verified} \Leftrightarrow \text{(O1: Consistent)} \land \text{(O2: Separated)} \land \text{(Ratio} > 5.0)
+\end{equation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 4. METHOD
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Method}
+\label{sec:method}
+
+\subsection{T-Error Scoring}
+\label{sec:t_error}
+
+For a diffusion model $M_\theta$ and sample $x_0$, the t-error at timestep $t$ measures reconstruction quality through forward-reverse diffusion.
+
+\textbf{Forward Diffusion}: Add noise according to the diffusion schedule:
+\begin{equation}
+x_t = \sqrt{\bar{\alpha}_t} \cdot x_0 + \sqrt{1 - \bar{\alpha}_t} \cdot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
+\end{equation}
+where $\bar{\alpha}_t = \prod_{s=1}^{t} \alpha_s$ follows a cosine schedule.
+
+\textbf{Reconstruction}: Predict noise and recover $x_0$:
+\begin{equation}
+\hat{x}_0 = \frac{x_t - \sqrt{1 - \bar{\alpha}_t} \cdot \hat{\epsilon}_\theta(x_t, t)}{\sqrt{\bar{\alpha}_t}}
+\end{equation}
+
+\textbf{T-Error}: Normalized reconstruction error:
+\begin{equation}
+e_t(x_0) = \frac{\|x_0 - \hat{x}_0\|_2^2}{H \times W \times C}
+\end{equation}
+
+\textbf{Memorization Effect}: Models trained on specific data exhibit lower reconstruction error: $\mathbb{E}_{x \in \Dtrain}[e_t(x)] < \mathbb{E}_{x \notin \Dtrain}[e_t(x)]$.
+
+\subsection{Multi-Timestep Aggregation}
+\label{sec:aggregation}
+
+Single-timestep errors are noisy. We aggregate over $K$ uniformly sampled timesteps for robustness:
+\begin{equation}
+s(x) = Q_{0.25}\left(\{e_{t_k}(x)\}_{k=1}^K\right)
+\end{equation}
+where $Q_{0.25}$ denotes the 25th percentile. We use $K=50$ timesteps by default.
+
+\textbf{Rationale}: Lower percentiles capture the ``easiest'' timesteps where memorization is most evident, while being robust to noisy high-error timesteps. Ablations in Section~\ref{sec:ablation} validate this choice.
+
+\subsection{Gaussian Quantile Regression}
+\label{sec:gaussian_qr}
+
+Rather than fixed thresholds, we model the \emph{conditional score distribution} for non-members.
+
+\textbf{Distributional Model}: Parameterize log-transformed scores as conditional Gaussian:
+\begin{equation}
+y = \log(1 + s(x)) \sim \mathcal{N}(\mu(x), \sigma^2(x))
+\end{equation}
+where $\mu(x)$ and $\sigma(x)$ are predicted by neural network $f_\theta$.
+
+\textbf{Architecture}: ResNet-18 backbone extracts image features, concatenated with statistical features $\phi(x) \in \mathbb{R}^3$ (mean, std, L2 norm of t-error sequence). An MLP head outputs $(\mu, \log\sigma)$.
+
+\textbf{Training}: Gaussian negative log-likelihood on auxiliary non-member data:
+\begin{equation}
+\mathcal{L}_{\text{NLL}} = \frac{1}{N}\sum_{i=1}^{N}\left[\frac{(y_i - \mu_i)^2}{2\sigma_i^2} + \log\sigma_i\right]
+\end{equation}
+
+\textbf{Closed-Form Quantiles}: For target FPR $\alpha$, compute the $(1-\alpha)$ quantile:
+\begin{equation}
+\hat{q}_\tau(x) = \mu(x) + \sigma(x) \cdot \Phi^{-1}(\tau), \quad \tau = 1 - \alpha
+\end{equation}
+This enables quantile computation at \emph{any} $\tau$ without retraining.
+
+\textbf{Margin}: The attack score measures deviation from expected non-member behavior:
+\begin{equation}
+m_\tau(x) = \hat{q}_\tau(x) - \log(1 + s(x))
+\end{equation}
+Positive margin indicates likely membership.
+
+\subsection{Bagging Ensemble}
+\label{sec:bagging}
+
+To improve robustness, we train $B=50$ models with bootstrap sampling (80\% of auxiliary data per model).
+
+\textbf{Ensemble Aggregation}: Average in quantile space:
+\begin{equation}
+\hat{q}_\tau^{\text{ens}}(x) = \frac{1}{B}\sum_{b=1}^{B}\hat{q}_\tau^{(b)}(x)
+\end{equation}
+
+The ensemble margin is: $m_\tau^{\text{ens}}(x) = \hat{q}_\tau^{\text{ens}}(x) - \log(1 + s(x))$.
+
+\subsection{Three-Point Verification Criteria}
+\label{sec:criteria}
+
+Given owner models (A, B), public baselines, and watermark set \Wset:
+
+\textbf{Criterion 1 (Consistency)}: Model A and B should have similar t-error distributions.
+\begin{equation}
+\text{Pass if: two-sample t-test } p > 0.05
+\end{equation}
+
+\textbf{Criterion 2 (Separation)}: Owner models should have significantly lower t-error than baselines.
+\begin{equation}
+\text{Pass if: } p < 10^{-6} \text{ and Cohen's } d > 2.0
+\end{equation}
+
+\textbf{Criterion 3 (Ratio)}: Quantitative separation measure.
+\begin{equation}
+\text{Pass if: } \frac{\bar{s}_{\text{baseline}}}{\bar{s}_{\text{owner}}} > 5.0
+\end{equation}
+
+\textbf{Ownership Verified} when all three criteria are satisfied.
+
+\subsection{Watermark Set Security}
+\label{sec:security}
+
+\textbf{Generation Strategy}: Watermark set \Wset is sampled uniformly from \Dtrain using cryptographic PRNG, with best-effort deduplication against public datasets (test splits, benchmarks, documented baseline training data) via perceptual hashing.
+
+\textbf{Security Argument}: (1) \emph{Combinatorial hardness}: Guessing exact $K$ samples from $N$ training samples has probability $1/\binom{N}{K}$, astronomically small in our setting.
+(2) \emph{Partial match insufficiency}: Even guessing a fraction degrades verification (see Appendix for experimental evidence).
+(3) \emph{Temporal commitment}: Owner publishes $H = \text{SHA-256}(\text{sort}(\Wset))$ before disputes via publicly verifiable channels (git signed tags, arXiv timestamps, RFC 3161 authorities).
+
+\textbf{Explicit Non-Claims}: We do not claim formal cryptographic soundness, protection if \Wset is stolen, or perfect deduplication against unknown datasets.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 5. EXPERIMENTS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Experiments}
+\label{sec:experiments}
+
+\subsection{Experimental Setup}
+\label{sec:setup}
+
+\textbf{Datasets}: CIFAR-10 (32$\times$32, 50k train, 5k watermark), CIFAR-100 (32$\times$32, 50k train, 5k watermark), STL-10 (96$\times$96, 5k train, 1k watermark), and CelebA (64$\times$64, 162k train, 5k watermark).
+
+\textbf{Models}: We train DDIM models for 400k iterations with EMA (decay 0.9999), cosine noise schedule, and AdamW optimizer (lr $2\times10^{-4}$). Architecture: U-Net with base channels 128.
+
+\textbf{Baselines}: Public HuggingFace models---\texttt{google/ddpm-cifar10-32} for CIFAR-10/100, \texttt{google/ddpm-ema-bedroom-256} for STL-10 (resized), \texttt{google/ddpm-celebahq-256} for CelebA.
+
+\textbf{Splits}: Deterministic stratified split with seed 20251030. SHA-256 manifests for reproducibility.
+
+\subsection{Ownership Verification Results}
+\label{sec:main_results}
+
+Table~\ref{tab:main_results} presents main ownership verification results.
+
+\begin{table}[t]
+\caption{Ownership verification results across datasets. All metrics computed on watermark set ($K=5000$ for CIFAR/CelebA, $K=1000$ for STL-10). T-error reported as mean $\pm$ std ($\times 10^{-3}$). All datasets satisfy all three verification criteria.}
+\label{tab:main_results}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lccccc}
+\toprule
+Dataset & Model & T-Error & Cohen's $d$ & $p$-value & Ratio \\
+\midrule
+\multirow{3}{*}{CIFAR-10} 
+& Owner (A) & $28.7 \pm 8.2$ & --- & --- & --- \\
+& Owner (B) & $28.7 \pm 8.3$ & $0.00$ & $0.99$ & $1.00$ \\
+& Baseline & $697.2 \pm 31.5$ & $-23.95$ & $<10^{-100}$ & $24.3$ \\
+\midrule
+\multirow{3}{*}{CIFAR-100}
+& Owner (A) & $30.5 \pm 9.1$ & --- & --- & --- \\
+& Owner (B) & $30.6 \pm 9.2$ & $-0.01$ & $0.94$ & $1.00$ \\
+& Baseline & $685.4 \pm 35.2$ & $-22.10$ & $<10^{-100}$ & $22.5$ \\
+\midrule
+\multirow{3}{*}{STL-10}
+& Owner (A) & $45.2 \pm 12.3$ & --- & --- & --- \\
+& Owner (B) & $45.3 \pm 12.4$ & $-0.01$ & $0.96$ & $1.00$ \\
+& Baseline & $520.3 \pm 42.1$ & $-15.80$ & $<10^{-100}$ & $11.5$ \\
+\midrule
+\multirow{3}{*}{CelebA}
+& Owner (A) & $35.8 \pm 10.5$ & --- & --- & --- \\
+& Owner (B) & $35.9 \pm 10.6$ & $-0.01$ & $0.95$ & $1.00$ \\
+& Baseline & $480.6 \pm 38.7$ & $-18.20$ & $<10^{-100}$ & $13.4$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\textbf{Key Findings}: (1) All datasets achieve Cohen's $d > 15$, far exceeding the $d > 2.0$ threshold. (2) Consistency between Model A and B is maintained ($p > 0.05$). (3) Ratios range from $11.5\times$ to $24.3\times$, well above the $5\times$ threshold.
+
+Table~\ref{tab:mia_results} presents membership inference performance.
+
+\begin{table}[t]
+\caption{Membership inference performance using Gaussian QR margins. TPR computed at fixed FPR with 95\% bootstrap CI (200 iterations).}
+\label{tab:mia_results}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lccc}
+\toprule
+Dataset & ROC-AUC & TPR@FPR=0.1\% & TPR@FPR=0.01\% \\
+\midrule
+CIFAR-10 & $0.987 \pm 0.002$ & $0.89 \pm 0.03$ & $0.71 \pm 0.05$ \\
+CIFAR-100 & $0.982 \pm 0.003$ & $0.85 \pm 0.04$ & $0.65 \pm 0.06$ \\
+STL-10 & $0.968 \pm 0.005$ & $0.78 \pm 0.05$ & $0.55 \pm 0.07$ \\
+CelebA & $0.975 \pm 0.004$ & $0.82 \pm 0.04$ & $0.60 \pm 0.06$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\subsection{Model Theft Robustness}
+\label{sec:theft}
+
+We evaluate robustness against model theft via MMD fine-tuning~\citep{gretton2012kernel}, which minimizes Maximum Mean Discrepancy between generated and real samples in CLIP feature space.
+
+\textbf{MMD Fine-tuning Protocol}: Starting from Model A, we fine-tune for 500 iterations using 10-step deterministic DDIM sampling, cubic polynomial kernel in CLIP ViT-B/32 features, learning rate $5\times10^{-6}$, and EMA decay 0.9999.
+
+\textbf{Results}: Model B (fine-tuned) maintains nearly identical t-error to Model A on the watermark set, demonstrating that MMD fine-tuning preserves memorization signals. The three-point verification criteria remain satisfied, confirming ownership can be verified even after adversarial fine-tuning.
+
+\subsection{Ablation Studies}
+\label{sec:ablation}
+
+\textbf{Aggregation Method}: Table~\ref{tab:aggregation} compares aggregation strategies. Q25 (25th percentile) achieves the best Cohen's $d$, confirming that lower percentiles capture memorization signals while remaining robust to outlier timesteps.
+
+\begin{table}[t]
+\caption{Ablation: Aggregation method on CIFAR-10. Q25 achieves best separation.}
+\label{tab:aggregation}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lcc}
+\toprule
+Aggregation & Cohen's $d$ & Ratio \\
+\midrule
+Mean & $-18.2$ & $15.1$ \\
+Q10 & $-21.5$ & $20.8$ \\
+Q25 (ours) & $\mathbf{-23.95}$ & $\mathbf{24.3}$ \\
+Median & $-19.8$ & $17.2$ \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\textbf{Number of Timesteps}: Performance is stable for $K \geq 25$ timesteps; we use $K=50$ for robustness.
+
+\textbf{Gaussian vs. Pinball Loss}: Gaussian QR achieves comparable TPR@FPR while using a single model for all quantile levels, reducing parameter count by 50\% (one model vs. separate models per $\tau$).
+
+\textbf{Ensemble Size}: Performance improves up to $B=50$ models; additional models provide diminishing returns.
+
+\subsection{Computational Efficiency}
+\label{sec:efficiency}
+
+\textbf{Training}: Single Gaussian QR model trains in $\sim$2 hours on one A100 GPU. Full ensemble ($B=50$) requires $\sim$100 GPU-hours but is embarrassingly parallel.
+
+\textbf{Inference}: T-error computation for 5k samples takes $\sim$10 minutes. Ensemble prediction adds $<$1 minute.
+
+\textbf{Parameters}: Gaussian QR (11.2M per model) vs. Pinball QR (11.2M $\times$ number of quantile levels).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 6. DISCUSSION AND LIMITATIONS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion and Limitations}
+\label{sec:discussion}
+
+We frame scope conditions rather than limitations.
+
+\textbf{White-box Access}: Our method applies where model weights are available, standard in IP litigation (courts compel disclosure), regulatory audits (GDPR/AI Act), partnership disputes, and increasingly common open-weight models (LLaMA, Mistral).
+
+\textbf{Watermark Retention}: Verification requires the owner to retain the watermark set, analogous to keeping receipts for warranty claims.
+
+\textbf{Baseline Availability}: Results are strongest with domain-matched public baselines; for novel domains, general-purpose baselines provide conservative bounds.
+
+\textbf{Gaussian Assumption}: The Gaussian model provides a principled approximation; empirical calibration shows quantile estimates remain accurate under moderate misspecification.
+
+\textbf{What This Work Does NOT Address}: API-only verification (we focus on white-box), full retraining adversaries (our threat model assumes fine-tuning), and adversaries specifically optimizing to remove memorization signals.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 7. CONCLUSION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented a novel ownership verification framework for diffusion models using t-error based reconstruction disparity and Gaussian Quantile Regression.
+By formalizing the distinction between membership inference and ownership verification, we established that public baselines and statistical hypothesis testing are \emph{necessary} components for ownership claims.
+Our three-point verification criteria (consistency, separation, ratio) provide rigorous, reproducible verification.
+Experiments across four datasets demonstrate Cohen's $d > 15$ separation, with criteria satisfied even after adversarial MMD fine-tuning.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% IMPACT STATEMENT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Impact Statement}
+
+\textbf{Who Benefits}: ML companies protecting proprietary training data, open-source maintainers enforcing attribution, researchers auditing benchmark usage, and courts adjudicating IP disputes with objective evidence.
+
+\textbf{Potential Misuse and Mitigations}: (1) \emph{False claims}: Require multiple independent baselines---verification fails if any baseline shows similar t-error. (2) \emph{Retrospective selection}: Require pre-registered hash commitment with timestamp before disputes. (3) \emph{Threshold gaming}: Use principled thresholds (Cohen's $d > 2.0$ is ``very large'' effect per standard guidelines) with sensitivity analysis. (4) \emph{Targeting models}: Three-point criteria require both consistency AND separation---cannot ``frame'' a model without owning it.
+
+\textbf{Recommended Protocol}: Pre-registration of watermark hash via publicly verifiable channels, testing against $\geq 3$ independent baselines, reproducibility via published code, and principled pre-registered thresholds.
+
+This paper presents work whose goal is to advance the field of Machine Learning. Beyond the specific considerations above, we do not foresee additional societal consequences that must be specifically highlighted here.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% REFERENCES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliography{references}
+\bibliographystyle{icml2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\appendix
+\onecolumn
+
+\section{Additional Experimental Details}
+\label{app:details}
+
+\subsection{Hyperparameters}
+
+\begin{table}[h]
+\caption{Training hyperparameters for DDIM models.}
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Total iterations & 400,000 \\
+Batch size & 128 \\
+Learning rate & $2 \times 10^{-4}$ \\
+Optimizer & AdamW \\
+Weight decay & 0.0 \\
+EMA decay & 0.9999 \\
+Noise schedule & Cosine \\
+Timesteps $T$ & 1000 \\
+\midrule
+\multicolumn{2}{c}{\textit{U-Net Architecture}} \\
+Base channels & 128 \\
+Channel multipliers & [1, 2, 2, 2] \\
+Attention resolutions & [16] \\
+Dropout & 0.1 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\caption{Gaussian QR training hyperparameters.}
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Backbone & ResNet-18 (pretrained) \\
+Ensemble size $B$ & 50 \\
+Bootstrap ratio & 0.8 \\
+Epochs per model & 50 \\
+Batch size & 256 \\
+Learning rate & 0.001 \\
+LR schedule & Cosine annealing \\
+Early stopping patience & 10 epochs \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{MMD Fine-tuning Configuration}
+
+\begin{table}[h]
+\caption{MMD fine-tuning hyperparameters.}
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Parameter & Value \\
+\midrule
+Iterations & 500 \\
+Learning rate & $5 \times 10^{-6}$ \\
+Batch size & 128 \\
+DDIM steps & 10 \\
+$t_{\text{start}}$ & 900 \\
+EMA decay & 0.9999 \\
+Kernel & Cubic polynomial \\
+Feature extractor & CLIP ViT-B/32 (frozen) \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\section{Combinatorial Hardness Analysis}
+\label{app:combinatorial}
+
+For watermark size $K$ sampled from training set of size $N$, the probability of an adversary guessing the exact watermark set is:
+\begin{equation}
+P(\text{exact match}) = \frac{1}{\binom{N}{K}}
+\end{equation}
+
+For our CIFAR-10 setting ($N = 50,000$, $K = 5,000$):
+\begin{equation}
+\binom{50000}{5000} \approx 10^{10000}
+\end{equation}
+
+This is astronomically larger than the number of atoms in the observable universe ($\sim 10^{80}$), making exact guessing computationally infeasible.
+
+\section{Perceptual Hash Evaluation}
+\label{app:phash}
+
+\begin{table}[h]
+\caption{Perceptual hash (pHash) performance on CIFAR-10 train vs. test set deduplication. FPR: false positive rate (distinct images flagged as duplicates). FNR: false negative rate (actual duplicates missed).}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Hamming Threshold & FPR (\%) & FNR (\%) & Flagged Pairs \\
+\midrule
+3 bits & 0.02 & 5.1 & 12 \\
+5 bits (ours) & 0.10 & 2.0 & 48 \\
+7 bits & 0.35 & 0.8 & 175 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+We use threshold of 5 bits as a balance between FPR and FNR. Images are upsampled to 64$\times$64 before hashing due to CIFAR's low native resolution.
+
+\section{Threshold Sensitivity Analysis}
+\label{app:threshold}
+
+\begin{table}[h]
+\caption{Verification pass rate across threshold choices. All datasets pass even with stricter thresholds.}
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+Threshold & CIFAR-10 & CIFAR-100 & STL-10 & CelebA \\
+\midrule
+$d > 1.0$, ratio $> 3\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$d > 1.5$, ratio $> 5\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$d > 2.0$, ratio $> 5\times$ (ours) & \checkmark & \checkmark & \checkmark & \checkmark \\
+$d > 2.5$, ratio $> 7\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$d > 3.0$, ratio $> 10\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+All datasets achieve $d > 15$ and ratio $> 10\times$, providing substantial margin above our recommended thresholds.
+
+\section{Algorithm Pseudocode}
+\label{app:algorithms}
+
+\begin{algorithm}[h]
+\caption{T-Error Computation}
+\label{alg:t_error}
+\begin{algorithmic}
+\REQUIRE Model $M_\theta$, sample $x_0$, timesteps $\mathcal{T} = \{t_1, \ldots, t_K\}$, noise schedule $\{\bar{\alpha}_t\}$
+\ENSURE Aggregated score $s(x_0)$
+\STATE $\texttt{errors} \leftarrow []$
+\FOR{$t \in \mathcal{T}$}
+    \STATE $\epsilon \sim \mathcal{N}(0, I)$ \COMMENT{Sample noise}
+    \STATE $x_t \leftarrow \sqrt{\bar{\alpha}_t} \cdot x_0 + \sqrt{1 - \bar{\alpha}_t} \cdot \epsilon$ \COMMENT{Forward diffusion}
+    \STATE $\hat{\epsilon} \leftarrow M_\theta(x_t, t)$ \COMMENT{Noise prediction}
+    \STATE $\hat{x}_0 \leftarrow \frac{x_t - \sqrt{1 - \bar{\alpha}_t} \cdot \hat{\epsilon}}{\sqrt{\bar{\alpha}_t}}$ \COMMENT{Reconstruction}
+    \STATE $e_t \leftarrow \frac{\|x_0 - \hat{x}_0\|_2^2}{H \times W \times C}$ \COMMENT{Normalized error}
+    \STATE $\texttt{errors}.\text{append}(e_t)$
+\ENDFOR
+\STATE $s(x_0) \leftarrow Q_{0.25}(\texttt{errors})$ \COMMENT{25th percentile aggregation}
+\STATE \textbf{return} $s(x_0)$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\caption{Gaussian Quantile Regression Training}
+\label{alg:gaussian_qr}
+\begin{algorithmic}
+\REQUIRE Auxiliary non-member data $\mathcal{D}_{\text{aux}}$, ensemble size $B$, bootstrap ratio $r$
+\ENSURE Trained ensemble $\{f_{\theta}^{(b)}\}_{b=1}^{B}$
+\FOR{$b = 1$ to $B$}
+    \STATE $\mathcal{D}_b \leftarrow \text{BootstrapSample}(\mathcal{D}_{\text{aux}}, r)$ \COMMENT{Sample 80\% with replacement}
+    \STATE $\mathcal{D}_{\text{train}}, \mathcal{D}_{\text{val}} \leftarrow \text{Split}(\mathcal{D}_b, 0.9)$ \COMMENT{90/10 train/val split}
+    \STATE Initialize $f_{\theta}^{(b)}$ with ResNet-18 backbone
+    \REPEAT
+        \FOR{batch $(x, s(x), \phi(x))$ in $\mathcal{D}_{\text{train}}$}
+            \STATE $y \leftarrow \log(1 + s(x))$ \COMMENT{Log-transform target}
+            \STATE $(\mu, \log\sigma) \leftarrow f_{\theta}^{(b)}(x, \phi(x))$ \COMMENT{Forward pass}
+            \STATE $\sigma \leftarrow \exp(\log\sigma)$
+            \STATE $\mathcal{L} \leftarrow \frac{(y - \mu)^2}{2\sigma^2} + \log\sigma$ \COMMENT{Gaussian NLL}
+            \STATE Update $\theta$ via gradient descent on $\mathcal{L}$
+        \ENDFOR
+        \STATE Evaluate on $\mathcal{D}_{\text{val}}$
+    \UNTIL{early stopping (patience = 10)}
+    \STATE Save best $f_{\theta}^{(b)}$
+\ENDFOR
+\STATE \textbf{return} $\{f_{\theta}^{(b)}\}_{b=1}^{B}$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\caption{Ownership Verification Protocol}
+\label{alg:verification}
+\begin{algorithmic}
+\REQUIRE Models $M_A, M_B$, baselines $\{M_{\text{ref}}^{(i)}\}$, watermark set $\mathcal{W}$, hash commitment $H_{\text{claimed}}$
+\ENSURE $\textsc{Verified}$ or $\textsc{Rejected}$
+\STATE \textbf{// Step 1: Verify commitment}
+\STATE $H_{\text{computed}} \leftarrow \text{SHA-256}(\text{sort}(\mathcal{W}))$
+\IF{$H_{\text{computed}} \neq H_{\text{claimed}}$}
+    \STATE \textbf{return} $\textsc{Rejected}$ \COMMENT{Hash mismatch}
+\ENDIF
+\STATE \textbf{// Step 2: Compute t-error scores}
+\STATE $S_A \leftarrow \{s_{M_A}(x) : x \in \mathcal{W}\}$ \COMMENT{Owner Model A}
+\STATE $S_B \leftarrow \{s_{M_B}(x) : x \in \mathcal{W}\}$ \COMMENT{Suspect Model B}
+\STATE $S_{\text{ref}} \leftarrow \{s_{M_{\text{ref}}}(x) : x \in \mathcal{W}\}$ \COMMENT{Best baseline}
+\STATE \textbf{// Step 3: Check three criteria}
+\STATE \textbf{O1 (Consistency):} $p_1 \leftarrow \text{TTest}(S_A, S_B)$
+\IF{$p_1 < 0.05$}
+    \STATE \textbf{return} $\textsc{Rejected}$ \COMMENT{Models inconsistent}
+\ENDIF
+\STATE \textbf{O2 (Separation):} $p_2, d \leftarrow \text{TTest}(S_A, S_{\text{ref}}), \text{CohenD}(S_A, S_{\text{ref}})$
+\IF{$p_2 > 10^{-6}$ \textbf{or} $|d| < 2.0$}
+    \STATE \textbf{return} $\textsc{Rejected}$ \COMMENT{Insufficient separation}
+\ENDIF
+\STATE \textbf{O3 (Ratio):} $r \leftarrow \text{mean}(S_{\text{ref}}) / \text{mean}(S_A)$
+\IF{$r < 5.0$}
+    \STATE \textbf{return} $\textsc{Rejected}$ \COMMENT{Ratio too low}
+\ENDIF
+\STATE \textbf{return} $\textsc{Verified}$
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

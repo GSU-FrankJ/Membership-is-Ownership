@@ -4,7 +4,7 @@
 base:
   model_config: configs/model_ddim_cifar10.yaml
   data_config: configs/data_cifar10.yaml
-  checkpoint: runs/ddim_cifar10/main/best_for_mia.ckpt  # ModelA checkpoint
+  checkpoint: /data/short/fjiang4/mia_ddpm_qr/runs/ddim_cifar10/main/best_for_mia.ckpt  # ModelA checkpoint (pre-trained)
 
 finetune:
   iterations: 500

@@ -3,8 +3,8 @@
 
 dataset:
   name: stl10
-  root: data/stl10
-  download: true
+  root: /data/short/fjiang4/mia_ddpm_qr/data/stl10
+  download: false  # Using existing dataset from /data/short/
   image_shape: [3, 96, 96]
   normalization:
     mean: [0.4467, 0.4398, 0.4066]
@@ -15,10 +15,10 @@ splits:
   seed: 20251030
   watermark_size: 1000  # K = 1000 (smaller due to dataset size)
   paths:
-    watermark_private: data/splits/stl10/watermark_private.json
-    eval_nonmember: data/splits/stl10/eval_nonmember.json
-    member_train: data/splits/stl10/member_train.json
-    manifest: data/splits/stl10/manifest.json
+    watermark_private: /data/short/fjiang4/mia_ddpm_qr/data/splits/stl10/watermark_private.json
+    eval_nonmember: /data/short/fjiang4/mia_ddpm_qr/data/splits/stl10/eval_nonmember.json
+    member_train: /data/short/fjiang4/mia_ddpm_qr/data/splits/stl10/member_train.json
+    manifest: /data/short/fjiang4/mia_ddpm_qr/data/splits/stl10/manifest.json
     # Legacy paths for checkpoint selection (uses member_train as aux, eval_nonmember as eval_out)
     aux: data/splits/stl10/member_train.json
     eval_in: data/splits/stl10/watermark_private.json

@@ -1,0 +1,94 @@
+\begin{thebibliography}{12}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Adi et~al.(2018)Adi, Baum, Ciss{\'e}, Pinkas, and
+  Keshet]{adi2018turning}
+Adi, Y., Baum, C., Ciss{\'e}, M., Pinkas, B., and Keshet, J.
+\newblock Turning your weakness into a strength: Watermarking deep neural
+  networks by backdooring.
+\newblock In \emph{USENIX Security Symposium}, pp.\  1615--1631, 2018.
+
+\bibitem[Carlini et~al.(2023)Carlini, Hayes, Nasr, Jagielski, Sez, Tram{\`e}r,
+  Balle, Ippolito, and Wallace]{carlini2023extracting}
+Carlini, N., Hayes, J., Nasr, M., Jagielski, M., Sez, V., Tram{\`e}r, F.,
+  Balle, B., Ippolito, D., and Wallace, E.
+\newblock Extracting training data from diffusion models.
+\newblock In \emph{USENIX Security Symposium}, pp.\  5253--5270, 2023.
+
+\bibitem[Duan et~al.(2023)Duan, Kong, Wang, Gu, et~al.]{duan2023diffusion}
+Duan, J., Kong, F., Wang, R., Gu, K., et~al.
+\newblock Diffusion model membership inference via reverse process discrepancy.
+\newblock In \emph{International Conference on Machine Learning (ICML)}, 2023.
+
+\bibitem[Gretton et~al.(2012)Gretton, Borgwardt, Rasch, Sch{\"o}lkopf, Smola,
+  et~al.]{gretton2012kernel}
+Gretton, A., Borgwardt, K.~M., Rasch, M.~J., Sch{\"o}lkopf, B., Smola, A.,
+  et~al.
+\newblock A kernel two-sample test.
+\newblock \emph{Journal of Machine Learning Research (JMLR)}, 13\penalty0
+  (1):\penalty0 723--773, 2012.
+
+\bibitem[Ho et~al.(2020)Ho, Jain, and Abbeel]{ho2020ddpm}
+Ho, J., Jain, A., and Abbeel, P.
+\newblock Denoising diffusion probabilistic models.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, volume~33, pp.\  6840--6851, 2020.
+
+\bibitem[Matsumoto et~al.(2023)Matsumoto, Miura, and
+  Yanai]{matsumoto2023membership}
+Matsumoto, T., Miura, T., and Yanai, N.
+\newblock Membership inference attacks against diffusion models.
+\newblock In \emph{IEEE Security and Privacy Workshops (SPW)}, pp.\  77--83,
+  2023.
+
+\bibitem[Salem et~al.(2019)Salem, Zhang, Humbert, Berrang, Fritz, and
+  Backes]{salem2019ml}
+Salem, A., Zhang, Y., Humbert, M., Berrang, P., Fritz, M., and Backes, M.
+\newblock {ML-Leaks}: Model and data independent membership inference attacks
+  and defenses on machine learning models.
+\newblock In \emph{Network and Distributed System Security Symposium (NDSS)},
+  2019.
+
+\bibitem[Shokri et~al.(2017)Shokri, Stronati, Song, and
+  Shmatikov]{shokri2017membership}
+Shokri, R., Stronati, M., Song, C., and Shmatikov, V.
+\newblock Membership inference attacks against machine learning models.
+\newblock In \emph{IEEE Symposium on Security and Privacy (S\&P)}, pp.\  3--18,
+  2017.
+
+\bibitem[Somepalli et~al.(2023)Somepalli, Singla, Goldblum, Geiping, and
+  Goldstein]{somepalli2023diffusion}
+Somepalli, G., Singla, V., Goldblum, M., Geiping, J., and Goldstein, T.
+\newblock Diffusion art or digital forgery? investigating data replication in
+  diffusion models.
+\newblock In \emph{IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition (CVPR)}, pp.\  6048--6058, 2023.
+
+\bibitem[Song et~al.(2021)Song, Meng, and Ermon]{song2021ddim}
+Song, J., Meng, C., and Ermon, S.
+\newblock Denoising diffusion implicit models.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2021.
+
+\bibitem[Yeom et~al.(2018)Yeom, Giacomelli, Fredrikson, and
+  Jha]{yeom2018privacy}
+Yeom, S., Giacomelli, I., Fredrikson, M., and Jha, S.
+\newblock Privacy risk in machine learning: Analyzing the connection to
+  overfitting.
+\newblock In \emph{IEEE Computer Security Foundations Symposium (CSF)}, pp.\
+  268--282, 2018.
+
+\bibitem[Zhang et~al.(2018)Zhang, Gu, Jang, Wu, Stoecklin, Huang, and
+  Molloy]{zhang2018protecting}
+Zhang, J., Gu, Z., Jang, J., Wu, H., Stoecklin, M.~P., Huang, H., and Molloy,
+  I.
+\newblock Protecting intellectual property of deep neural networks with
+  watermarking.
+\newblock In \emph{ACM Asia Conference on Computer and Communications Security
+  (ASIACCS)}, pp.\  159--172, 2018.
+
+\end{thebibliography}

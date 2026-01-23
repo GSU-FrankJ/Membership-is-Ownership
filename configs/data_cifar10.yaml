@@ -3,8 +3,8 @@
 
 dataset:
   name: cifar10
-  root: data/cifar10
-  download: true
+  root: /data/short/fjiang4/mia_ddpm_qr/data/cifar10
+  download: false  # Using existing dataset from /data/short/
   image_shape: [3, 32, 32]
   normalization:
     mean: [0.4914, 0.4822, 0.4465]
@@ -15,10 +15,10 @@ splits:
   seed: 20251030
   watermark_size: 5000  # K = 5000 private member samples
   paths:
-    watermark_private: data/splits/cifar10/watermark_private.json
-    eval_nonmember: data/splits/cifar10/eval_nonmember.json
-    member_train: data/splits/cifar10/member_train.json
-    manifest: data/splits/cifar10/manifest.json
+    watermark_private: /data/short/fjiang4/mia_ddpm_qr/data/splits/cifar10/watermark_private.json
+    eval_nonmember: /data/short/fjiang4/mia_ddpm_qr/data/splits/cifar10/eval_nonmember.json
+    member_train: /data/short/fjiang4/mia_ddpm_qr/data/splits/cifar10/member_train.json
+    manifest: /data/short/fjiang4/mia_ddpm_qr/data/splits/cifar10/manifest.json
     # Legacy paths (backward compatibility)
     aux: data/splits/aux.json
     eval_in: data/splits/eval_in.json

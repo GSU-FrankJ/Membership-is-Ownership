@@ -3,7 +3,7 @@
 
 experiment:
   name: ddim_stl10
-  output_dir: runs/ddim_stl10
+  output_dir: /data/short/fjiang4/mia_ddpm_qr/runs/ddim_stl10  # Use existing checkpoints
   resume: null
 
 model:

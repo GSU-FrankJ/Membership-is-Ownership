@@ -11,7 +11,7 @@ from typing import Dict, Iterable, List, Tuple
 import torch
 from torch.utils.data import DataLoader
 
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]  # Go up to project root (from src/ddpm_ddim/select_checkpoints.py)
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
