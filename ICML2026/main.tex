@@ -61,13 +61,13 @@
 % ABSTRACT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-Large-scale diffusion models are valuable intellectual property, yet are frequently stolen and adapted via downstream fine-tuning.
-Existing diffusion watermarking often embeds explicit signatures into parameters or behavior, which can degrade utility and be removed by post-hoc fine-tuning.
-We propose \textbf{Membership Is Ownership}, a \emph{non-invasive} ownership verification framework that treats a private member evidence set \Wset as a watermark and leverages the model's intrinsic memorization.
-Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction over uniformly sampled timesteps, then aggregate with a robust lower quantile.
-To support stringent false-positive budgets, we fit a conditional Gaussian model in log-score space and obtain \emph{closed-form} quantile thresholds at arbitrary target FPR via Gaussian quantile regression.
-Crucially, our protocol produces population-level forensic evidence by comparing the suspect model against public reference models using hypothesis tests, effect sizes, and error ratios.
-Across CIFAR-10/100, STL-10, and CelebA, the resulting watermark signal yields extremely large separations from public baselines (Cohen's $d$ up to $33.4$; error ratios up to $101\times$) while remaining consistent between the owner model and an MMD-fine-tuned ``stolen'' derivative, enabling robust, practical ownership claims under realistic post-theft fine-tuning.
+Large-scale diffusion models are valuable intellectual property, yet can be stolen and adapted via downstream fine-tuning.
+Existing diffusion watermarking embeds explicit signatures into parameters or behavior, which may degrade utility and can be removed by post-hoc fine-tuning.
+We propose \textbf{Membership Is Ownership}, an ownership verification framework that treats a private member evidence set \Wset as a watermark and leverages the model's intrinsic memorization.
+Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction, then aggregate with a lower quantile (Q25).
+To control false-positive rates, we fit a conditional Gaussian model in log-score space and obtain closed-form quantile thresholds at arbitrary target FPR.
+The protocol compares the suspect model against public baselines via hypothesis tests, effect sizes, and error ratios, producing statistical evidence rather than a single score.
+On CIFAR-10/100, STL-10, and CelebA, all datasets achieve Cohen's $d > 18$ and error ratios $> 19\times$ against public baselines; these separations persist after MMD fine-tuning (simulating post-theft adaptation), provided the adversary does not retrain from scratch.
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -76,19 +76,19 @@ Across CIFAR-10/100, STL-10, and CelebA, the resulting watermark signal yields e
 \section{Introduction}
 \label{sec:intro}
 
-Large-scale diffusion models have become valuable assets: training them consumes substantial compute and curated data, yet the resulting models can be readily copied and adapted via downstream fine-tuning. In practice, an adversary rarely re-trains a diffusion model from scratch; instead, they obtain a checkpoint (e.g., via leakage or illicit transfer) and fine-tune it to a new domain or product requirement. This post-theft fine-tuning creates a central challenge for ownership verification: the owner must produce evidence that is (i) accurate under stringent false-positive budgets, and (ii) robust to realistic adaptation after theft.
+Large-scale diffusion models have become valuable assets: training them consumes substantial compute and curated data, yet the resulting models can be copied and adapted via downstream fine-tuning. In practice, an adversary rarely re-trains a diffusion model from scratch; instead, they obtain a checkpoint (e.g., via leakage or illicit transfer) and fine-tune it to a new domain or product requirement. This post-theft fine-tuning creates a challenge for ownership verification: the owner must produce evidence that is (i) accurate under stringent false-positive budgets, and (ii) valid after realistic adaptation.
 
-Most existing diffusion IP protection methods embed explicit signatures into model parameters or output behavior. While effective in controlled settings, such watermarks may impose utility costs and can be weakened or removed by post-hoc fine-tuning. An appealing alternative is to leverage the model's intrinsic memorization: diffusion models tend to reconstruct training examples with systematically lower error than non-members. However, ``low error on a few examples'' is not sufficient for an ownership claim---many public models may also score well on certain samples due to shared data sources, inductive biases, or dataset artifacts. Robust verification therefore requires \emph{population-level} evidence: the suspect model must be distinguished from a panel of public reference models under a statistically controlled decision rule.
+Most existing diffusion IP protection methods embed explicit signatures into model parameters or output behavior. While effective in controlled settings, such watermarks may impose utility costs and can be weakened by post-hoc fine-tuning. An alternative is to leverage the model's intrinsic memorization: diffusion models reconstruct training examples with systematically lower error than non-members. However, ``low error on a few examples'' is insufficient for an ownership claim---many public models may also score well on certain samples due to shared data sources or dataset artifacts. Verification therefore requires \emph{population-level} evidence: the suspect model must be distinguished from public reference models under a statistically controlled decision rule.
 
-We propose \textbf{Membership Is Ownership}, a non-invasive ownership verification framework that treats a private member evidence set $\mathcal{W}$ as a watermark and turns memorization into forensic evidence. Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction over uniformly sampled timesteps, and aggregate the resulting errors with a robust lower quantile to obtain a stable per-example score. To support stringent false-positive budgets, we fit a conditional Gaussian model in log-score space and derive \emph{closed-form} quantile thresholds at arbitrary target FPR via Gaussian quantile regression. Crucially, our protocol produces evidence by comparing the suspect model against public reference models using hypothesis tests, effect sizes, and error ratios, yielding an auditable report rather than a single opaque score.
+We propose \textbf{Membership Is Ownership}, an ownership verification framework that treats a private member evidence set $\mathcal{W}$ as a watermark and uses memorization as statistical evidence. Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction, and aggregate with a lower quantile (Q25) to obtain a stable per-example score. To control false-positive rates, we fit a conditional Gaussian model in log-score space and derive closed-form quantile thresholds at arbitrary target FPR. The protocol compares the suspect model against public baselines via hypothesis tests, effect sizes, and error ratios, producing an auditable report rather than a single opaque score.
 
-Across CIFAR-10/100, STL-10, and CelebA, the resulting watermark signal exhibits extremely large separations from public baselines (e.g., Cohen's $d$ up to $33.4$; error ratios up to $101\times$) and remains consistent between the owner model and an MMD-fine-tuned ``stolen'' derivative, enabling robust ownership claims under realistic post-theft fine-tuning.
+On CIFAR-10/100, STL-10, and CelebA, all datasets achieve Cohen's $d > 18$ and error ratios $> 19\times$ against public baselines. These separations persist after MMD fine-tuning (simulating theft), provided the adversary does not retrain from scratch or specifically target memorization removal.
 
 \paragraph{Contributions.}
-(1) We introduce a non-invasive ownership verification protocol for diffusion models that treats a private member evidence set as a watermark and outputs population-level forensic evidence against public references.
-(2) We propose a multi-timestep t-error score with robust lower-quantile aggregation to stabilize evidence under timestep variability and outliers.
-(3) We provide FPR-controlled, closed-form quantile thresholds by modeling log-scores with conditional Gaussians via Gaussian quantile regression.
-(4) We empirically validate strong separations and post-theft robustness across multiple datasets and fine-tuning settings.
+(1) We introduce an ownership verification protocol for diffusion models that treats a private member evidence set as a watermark and outputs statistical evidence calibrated against public baselines.
+(2) We propose a multi-timestep t-error score with lower-quantile (Q25) aggregation to reduce variance across timesteps.
+(3) We provide closed-form quantile thresholds at arbitrary FPR by modeling log-scores as conditional Gaussians.
+(4) We report Cohen's $d > 18$ separation on four datasets; separations persist under MMD fine-tuning but assume white-box access and fine-tuning (not full retraining) adversaries.
 
 \begin{figure*}[t]
 \vspace{-2mm}
