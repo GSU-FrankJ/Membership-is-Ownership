@@ -123,92 +123,86 @@ Forward noise + single-step reconstruction\par
 \emph{compute $e_t(x)$ for $x\in\mathcal{W}_D$, $t\sim\mathrm{Unif}(\mathcal{T})$}
 };
 
-\node[stepbox, below=4mm of s1] (s2)
-{\textbf{2. Multi-timestep aggregation ($K{=}50$)}\par
-$s(x)=Q_{0.25}\!\bigl(\{e_{t_i}(x)\}_{i=1}^K\bigr)$
+\node[stepbox, below=7mm of s1] (s2)
+{\textbf{2. $K$ timesteps + $Q_{0.25}$ aggregation}\par
+Sample $t_i\sim \mathrm{Unif}(\mathcal{T}),\, i=1..K$;\;
+$s(x)=Q_{0.25}\!\left(\{e_{t_i}(x)\}\right)$
 };
 
-\node[stepbox, below=4mm of s2] (s3)
-{\textbf{3. Log-score transformation}\par
-$y=\log(1+s(x))$
+\node[stepbox, below=7mm of s2] (s3)
+{\textbf{3. Log-score computation}\par
+$y=\log\!\bigl(1+s(x)\bigr)$
 };
 
-\node[stepbox, below=4mm of s3] (s4)
-{\textbf{4. Gaussian QR threshold}\par
-Fit $\mu(x),\sigma(x)$; threshold $\tau=\mu+\sigma\Phi^{-1}(1{-}\text{FPR})$
+\node[stepbox, below=7mm of s3] (s4)
+{\textbf{4. Gaussian QR output + FPR-controlled threshold}\par
+Fit conditional Gaussian in log-score space: $\mu(x),\,\sigma(x)$\par
+$\tau(\mathrm{FPR})=\mu(x)+\sigma(x)\,\Phi^{-1}\!\bigl(1-\mathrm{FPR}\bigr)$
 };
 
-\node[stepbox, below=4mm of s4] (s5)
-{\textbf{5. Three-point verification (AND)}
+\node[stepbox, below=7mm of s4] (s5)
+{\textbf{5. Three-point criteria (AND)}\par
 };
 
-% ========== DIAMONDS: evenly spaced, centered under s5 ==========
-\path (s5.south) ++(0,-10mm) coordinate (diamondrow);
-\node[diamondbox] (c2) at (diamondrow) {Separation};
-\node[diamondbox, left=20mm of c2] (c1) {Consistency};
-\node[diamondbox, right=20mm of c2] (c3) {Ratio};
+% Criteria diamonds (c2 centered below s5 for vertical arrow)
+\node[diamondbox, below=9mm of s5] (c2) {Separation};
+\node[diamondbox, left=18mm of c2] (c1) {Consistency};
+\node[diamondbox, right=18mm of c2] (c3) {Ratio};
 
-% Metric labels below each diamond (with enough gap)
-\node[notelabel, below=4mm of c1] (lbl1) {$\Delta(\text{own},\text{sus})$};
-\node[notelabel, below=4mm of c2] (lbl2) {$p$-value, Cohen's $d$};
-\node[notelabel, below=4mm of c3] (lbl3) {error ratio};
+\node[notelabel, below=2mm of c1] (lbl1) {$\Delta(\text{own},\text{sus})$};
+\node[notelabel, below=2mm of c2] (lbl2) {$p$-value, Cohen's $d$};
+\node[notelabel, below=2mm of c3] (lbl3) {error ratio};
 
-% ========== VERDICT: centered below diamonds (extra space for bus line) ==========
-\node[decision, below=20mm of c2] (verdict)
-{\textbf{Verdict: VERIFIED / REJECTED}\par
-(pass threshold AND all three criteria)
+% Decision box
+\node[decision, below=14mm of c2, minimum width=62mm] (verdict)
+{\textbf{Verdict}\par
+\textbf{VERIFIED} \quad / \quad \textbf{REJECTED}
 };
 
-% ========== RIGHT: Evidence/Report ==========
-% Position to the right of the pipeline, aligned vertically with s4/s5
-\node[outbox, right=14mm of s4.east, anchor=west, yshift=-8mm] (report)
-{\textbf{Evidence Report}\vspace{1mm}\par
+% -----------------------------
+% Output / Evidence report (aligned with Ratio for horizontal arrow)
+% -----------------------------
+\node[outbox, right=15mm of c3.east, anchor=west] (report)
+{\textbf{Evidence / Report}\vspace{1mm}\par
+Decision: pass $\tau(\mathrm{FPR})$ \textbf{AND} all three criteria hold\par\vspace{1mm}
 \begin{tabular}{@{}l@{}}
-$\bullet$ FPR threshold $\tau$\\
-$\bullet$ $p$-value vs refs\\
+$\bullet$ threshold at target FPR\\
+$\bullet$ $p$-value\\
 $\bullet$ Cohen's $d$\\
 $\bullet$ error ratio\\
 \end{tabular}
 };
 
-\node[notelabel, above=2mm of report, text width=3.8cm, align=center]
-{Population-level forensics:\\$\mathcal{M}_{\text{sus}}$ vs $\{\mathcal{M}_j\}$};
+% -----------------------------
+% Arrows (orthogonal Manhattan routing)
+% -----------------------------
 
-% ========== ARROWS: Pipeline flow ==========
+% ===== P0-1: Inputs → Step1 (single horizontal arrow) =====
+\draw[thinline] (inputs.east) -- (s1.west);
+
+% ===== Pipeline arrows (vertical) =====
 \draw[line] (s1) -- (s2);
 \draw[line] (s2) -- (s3);
 \draw[line] (s3) -- (s4);
 \draw[line] (s4) -- (s5);
 
-% s5 to diamonds: single arrow to c2, then fan out
+% ===== Step5 → Separation (pure vertical) =====
 \draw[thinline] (s5.south) -- (c2.north);
 
-% ========== ARROW: Inputs to s1 (single arrow) ==========
-\draw[thinline] (inputs.east) -- (s1.west);
+% ===== Horizontal bus connecting diamonds =====
+\draw[semithick] (c1.south) -- (c2.south) -- (c3.south);
 
-% ========== ARROWS: Diamonds to Verdict via horizontal bus ==========
-% Bus line immediately below diamonds (ABOVE labels)
-\path (c2.south) ++(0,-2mm) coordinate (bus_y);
-\path (bus_y -| c1) coordinate (bus_l);
-\path (bus_y -| c2) coordinate (bus_c);
-\path (bus_y -| c3) coordinate (bus_r);
+% ===== Bus center → Verdict (vertical) =====
+\draw[thinline] (c2.south) -- (verdict.north);
 
-% c1: short drop to bus, then horizontal to center
-\draw[semithick] (c1.south) -- (bus_l) -- (bus_c);
-% c2: short drop to bus center
-\draw[semithick] (c2.south) -- (bus_c);
-% c3: short drop to bus, then horizontal to center
-\draw[semithick] (c3.south) -- (bus_r) -- (bus_c);
+% ===== Ratio → Evidence (pure horizontal) =====
+\draw[thinline] (c3.east) -- (report.west);
 
-% Single arrow from bus center down (past labels) to verdict
-\draw[thinline] (bus_c) -- (verdict.north);
-
-% ========== ARROWS: Report connections ==========
-% s5 to Report: horizontal arrow
-\draw[thinline] (s5.east) -- (report.west);
-
-% Verdict to Report: right then up (one bend, avoids Ratio)
+% ===== Verdict → Evidence (L-shape: horizontal right, then vertical up) =====
 \draw[thinline] (verdict.east) -| (report.south);
+
+% ===== Label above report =====
+\node[notelabel, above=2mm of report] {Compare $\mathcal{M}_{\text{sus}}$ vs $\{\mathcal{M}_j\}$};
 
 \end{tikzpicture}
 \vspace{-2mm}
@@ -224,23 +218,22 @@ $\bullet$ error ratio\\
 \label{sec:related}
 
 \paragraph{Model Watermarking.}
-Traditional watermarking embeds identifiable patterns into model behavior~\citep{adi2018turning,zhang2018protecting,fernandez2023stable,wen2023tree}.
-These methods insert trigger-based backdoors or adversarial examples that produce specific outputs.
-While effective when watermarks remain intact, they are vulnerable to removal attacks and require modifying the training process.
-Our approach differs fundamentally: we leverage \emph{intrinsic} memorization signals rather than \emph{embedded} triggers.
+Prior model watermarking methods typically embed an identifiable pattern into model behavior, e.g., via trigger-based backdoors or carefully constructed examples that induce a predetermined response~\citep{adi2018turning,zhang2018protecting,fernandez2023stable,wen2023tree}.
+Such approaches provide a direct verification interface when the watermark remains intact, but they generally require explicit intervention during training and can be sensitive to subsequent model editing or ``cleaning.''
+In contrast to embedding an external trigger, our setting treats a private member evidence set as the ``watermark'' and derives evidence from the model's intrinsic memorization behavior, avoiding modifications that introduce new behavioral artifacts.
 
 \paragraph{Membership Inference Attacks.}
-MIA methods determine if a sample was in the training set~\citep{shokri2017membership,yeom2018privacy,salem2019ml}.
-For diffusion models, recent work uses reconstruction error~\citep{carlini2023extracting,duan2023diffusion,kong2024efficient}, loss-based signals~\citep{matsumoto2023membership,hu2023loss}, or quantile regression~\citep{bertran2023scalable,tang2024membership}.
-However, prior MIA work focuses on per-sample binary classification.
-We argue this is \textbf{necessary but insufficient} for ownership verification, which requires: (1) population-level statistical comparison, (2) reference baselines to establish the null hypothesis, and (3) formal hypothesis testing.
-Our work bridges MIA and ownership verification by adding these missing components.
+Membership inference attacks (MIA) aim to decide whether an input was part of a model's training data~\citep{shokri2017membership,yeom2018privacy,salem2019ml}.
+For diffusion models, recent work instantiates MIA using reconstruction-based signals~\citep{carlini2023extracting,duan2023diffusion,kong2024efficient}, loss/likelihood-based criteria~\citep{matsumoto2023membership,hu2023loss}, or scalable quantile-regression formulations~\citep{bertran2023scalable,tang2024membership}.
+These methods are primarily evaluated as per-example decision rules (binary classification or scoring) and are typically reported via attack metrics.
+Ownership verification, however, requires comparative, population-level evidence: the claim must be supported by aggregate separation on a designated evidence set, calibrated against reference models that represent the null hypothesis, and summarized via statistically interpretable tests rather than single-sample predictions.
+Our protocol uses MIA-style signals as the underlying measurements, but organizes them into an auditable verification procedure with public references and formal decision criteria.
 
 \paragraph{Diffusion Model Analysis.}
-\citet{carlini2023extracting} demonstrate that diffusion models memorize training data and can regenerate it verbatim.
-\citet{somepalli2023diffusion} study the extent of content replication, with follow-up work on detection and mitigation~\citep{wen2024detecting,chen2024towards}.
-These works focus on detection rather than actionable verification protocols.
-We provide a complete framework with statistical criteria for ownership claims.
+Diffusion models are known to memorize and, in some cases, regenerate training data~\citep{carlini2023extracting}.
+Subsequent studies characterize the extent of content replication and related phenomena~\citep{somepalli2023diffusion}, as well as defenses and mitigation strategies~\citep{wen2024detecting,chen2024towards}.
+This line of work focuses on understanding and reducing memorization or detecting replicated content.
+Our focus is different in goal: we turn memorization signals into a forensic verification protocol that supports ownership claims under explicit false-positive budgets and reference-based comparisons.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 3. PROBLEM SETUP
@@ -461,21 +454,25 @@ Table~\ref{tab:main_results} presents main ownership verification results.
 \toprule
 Dataset & Model & T-Error & $|d|$ / Ratio \\
 \midrule
-\multirow{2}{*}{CIFAR-10} 
-& Owner & $28.6$ & --- \\
-& Baseline & $697.6$ & $23.9$ / $24.4\times$ \\
+\multirow{3}{*}{CIFAR-10}
+& Owner & $28.6$ & $23.9$ / $24.4\times$ \\
+& Model B & $28.6$ & $23.9$ / $24.4\times$ \\
+& Baseline & $697.6$ & --- \\
 \midrule
-\multirow{2}{*}{CIFAR-100}
-& Owner & $33.2$ & --- \\
-& Baseline & $636.6$ & $18.5$ / $19.2\times$ \\
+\multirow{3}{*}{CIFAR-100}
+& Owner & $33.2$ & $18.5$ / $19.2\times$ \\
+& Model B & $33.2$ & $18.5$ / $19.2\times$ \\
+& Baseline & $636.6$ & --- \\
 \midrule
-\multirow{2}{*}{STL-10}
-& Owner & $70.7$ & --- \\
-& Baseline & $7152.9$ & $33.4$ / $101\times$ \\
+\multirow{3}{*}{STL-10}
+& Owner & $70.7$ & $33.4$ / $101\times$ \\
+& Model B & $71.2$ & $33.4$ / $100\times$ \\
+& Baseline & $7152.9$ & --- \\
 \midrule
-\multirow{2}{*}{CelebA}
-& Owner & $63.5$ & --- \\
-& Baseline & $1691.8$ & $26.1$ / $26.6\times$ \\
+\multirow{3}{*}{CelebA}
+& Owner & $63.5$ & $26.1$ / $26.6\times$ \\
+& Model B & $63.5$ & $26.1$ / $26.6\times$ \\
+& Baseline & $1691.8$ & --- \\
 \bottomrule
 \end{tabular}
 \end{small}
