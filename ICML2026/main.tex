@@ -6,7 +6,7 @@
 \documentclass{article}
 
 % Use ICML 2026 style (remove [accepted] for submission)
-\usepackage{icml2026}
+\usepackage[preprint]{icml2026}
 
 % Required packages (most already in icml2026.sty)
 \usepackage{amsmath,amssymb,amsthm}
@@ -29,30 +29,39 @@
 \newtheorem{claim}{Claim}
 
 % Shorter running title for header (MUST be before \icmltitle)
-\icmltitlerunning{Ownership Verification for Diffusion Models}
-
-% Title
-\icmltitle{Ownership Verification for Diffusion Models via T-Error and Gaussian Quantile Regression}
-
-% Anonymous submission
-\icmlauthor{Anonymous Author(s)}{}
-
-% Required for ICML
-\printAffiliationsAndNotice{}
+\icmltitlerunning{Membership is Ownership}
 
 \begin{document}
+\twocolumn[
+\icmltitle{Membership is Ownership: A Robust Model Watermark Detection with Quantile Regression}
 
-\maketitle
+\begin{icmlauthorlist}
+\icmlauthor{Feng Jiang}{aff1}
+\icmlauthor{Zuobin Xiong}{aff1}
+\icmlauthor{An Huang}{aff1}
+\icmlauthor{Zhipeng Cai}{aff1}
+\icmlauthor{Yingshu Li}{aff1}
+\end{icmlauthorlist}
+
+\icmlaffiliation{aff1}{Affiliation(s) omitted for this draft.}
+
+\vskip 0.3in
+]
+
+% Required for ICML (prints affiliations/notice footnote on the first page)
+\printAffiliationsAndNotice{}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ABSTRACT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-We propose a novel ownership verification framework for diffusion models that leverages reconstruction error disparities to prove model provenance.
-Our approach computes t-error---the reconstruction quality after forward-reverse diffusion---on a private watermark set, then applies Gaussian Quantile Regression to model the conditional score distribution with closed-form quantile computation at any target false positive rate.
-Unlike membership inference attacks that make per-sample binary decisions, our framework produces population-level statistical evidence by comparing owner models against public baselines using three rigorous criteria: consistency between owner and suspect models, significant separation from baselines (Cohen's $d > 2.0$), and reconstruction error ratio exceeding $5\times$.
-Experiments across CIFAR-10, CIFAR-100, STL-10, and CelebA demonstrate Cohen's $d > 15$ separation on all datasets, with verification criteria satisfied even after adversarial MMD fine-tuning that simulates model theft.
-Our Gaussian parameterization reduces parameters by 50\% compared to per-quantile models while enabling efficient ensemble aggregation.
+Large-scale diffusion models are valuable intellectual property, yet are frequently stolen and adapted via downstream fine-tuning.
+Existing diffusion watermarking often embeds explicit signatures into parameters or behavior, which can degrade utility and be removed by post-hoc fine-tuning.
+We propose \textbf{Membership Is Ownership}, a \emph{non-invasive} ownership verification framework that treats a private member evidence set \Wset as a watermark and leverages the model's intrinsic memorization.
+Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction over uniformly sampled timesteps, then aggregate with a robust lower quantile.
+To support stringent false-positive budgets, we fit a conditional Gaussian model in log-score space and obtain \emph{closed-form} quantile thresholds at arbitrary target FPR via Gaussian quantile regression.
+Crucially, our protocol produces population-level forensic evidence by comparing the suspect model against public reference models using hypothesis tests, effect sizes, and error ratios.
+Across CIFAR-10/100, STL-10, and CelebA, the resulting watermark signal yields extremely large separations from public baselines (Cohen's $d$ up to $33.4$; error ratios up to $101\times$) while remaining consistent between the owner model and an MMD-fine-tuned ``stolen'' derivative, enabling robust, practical ownership claims under realistic post-theft fine-tuning.
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
