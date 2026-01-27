@@ -495,7 +495,33 @@ where $\bar{s}$ denotes the sample mean of aggregated t-error scores. The $5\tim
 
 \textbf{Baselines}: Public HuggingFace models---\texttt{google/ddpm-cifar10-32} for CIFAR-10/100, \texttt{google/ddpm-ema-bedroom-256} for STL-10 (resized), \texttt{google/ddpm-celebahq-256} for CelebA.
 
-\textbf{Splits}: Deterministic stratified split with seed 20251030. SHA-256 manifests for reproducibility.
+\textbf{Splits}: Deterministic stratified split with seed 20251030.
+
+\textbf{Hyperparameters}: Table~\ref{tab:hyperparams} summarizes key training settings. DDIM models train for 400k iterations; Gaussian QR uses $B{=}50$ ensemble members with bootstrap sampling. Full details (optimizer, schedule, architecture) appear in Appendix~\ref{app:details}.
+
+\begin{table}[t]
+\caption{Key hyperparameters for reproducibility.}
+\label{tab:hyperparams}
+\vskip 0.05in
+\begin{center}
+\begin{small}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Component & Parameter & Value \\
+\midrule
+\multirow{3}{*}{DDIM} & Iterations & 400k \\
+& Batch size / LR & 128 / $2{\times}10^{-4}$ \\
+& EMA decay & 0.9999 \\
+\midrule
+\multirow{3}{*}{Gaussian QR} & Ensemble $B$ & 50 \\
+& Bootstrap ratio & 0.8 \\
+& Epochs / patience & 50 / 10 \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.15in
+\end{table}
 
 \subsection{RQ1: Verification Effectiveness}
 \label{sec:main_results}
@@ -563,6 +589,28 @@ CelebA & $0.975 \pm 0.004$ & $0.82 \pm 0.04$ & $0.60 \pm 0.06$ \\
 \end{small}
 \end{center}
 \vskip -0.1in
+\end{table}
+
+\textbf{Threshold Sensitivity}: The thresholds $d > 2.0$ and ratio $> 5\times$ are conservative. Table~\ref{tab:threshold_sens} shows that all datasets pass verification even under stricter thresholds (up to $d > 3.0$, ratio $> 10\times$), confirming that results are not artifacts of threshold tuning.
+
+\begin{table}[t]
+\caption{Verification pass rate across threshold choices.}
+\label{tab:threshold_sens}
+\vskip 0.05in
+\begin{center}
+\begin{small}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Threshold & C-10 & C-100 & STL & CelebA \\
+\midrule
+$d{>}1.5$, $r{>}5\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$d{>}2.0$, $r{>}5\times$ (ours) & \checkmark & \checkmark & \checkmark & \checkmark \\
+$d{>}3.0$, $r{>}10\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.15in
 \end{table}
 
 \subsection{RQ2: Post-Theft Robustness}
