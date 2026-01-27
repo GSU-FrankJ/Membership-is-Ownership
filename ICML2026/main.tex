@@ -16,6 +16,10 @@
 \usepackage{multirow}
 \usepackage{xspace}
 
+% --- Figure (TikZ) ---
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,shapes.geometric}
+
 % Custom commands for consistency
 \newcommand{\terr}{\ensuremath{e_t}\xspace}
 \newcommand{\Wset}{\ensuremath{\mathcal{W}_D}\xspace}
@@ -45,6 +49,8 @@
 
 \icmlaffiliation{aff1}{Affiliation(s) omitted for this draft.}
 
+\icmlcorrespondingauthor{Feng Jiang}{fjiang4@student.gsu.edu}
+
 \vskip 0.3in
 ]
 
@@ -70,36 +76,139 @@ Across CIFAR-10/100, STL-10, and CelebA, the resulting watermark signal yields e
 \section{Introduction}
 \label{sec:intro}
 
-Diffusion models have emerged as the dominant paradigm for generative AI, achieving state-of-the-art results in image synthesis~\citep{ho2020ddpm,song2021ddim}, video generation, and molecular design.
-Training these models requires substantial computational resources and carefully curated datasets, making intellectual property protection increasingly critical.
-When a valuable diffusion model is stolen or fine-tuned without authorization, model owners need robust methods to verify their ownership claims.
+Large-scale diffusion models have become valuable assets: training them consumes substantial compute and curated data, yet the resulting models can be readily copied and adapted via downstream fine-tuning. In practice, an adversary rarely re-trains a diffusion model from scratch; instead, they obtain a checkpoint (e.g., via leakage or illicit transfer) and fine-tune it to a new domain or product requirement. This post-theft fine-tuning creates a central challenge for ownership verification: the owner must produce evidence that is (i) accurate under stringent false-positive budgets, and (ii) robust to realistic adaptation after theft.
 
-Existing approaches to model protection fall into two categories: \emph{watermarking} and \emph{membership inference}.
-Watermarking methods embed external signatures---such as trigger patterns or adversarial examples---into models~\citep{adi2018turning,zhang2018protecting}, but these signatures can potentially be detected and removed by adversaries.
-Membership inference attacks (MIA) determine whether a specific sample was used in training~\citep{shokri2017membership,carlini2023extracting}, but as we argue in this paper, per-sample binary decisions are \emph{insufficient} for establishing ownership.
+Most existing diffusion IP protection methods embed explicit signatures into model parameters or output behavior. While effective in controlled settings, such watermarks may impose utility costs and can be weakened or removed by post-hoc fine-tuning. An appealing alternative is to leverage the model's intrinsic memorization: diffusion models tend to reconstruct training examples with systematically lower error than non-members. However, ``low error on a few examples'' is not sufficient for an ownership claim---many public models may also score well on certain samples due to shared data sources, inductive biases, or dataset artifacts. Robust verification therefore requires \emph{population-level} evidence: the suspect model must be distinguished from a panel of public reference models under a statistically controlled decision rule.
 
-Our key insight is that diffusion models exhibit a fundamental \emph{memorization property}: models reconstruct their training data with significantly lower error than unseen data.
-This creates an intrinsic, unforgeable ownership signal.
-However, demonstrating that a model has low reconstruction error on some samples proves nothing by itself---those samples might simply be ``easy'' for any model.
-\textbf{Ownership verification requires comparative statistical evidence}: showing that owner models have significantly lower error than public baselines that definitely did not train on the claimed data.
+We propose \textbf{Membership Is Ownership}, a non-invasive ownership verification framework that treats a private member evidence set $\mathcal{W}$ as a watermark and turns memorization into forensic evidence. Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction over uniformly sampled timesteps, and aggregate the resulting errors with a robust lower quantile to obtain a stable per-example score. To support stringent false-positive budgets, we fit a conditional Gaussian model in log-score space and derive \emph{closed-form} quantile thresholds at arbitrary target FPR via Gaussian quantile regression. Crucially, our protocol produces evidence by comparing the suspect model against public reference models using hypothesis tests, effect sizes, and error ratios, yielding an auditable report rather than a single opaque score.
 
-We formalize this distinction between Membership Inference Attack (\MIA) and Ownership Verification (\OV):
-\begin{itemize}
-    \item \MIA outputs a binary decision for a single sample: $\text{MIA}(M, x) \in \{0, 1\}$
-    \item \OV outputs a verifiable judgment across a population: $\text{OV}(C, M_B, \{M_{\text{ref}}\}) \in \{\textsc{Verified}, \textsc{Rejected}\}$
-\end{itemize}
-MIA is a necessary building block, but alone cannot constitute ownership evidence.
+Across CIFAR-10/100, STL-10, and CelebA, the resulting watermark signal exhibits extremely large separations from public baselines (e.g., Cohen's $d$ up to $33.4$; error ratios up to $101\times$) and remains consistent between the owner model and an MMD-fine-tuned ``stolen'' derivative, enabling robust ownership claims under realistic post-theft fine-tuning.
 
-\textbf{Contributions.} We make the following contributions:
-\begin{enumerate}
-    \item \textbf{T-error based ownership verification}: We propose the first framework using reconstruction error disparity for diffusion model ownership claims, with rigorous three-point statistical criteria (consistency, separation, ratio).
-    
-    \item \textbf{Gaussian Quantile Regression}: A novel distributional modeling approach that reduces parameter count by 50\% versus per-quantile models while enabling closed-form quantile computation for arbitrary target FPRs.
-    
-    \item \textbf{MMD fine-tuning for theft simulation}: A realistic adversarial evaluation protocol that preserves memorization signals while simulating model theft in CLIP feature space.
-    
-    \item \textbf{Comprehensive evaluation}: Experiments across four datasets (CIFAR-10, CIFAR-100, STL-10, CelebA) with Cohen's $d$ ranging from $18.5$ to $33.4$ and verification success even under adversarial fine-tuning.
-\end{enumerate}
+\paragraph{Contributions.}
+(1) We introduce a non-invasive ownership verification protocol for diffusion models that treats a private member evidence set as a watermark and outputs population-level forensic evidence against public references.
+(2) We propose a multi-timestep t-error score with robust lower-quantile aggregation to stabilize evidence under timestep variability and outliers.
+(3) We provide FPR-controlled, closed-form quantile thresholds by modeling log-scores with conditional Gaussians via Gaussian quantile regression.
+(4) We empirically validate strong separations and post-theft robustness across multiple datasets and fine-tuning settings.
+
+\begin{figure*}[t]
+\vspace{-2mm}
+\centering
+\begin{tikzpicture}[
+  scale=0.50, transform shape,
+  font=\small,
+  line/.style={-Latex, very thick, draw=black},
+  thinline/.style={-Latex, thick, draw=black},
+  box/.style={draw=black, rounded corners=2pt, align=left, inner sep=6pt, fill=gray!8},
+  stepbox/.style={draw=black, rounded corners=2pt, align=left, inner sep=6pt, fill=gray!6, minimum width=58mm},
+  outbox/.style={draw=black, rounded corners=2pt, align=left, inner sep=6pt, fill=gray!6, minimum width=52mm},
+  diamondbox/.style={draw=black, diamond, aspect=2.2, inner sep=2.5pt, fill=gray!4},
+  decision/.style={draw=black, rounded corners=2pt, align=center, inner sep=6pt, fill=gray!6, minimum width=30mm},
+  notelabel/.style={font=\scriptsize, text=black}
+]
+
+% -----------------------------
+% Inputs box (left)
+% -----------------------------
+\node[box, minimum width=46mm] (inputs) {\textbf{Inputs}\vspace{1mm}\par
+\begin{tabular}{@{}l@{}}
+Owner model $\mathcal{M}_{\text{own}}$\\
+Suspect model $\mathcal{M}_{\text{sus}}$\\
+Public reference models $\{\mathcal{M}_j\}$\\
+Private watermark set $\mathcal{W}_D$\\
+\end{tabular}
+};
+
+% -----------------------------
+% Main pipeline (center)
+% -----------------------------
+\node[stepbox, right=20mm of inputs, yshift=26mm] (s1)
+{\textbf{1. t-error calculation}\par
+Forward noise + single-step \textbf{reconstruction}\par
+\hspace*{0mm}\emph{(compute $e_t(x)$ from $x\in\mathcal{W}_D$)}
+};
+
+\node[stepbox, below=7mm of s1] (s2)
+{\textbf{2. $K$ timesteps + $Q_{0.25}$ aggregation}\par
+Sample $t_i\sim \mathrm{Unif}(\mathcal{T}),\, i=1..K$;\;
+$s(x)=Q_{0.25}\!\left(\{e_{t_i}(x)\}\right)$
+};
+
+\node[stepbox, below=7mm of s2] (s3)
+{\textbf{3. Log-score computation}\par
+$y=\log\!\bigl(1+s(x)\bigr)$
+};
+
+\node[stepbox, below=7mm of s3] (s4)
+{\textbf{4. Gaussian QR output + FPR-controlled threshold}\par
+Fit conditional Gaussian in log-score space: $\mu(x),\,\sigma(x)$\par
+$\tau(\mathrm{FPR})=\mu(x)+\sigma(x)\,\Phi^{-1}\!\bigl(1-\mathrm{FPR}\bigr)$
+};
+
+\node[stepbox, below=7mm of s4] (s5)
+{\textbf{5. Three-point criteria (AND)}\par
+};
+
+% Criteria diamonds
+\node[diamondbox, below=9mm of s5, xshift=-18mm] (c1) {Consistency};
+\node[diamondbox, right=10mm of c1] (c2) {Separation};
+\node[diamondbox, right=10mm of c2] (c3) {Ratio};
+
+\node[notelabel, below=1.5mm of c1] {$\Delta(\text{own},\text{sus})$};
+\node[notelabel, below=1.5mm of c2] {$p$-value, Cohen's $d$};
+\node[notelabel, below=1.5mm of c3] {error ratio};
+
+% Decision box
+\node[decision, below=10mm of c2, minimum width=62mm] (verdict)
+{\textbf{Verdict}\par
+\textbf{VERIFIED} \quad / \quad \textbf{REJECTED}
+};
+
+% -----------------------------
+% Output / Evidence report (right, aligned to evidence/decision)
+% -----------------------------
+\node[outbox, right=18mm of c3, yshift=-2mm] (report)
+{\textbf{Evidence / Report}\vspace{1mm}\par
+Decision: pass $\tau(\mathrm{FPR})$ \textbf{AND} all three criteria hold\par\vspace{1mm}
+\begin{tabular}{@{}l@{}}
+$\bullet$ threshold at target FPR\\
+$\bullet$ $p$-value\\
+$\bullet$ Cohen's $d$\\
+$\bullet$ error ratio\\
+\end{tabular}
+};
+
+% -----------------------------
+% Arrows
+% -----------------------------
+% Pipeline arrows
+\draw[line] (s1) -- (s2);
+\draw[line] (s2) -- (s3);
+\draw[line] (s3) -- (s4);
+\draw[line] (s4) -- (s5);
+\draw[thinline] (s5) -- (c2);
+
+% Criteria to verdict (AND logic)
+\draw[thinline] (c1.south) -- ++(0,-5mm) -| (verdict.north);
+\draw[thinline] (c2.south) -- (verdict.north);
+\draw[thinline] (c3.south) -- ++(0,-5mm) -| (verdict.north);
+
+% Split inputs into two labeled arrows (fix semantics)
+\draw[thinline] (inputs.east) -- node[above, notelabel] {models} ($(s1.west)+(0,2mm)$);
+\draw[thinline] (inputs.east) -- node[below, notelabel] {$x\in\mathcal{W}_D$} ($(s1.west)+(0,-2mm)$);
+
+% Report connection (from criteria/decision region, not from the middle of pipeline)
+\draw[thinline] (c3.east) -- (report.west);
+\draw[thinline] (verdict.east) -- ++(8mm,0) |- (report.south);
+
+% Optional: small note for public references usage
+\node[notelabel, above=2mm of report] {Compare $\mathcal{M}_{\text{sus}}$ vs $\{\mathcal{M}_j\}$ (population-level forensics)};
+
+\end{tikzpicture}
+\vspace{-3mm}
+\caption{\textbf{Overview.} We treat the private evidence set $\mathcal{W}_D$ as a watermark. Multi-timestep t-error scoring is robustly aggregated, then a conditional Gaussian model in log-score space yields a closed-form threshold at a target FPR. Ownership is supported via population-level evidence against public reference models using three criteria (consistency, separation, ratio).}
+\vspace{-2mm}
+\label{fig:overview}
+\end{figure*}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 2. RELATED WORK
