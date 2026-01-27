@@ -98,7 +98,7 @@ MIA is a necessary building block, but alone cannot constitute ownership evidenc
     
     \item \textbf{MMD fine-tuning for theft simulation}: A realistic adversarial evaluation protocol that preserves memorization signals while simulating model theft in CLIP feature space.
     
-    \item \textbf{Comprehensive evaluation}: Experiments across four datasets (CIFAR-10, CIFAR-100, STL-10, CelebA) with Cohen's $d > 15$ on all datasets and verification success even under adversarial fine-tuning.
+    \item \textbf{Comprehensive evaluation}: Experiments across four datasets (CIFAR-10, CIFAR-100, STL-10, CelebA) with Cohen's $d$ ranging from $18.5$ to $33.4$ and verification success even under adversarial fine-tuning.
 \end{enumerate}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -335,8 +335,8 @@ Given owner models (A, B), public baselines, and watermark set \Wset:
 
 Table~\ref{tab:main_results} presents main ownership verification results.
 
-\begin{table}[t]
-\caption{Ownership verification results across datasets. All metrics computed on watermark set ($K=5000$ for CIFAR/CelebA, $K=1000$ for STL-10). T-error reported as mean $\pm$ std ($\times 10^{-3}$). All datasets satisfy all three verification criteria.}
+\begin{table*}[t]
+\caption{Ownership verification results across datasets. All metrics computed on watermark set ($K=5000$ for CIFAR/CelebA, $K=1000$ for STL-10). T-error reported as mean $\pm$ std. All datasets satisfy all three verification criteria.}
 \label{tab:main_results}
 \vskip 0.1in
 \begin{center}
@@ -346,32 +346,32 @@ Table~\ref{tab:main_results} presents main ownership verification results.
 Dataset & Model & T-Error & Cohen's $d$ & $p$-value & Ratio \\
 \midrule
 \multirow{3}{*}{CIFAR-10} 
-& Owner (A) & $28.7 \pm 8.2$ & --- & --- & --- \\
-& Owner (B) & $28.7 \pm 8.3$ & $0.00$ & $0.99$ & $1.00$ \\
-& Baseline & $697.2 \pm 31.5$ & $-23.95$ & $<10^{-100}$ & $24.3$ \\
+& Owner (A) & $28.59 \pm 10.80$ & --- & --- & --- \\
+& Owner (B) & $28.64 \pm 10.82$ & $-0.005$ & $0.802$ & $1.00$ \\
+& Baseline & $697.62 \pm 38.03$ & $-23.93$ & $<10^{-100}$ & $24.40$ \\
 \midrule
 \multirow{3}{*}{CIFAR-100}
-& Owner (A) & $30.5 \pm 9.1$ & --- & --- & --- \\
-& Owner (B) & $30.6 \pm 9.2$ & $-0.01$ & $0.94$ & $1.00$ \\
-& Baseline & $685.4 \pm 35.2$ & $-22.10$ & $<10^{-100}$ & $22.5$ \\
+& Owner (A) & $33.17 \pm 14.68$ & --- & --- & --- \\
+& Owner (B) & $33.22 \pm 14.72$ & $-0.003$ & $0.880$ & $1.00$ \\
+& Baseline & $636.61 \pm 43.80$ & $-18.47$ & $<10^{-100}$ & $19.19$ \\
 \midrule
 \multirow{3}{*}{STL-10}
-& Owner (A) & $45.2 \pm 12.3$ & --- & --- & --- \\
-& Owner (B) & $45.3 \pm 12.4$ & $-0.01$ & $0.96$ & $1.00$ \\
-& Baseline & $520.3 \pm 42.1$ & $-15.80$ & $<10^{-100}$ & $11.5$ \\
+& Owner (A) & $70.70 \pm 27.50$ & --- & --- & --- \\
+& Owner (B) & $71.18 \pm 27.59$ & $-0.018$ & $0.695$ & $1.01$ \\
+& Baseline & $7152.88 \pm 298.60$ & $-33.40$ & $<10^{-100}$ & $101.17$ \\
 \midrule
 \multirow{3}{*}{CelebA}
-& Owner (A) & $35.8 \pm 10.5$ & --- & --- & --- \\
-& Owner (B) & $35.9 \pm 10.6$ & $-0.01$ & $0.95$ & $1.00$ \\
-& Baseline & $480.6 \pm 38.7$ & $-18.20$ & $<10^{-100}$ & $13.4$ \\
+& Owner (A) & $63.54 \pm 18.38$ & --- & --- & --- \\
+& Owner (B) & $63.52 \pm 18.52$ & $0.002$ & $0.939$ & $1.00$ \\
+& Baseline & $1691.76 \pm 86.14$ & $-26.14$ & $<10^{-100}$ & $26.62$ \\
 \bottomrule
 \end{tabular}
 \end{small}
 \end{center}
 \vskip -0.1in
-\end{table}
+\end{table*}
 
-\textbf{Key Findings}: (1) All datasets achieve Cohen's $d > 15$, far exceeding the $d > 2.0$ threshold. (2) Consistency between Model A and B is maintained ($p > 0.05$). (3) Ratios range from $11.5\times$ to $24.3\times$, well above the $5\times$ threshold.
+\textbf{Key Findings}: (1) All datasets achieve Cohen's $d > 18$, far exceeding the $d > 2.0$ threshold (STL-10 achieves $d = -33.40$). (2) Consistency between Model A and B is maintained ($p > 0.05$). (3) Ratios range from $19.19\times$ to $101.17\times$, well above the $5\times$ threshold.
 
 Table~\ref{tab:mia_results} presents membership inference performance.
 
@@ -383,7 +383,7 @@ Table~\ref{tab:mia_results} presents membership inference performance.
 \begin{small}
 \begin{tabular}{lccc}
 \toprule
-Dataset & ROC-AUC & TPR@FPR=0.1\% & TPR@FPR=0.01\% \\
+Dataset & AUC & TPR@0.1\% & TPR@0.01\% \\
 \midrule
 CIFAR-10 & $0.987 \pm 0.002$ & $0.89 \pm 0.03$ & $0.71 \pm 0.05$ \\
 CIFAR-100 & $0.982 \pm 0.003$ & $0.85 \pm 0.04$ & $0.65 \pm 0.06$ \\
@@ -422,7 +422,7 @@ Aggregation & Cohen's $d$ & Ratio \\
 \midrule
 Mean & $-18.2$ & $15.1$ \\
 Q10 & $-21.5$ & $20.8$ \\
-Q25 (ours) & $\mathbf{-23.95}$ & $\mathbf{24.3}$ \\
+Q25 (ours) & $\mathbf{-23.93}$ & $\mathbf{24.40}$ \\
 Median & $-19.8$ & $17.2$ \\
 \bottomrule
 \end{tabular}
@@ -473,7 +473,7 @@ We frame scope conditions rather than limitations.
 We presented a novel ownership verification framework for diffusion models using t-error based reconstruction disparity and Gaussian Quantile Regression.
 By formalizing the distinction between membership inference and ownership verification, we established that public baselines and statistical hypothesis testing are \emph{necessary} components for ownership claims.
 Our three-point verification criteria (consistency, separation, ratio) provide rigorous, reproducible verification.
-Experiments across four datasets demonstrate Cohen's $d > 15$ separation, with criteria satisfied even after adversarial MMD fine-tuning.
+Experiments across four datasets demonstrate Cohen's $d > 18$ separation (up to $d = 33.4$ on STL-10), with criteria satisfied even after adversarial MMD fine-tuning.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % IMPACT STATEMENT
@@ -628,7 +628,7 @@ $d > 3.0$, ratio $> 10\times$ & \checkmark & \checkmark & \checkmark & \checkmar
 \end{center}
 \end{table}
 
-All datasets achieve $d > 15$ and ratio $> 10\times$, providing substantial margin above our recommended thresholds.
+All datasets achieve $d > 18$ and ratio $> 19\times$, providing substantial margin above our recommended thresholds.
 
 \section{Algorithm Pseudocode}
 \label{app:algorithms}
