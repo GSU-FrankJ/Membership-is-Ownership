@@ -286,9 +286,18 @@ Without public baselines, pure \MIA cannot constitute ownership evidence.
     \item \textbf{Verifier} $V$: Given Models A, B, baselines, and \Wset, determines if ownership claim is valid
 \end{itemize}
 
-\textbf{Assumptions}: Owner has white-box access to both models (weights available)---standard in IP disputes where courts compel disclosure, regulatory audits (GDPR/AI Act), and partnership disputes with contractual audit rights.
-Baselines are publicly available pretrained models.
-Adversary may fine-tune but cannot fully retrain from scratch.
+\textbf{Adversary Knowledge and Capabilities}:
+The adversary has white-box access to the stolen model (weights, architecture) and may possess similar-domain data disjoint from \Wset.
+The adversary knows that a verification protocol exists but cannot identify \Wset---guessing $K$ samples from $N$ training samples has probability $1/\binom{N}{K}$, which is negligible for typical sizes (e.g., $K{=}5000$, $N{=}50000$; see Appendix~\ref{app:combinatorial}).
+Permitted operations include fine-tuning, distillation, and pruning.
+Full retraining from scratch is outside scope: it severs the provenance link entirely.
+
+\textbf{Verifier Protocol}:
+The verifier (1) checks that $\text{SHA-256}(\text{sort}(\Wset))$ matches a hash commitment timestamped before the dispute; (2) computes t-error scores on \Wset for the suspect model and $\geq 3$ public baselines; (3) evaluates the three-point criteria (Section~\ref{sec:criteria}); and (4) outputs \textsc{Verified} or \textsc{Rejected} with the statistical evidence (p-values, Cohen's $d$, ratio).
+
+\textbf{Access Assumption}: Owner and verifier have white-box access to both models.
+This is standard in IP litigation (courts compel disclosure), regulatory audits (GDPR/AI Act), and contractual audit clauses.
+Baselines are publicly available pretrained models whose training data is documented or disjoint from \Wset by construction.
 
 \subsection{Three Outputs of Verification System}
 
@@ -307,32 +316,38 @@ Our system produces three distinct, complementary outputs:
 \textsc{Verified} \Leftrightarrow \text{(O1: Consistent)} \land \text{(O2: Separated)} \land \text{(Ratio} > 5.0)
 \end{equation}
 
+\textbf{Notation Summary}:
+$\Wset$ = watermark set; $e_t(x)$ = t-error at timestep $t$; $s(x)$ = aggregated score (Q25 over $K$ timesteps); $\mu(x), \sigma(x)$ = Gaussian QR predictions; $\hat{q}_\tau(x)$ = predicted $(1{-}\alpha)$-quantile; $m_\tau(x)$ = margin (positive $\Rightarrow$ member).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 4. METHOD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Method}
 \label{sec:method}
 
+The verification framework has four components: (1) a \emph{t-error} score measuring reconstruction quality via forward-reverse diffusion, (2) multi-timestep aggregation for stable per-sample scores, (3) Gaussian quantile regression for FPR-controlled thresholds, and (4) a three-point statistical protocol comparing the suspect model against public baselines.
+
 \subsection{T-Error Scoring}
 \label{sec:t_error}
 
-For a diffusion model $M_\theta$ and sample $x_0$, the t-error at timestep $t$ measures reconstruction quality through forward-reverse diffusion.
+Diffusion models reconstruct their training data with lower error than unseen data~\citep{carlini2023extracting}. We exploit this \emph{memorization gap} by measuring reconstruction quality at a given noise level $t$.
 
 \textbf{Forward Diffusion}: Add noise according to the diffusion schedule:
 \begin{equation}
 x_t = \sqrt{\bar{\alpha}_t} \cdot x_0 + \sqrt{1 - \bar{\alpha}_t} \cdot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
 \end{equation}
-where $\bar{\alpha}_t = \prod_{s=1}^{t} \alpha_s$ follows a cosine schedule.
+where $x_0$ is the original image, $x_t$ the noised image at timestep $t \in \{1,\ldots,T\}$, $\epsilon$ is i.i.d.\ Gaussian noise, and $\bar{\alpha}_t = \prod_{s=1}^{t} \alpha_s$ is the cumulative noise coefficient (cosine schedule~\citep{dhariwal2021diffusion}).
 
-\textbf{Reconstruction}: Predict noise and recover $x_0$:
+\textbf{Reconstruction}: The model predicts the noise $\hat{\epsilon}_\theta(x_t, t)$ and we recover:
 \begin{equation}
 \hat{x}_0 = \frac{x_t - \sqrt{1 - \bar{\alpha}_t} \cdot \hat{\epsilon}_\theta(x_t, t)}{\sqrt{\bar{\alpha}_t}}
 \end{equation}
 
-\textbf{T-Error}: Normalized reconstruction error:
+\textbf{T-Error}: The per-pixel mean squared error between original and reconstruction:
 \begin{equation}
 e_t(x_0) = \frac{\|x_0 - \hat{x}_0\|_2^2}{H \times W \times C}
 \end{equation}
+where $H$, $W$, $C$ are image height, width, and channels.
 
 \textbf{Memorization Effect}: Models trained on specific data exhibit lower reconstruction error: $\mathbb{E}_{x \in \Dtrain}[e_t(x)] < \mathbb{E}_{x \notin \Dtrain}[e_t(x)]$.
 
@@ -345,7 +360,26 @@ s(x) = Q_{0.25}\left(\{e_{t_k}(x)\}_{k=1}^K\right)
 \end{equation}
 where $Q_{0.25}$ denotes the 25th percentile. We use $K=50$ timesteps by default.
 
-\textbf{Rationale}: Lower percentiles capture the ``easiest'' timesteps where memorization is most evident, while being robust to noisy high-error timesteps. Ablations in Section~\ref{sec:ablation} validate this choice.
+\textbf{Rationale}: Lower percentiles capture the ``easiest'' timesteps where memorization is most evident, while being robust to noisy high-error timesteps. Ablations in Section~\ref{sec:ablation} validate this choice. The full procedure is given in Algorithm~\ref{alg:t_error}.
+
+\begin{algorithm}[t]
+\caption{T-Error Computation}
+\label{alg:t_error}
+\begin{algorithmic}
+\REQUIRE Model $M_\theta$, sample $x_0$, timesteps $\mathcal{T} = \{t_1, \ldots, t_K\}$, noise schedule $\{\bar{\alpha}_t\}$
+\ENSURE Aggregated score $s(x_0)$
+\STATE $\texttt{errors} \leftarrow []$
+\FOR{$t \in \mathcal{T}$}
+    \STATE $\epsilon \sim \mathcal{N}(0, I)$
+    \STATE $x_t \leftarrow \sqrt{\bar{\alpha}_t} \cdot x_0 + \sqrt{1 - \bar{\alpha}_t} \cdot \epsilon$
+    \STATE $\hat{\epsilon} \leftarrow M_\theta(x_t, t)$
+    \STATE $\hat{x}_0 \leftarrow (x_t - \sqrt{1 - \bar{\alpha}_t} \cdot \hat{\epsilon}) / \sqrt{\bar{\alpha}_t}$
+    \STATE $e_t \leftarrow \|x_0 - \hat{x}_0\|_2^2 / (H \times W \times C)$
+    \STATE $\texttt{errors}.\text{append}(e_t)$
+\ENDFOR
+\STATE \textbf{return} $s(x_0) \leftarrow Q_{0.25}(\texttt{errors})$
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{Gaussian Quantile Regression}
 \label{sec:gaussian_qr}
@@ -360,16 +394,17 @@ where $\mu(x)$ and $\sigma(x)$ are predicted by neural network $f_\theta$.
 
 \textbf{Architecture}: ResNet-18 backbone extracts image features, concatenated with statistical features $\phi(x) \in \mathbb{R}^3$ (mean, std, L2 norm of t-error sequence). An MLP head outputs $(\mu, \log\sigma)$.
 
-\textbf{Training}: Gaussian negative log-likelihood on auxiliary non-member data:
+\textbf{Training}: Gaussian negative log-likelihood on $N$ auxiliary non-member samples:
 \begin{equation}
 \mathcal{L}_{\text{NLL}} = \frac{1}{N}\sum_{i=1}^{N}\left[\frac{(y_i - \mu_i)^2}{2\sigma_i^2} + \log\sigma_i\right]
 \end{equation}
+where $y_i = \log(1 + s(x_i))$ is the log-score for sample $i$, and $(\mu_i, \sigma_i)$ are the network predictions.
 
-\textbf{Closed-Form Quantiles}: For target FPR $\alpha$, compute the $(1-\alpha)$ quantile:
+\textbf{Closed-Form Quantiles}: For target FPR $\alpha$, the $(1{-}\alpha)$ quantile of the non-member distribution is:
 \begin{equation}
 \hat{q}_\tau(x) = \mu(x) + \sigma(x) \cdot \Phi^{-1}(\tau), \quad \tau = 1 - \alpha
 \end{equation}
-This enables quantile computation at \emph{any} $\tau$ without retraining.
+where $\Phi^{-1}$ is the standard normal inverse CDF. This closed form allows quantile computation at any $\tau$ without retraining---unlike pinball-loss QR, which requires a separate model per quantile.
 
 \textbf{Margin}: The attack score measures deviation from expected non-member behavior:
 \begin{equation}
@@ -380,14 +415,13 @@ Positive margin indicates likely membership.
 \subsection{Bagging Ensemble}
 \label{sec:bagging}
 
-To improve robustness, we train $B=50$ models with bootstrap sampling (80\% of auxiliary data per model).
+To reduce variance, we train an ensemble of $B{=}50$ Gaussian QR models, each on a bootstrap sample (80\% of auxiliary data, sampled with replacement).
 
-\textbf{Ensemble Aggregation}: Average in quantile space:
+\textbf{Ensemble Aggregation}: Average the predicted quantiles:
 \begin{equation}
 \hat{q}_\tau^{\text{ens}}(x) = \frac{1}{B}\sum_{b=1}^{B}\hat{q}_\tau^{(b)}(x)
 \end{equation}
-
-The ensemble margin is: $m_\tau^{\text{ens}}(x) = \hat{q}_\tau^{\text{ens}}(x) - \log(1 + s(x))$.
+where $\hat{q}_\tau^{(b)}(x)$ is the quantile from ensemble member $b$. The ensemble margin is $m_\tau^{\text{ens}}(x) = \hat{q}_\tau^{\text{ens}}(x) - \log(1 + s(x))$; positive values indicate likely membership.
 
 \subsection{Three-Point Verification Criteria}
 \label{sec:criteria}
@@ -403,13 +437,37 @@ Given owner models (A, B), public baselines, and watermark set \Wset:
 \begin{equation}
 \text{Pass if: } p < 10^{-6} \text{ and Cohen's } d > 2.0
 \end{equation}
+The threshold $d > 2.0$ corresponds to a ``very large'' effect size~\citep{cohen1988statistical}; $p < 10^{-6}$ controls for multiple baseline comparisons.
 
-\textbf{Criterion 3 (Ratio)}: Quantitative separation measure.
+\textbf{Criterion 3 (Ratio)}: Mean score ratio between baseline and owner:
 \begin{equation}
 \text{Pass if: } \frac{\bar{s}_{\text{baseline}}}{\bar{s}_{\text{owner}}} > 5.0
 \end{equation}
+where $\bar{s}$ denotes the sample mean of aggregated t-error scores. The $5\times$ threshold is conservative; all experiments exceed $19\times$ (Table~\ref{tab:main_results}).
 
 \textbf{Ownership Verified} when all three criteria are satisfied.
+
+\begin{algorithm}[t]
+\caption{Ownership Verification Protocol}
+\label{alg:verification}
+\begin{algorithmic}
+\REQUIRE Models $M_A, M_B$, baselines $\{M_{\text{ref}}^{(i)}\}$, watermark set $\mathcal{W}$, hash commitment $H_{\text{claimed}}$
+\ENSURE $\textsc{Verified}$ or $\textsc{Rejected}$
+\STATE $H_{\text{computed}} \leftarrow \text{SHA-256}(\text{sort}(\mathcal{W}))$
+\IF{$H_{\text{computed}} \neq H_{\text{claimed}}$}
+    \STATE \textbf{return} $\textsc{Rejected}$
+\ENDIF
+\STATE $S_A \leftarrow \{s_{M_A}(x) : x \in \mathcal{W}\}$; $S_B \leftarrow \{s_{M_B}(x) : x \in \mathcal{W}\}$
+\STATE $S_{\text{ref}} \leftarrow \{s_{M_{\text{ref}}}(x) : x \in \mathcal{W}\}$ for best baseline
+\STATE \textbf{O1:} $p_1 \leftarrow \text{TTest}(S_A, S_B)$; \textbf{if} $p_1 < 0.05$ \textbf{return} $\textsc{Rejected}$
+\STATE \textbf{O2:} $p_2, d \leftarrow \text{TTest}(S_A, S_{\text{ref}}), \text{CohenD}(S_A, S_{\text{ref}})$
+\IF{$p_2 > 10^{-6}$ \textbf{or} $|d| < 2.0$}
+    \STATE \textbf{return} $\textsc{Rejected}$
+\ENDIF
+\STATE \textbf{O3:} $r \leftarrow \text{mean}(S_{\text{ref}}) / \text{mean}(S_A)$; \textbf{if} $r < 5.0$ \textbf{return} $\textsc{Rejected}$
+\STATE \textbf{return} $\textsc{Verified}$
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{Watermark Set Security}
 \label{sec:security}
@@ -439,10 +497,12 @@ Given owner models (A, B), public baselines, and watermark set \Wset:
 
 \textbf{Splits}: Deterministic stratified split with seed 20251030. SHA-256 manifests for reproducibility.
 
-\subsection{Ownership Verification Results}
+\subsection{RQ1: Verification Effectiveness}
 \label{sec:main_results}
 
-Table~\ref{tab:main_results} presents main ownership verification results.
+\textbf{Can private member evidence sets distinguish owner models from public baselines?}
+
+Table~\ref{tab:main_results} reports t-error scores on the watermark set for owner models, fine-tuned derivatives (Model B), and public baselines.
 
 \begin{table}[t]
 \caption{Ownership verification results. T-error (mean) on watermark set. All $p < 10^{-100}$ for baseline separation.}
@@ -480,9 +540,9 @@ Dataset & Model & T-Error & $|d|$ / Ratio \\
 \vskip -0.1in
 \end{table}
 
-\textbf{Key Findings}: (1) All datasets achieve Cohen's $d > 18$, far exceeding the $d > 2.0$ threshold (STL-10 achieves $d = -33.40$). (2) Consistency between Model A and B is maintained ($p > 0.05$). (3) Ratios range from $19.19\times$ to $101.17\times$, well above the $5\times$ threshold.
+\textbf{Results}: All datasets satisfy the three-point criteria. Separation: Cohen's $d$ ranges from $18.5$ (CIFAR-100) to $33.4$ (STL-10), exceeding the $d > 2.0$ threshold by an order of magnitude. Consistency: Model A and B show statistically indistinguishable t-error ($p > 0.05$ for all datasets). Ratio: ranges from $19.2\times$ to $101\times$, well above the $5\times$ threshold.
 
-Table~\ref{tab:mia_results} presents membership inference performance.
+Table~\ref{tab:mia_results} reports per-sample membership inference accuracy using Gaussian QR margins.
 
 \begin{table}[t]
 \caption{Membership inference performance using Gaussian QR margins. TPR computed at fixed FPR with 95\% bootstrap CI (200 iterations).}
@@ -505,19 +565,23 @@ CelebA & $0.975 \pm 0.004$ & $0.82 \pm 0.04$ & $0.60 \pm 0.06$ \\
 \vskip -0.1in
 \end{table}
 
-\subsection{Model Theft Robustness}
+\subsection{RQ2: Post-Theft Robustness}
 \label{sec:theft}
 
-We evaluate robustness against model theft via MMD fine-tuning~\citep{gretton2012kernel}, which minimizes Maximum Mean Discrepancy between generated and real samples in CLIP feature space.
+\textbf{Does verification survive fine-tuning by an adversary?}
 
-\textbf{MMD Fine-tuning Protocol}: Starting from Model A, we fine-tune for 500 iterations using 10-step deterministic DDIM sampling, cubic polynomial kernel in CLIP ViT-B/32 features, learning rate $5\times10^{-6}$, and EMA decay 0.9999.
+We simulate model theft via MMD fine-tuning~\citep{gretton2012kernel}, which adapts Model A to minimize distribution mismatch in CLIP feature space while preserving generation quality.
 
-\textbf{Results}: Model B (fine-tuned) maintains nearly identical t-error to Model A on the watermark set, demonstrating that MMD fine-tuning preserves memorization signals. The three-point verification criteria remain satisfied, confirming ownership can be verified even after adversarial fine-tuning.
+\textbf{Protocol}: Starting from Model A, fine-tune for 500 iterations using 10-step DDIM, cubic polynomial kernel in CLIP ViT-B/32 features, learning rate $5{\times}10^{-6}$, EMA decay 0.9999.
 
-\subsection{Ablation Studies}
+\textbf{Results}: Model B (fine-tuned) retains nearly identical t-error to Model A on the watermark set (Table~\ref{tab:main_results}). All three verification criteria remain satisfied. The memorization signal persists because MMD fine-tuning optimizes generation quality on \emph{new} samples, not reconstruction of training data.
+
+\subsection{RQ3: Score Stability and Threshold Calibration}
 \label{sec:ablation}
 
-\textbf{Aggregation Method}: Table~\ref{tab:aggregation} compares aggregation strategies. Q25 (25th percentile) achieves the best Cohen's $d$, confirming that lower percentiles capture memorization signals while remaining robust to outlier timesteps.
+\textbf{How should multi-timestep evidence be aggregated, and how do we set FPR-controlled thresholds?}
+
+\textbf{Aggregation Method}: Table~\ref{tab:aggregation} compares aggregation strategies on CIFAR-10. The 25th percentile (Q25) achieves the best Cohen's $d$ ($-23.93$) and ratio ($24.4\times$). Lower percentiles focus on timesteps where the memorization gap is largest; the 25th percentile balances signal strength against outlier sensitivity.
 
 \begin{table}[t]
 \caption{Ablation: Aggregation method on CIFAR-10. Q25 achieves best separation.}
@@ -540,20 +604,18 @@ Median & $-19.8$ & $17.2$ \\
 \vskip -0.1in
 \end{table}
 
-\textbf{Number of Timesteps}: Performance is stable for $K \geq 25$ timesteps; we use $K=50$ for robustness.
+\textbf{Number of Timesteps}: Separation ($|d|$) is stable for $K \geq 25$; we use $K{=}50$ as the default.
 
-\textbf{Gaussian vs. Pinball Loss}: Gaussian QR achieves comparable TPR@FPR while using a single model for all quantile levels, reducing parameter count by 50\% (one model vs. separate models per $\tau$).
+\textbf{Gaussian vs.\ Pinball Loss}: Gaussian QR achieves comparable TPR@FPR to pinball-loss QR while using a single model for all quantile levels. This reduces parameters by ${\sim}50\%$ (one shared backbone vs.\ separate models per $\tau$) and enables closed-form thresholds at arbitrary FPR without retraining.
 
-\textbf{Ensemble Size}: Performance improves up to $B=50$ models; additional models provide diminishing returns.
+\textbf{Ensemble Size}: Ensemble variance decreases up to $B{=}50$; beyond this, diminishing returns. Ensembling is embarrassingly parallel (no inter-model communication).
 
-\subsection{Computational Efficiency}
+\subsection{Computational Cost}
 \label{sec:efficiency}
 
-\textbf{Training}: Single Gaussian QR model trains in $\sim$2 hours on one A100 GPU. Full ensemble ($B=50$) requires $\sim$100 GPU-hours but is embarrassingly parallel.
-
-\textbf{Inference}: T-error computation for 5k samples takes $\sim$10 minutes. Ensemble prediction adds $<$1 minute.
-
-\textbf{Parameters}: Gaussian QR (11.2M per model) vs. Pinball QR (11.2M $\times$ number of quantile levels).
+\textbf{Training}: One Gaussian QR model trains in ${\sim}2$ hours on an A100; the full ensemble ($B{=}50$) requires ${\sim}100$ GPU-hours but parallelizes trivially.
+\textbf{Inference}: T-error for 5k samples takes ${\sim}10$ min; ensemble prediction adds $<1$ min.
+\textbf{Parameters}: 11.2M per Gaussian QR model vs.\ 11.2M $\times |\mathcal{T}|$ for pinball QR (one model per quantile $\tau \in \mathcal{T}$).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 6. DISCUSSION AND LIMITATIONS
@@ -739,28 +801,8 @@ $d > 3.0$, ratio $> 10\times$ & \checkmark & \checkmark & \checkmark & \checkmar
 
 All datasets achieve $d > 18$ and ratio $> 19\times$, providing substantial margin above our recommended thresholds.
 
-\section{Algorithm Pseudocode}
-\label{app:algorithms}
-
-\begin{algorithm}[h]
-\caption{T-Error Computation}
-\label{alg:t_error}
-\begin{algorithmic}
-\REQUIRE Model $M_\theta$, sample $x_0$, timesteps $\mathcal{T} = \{t_1, \ldots, t_K\}$, noise schedule $\{\bar{\alpha}_t\}$
-\ENSURE Aggregated score $s(x_0)$
-\STATE $\texttt{errors} \leftarrow []$
-\FOR{$t \in \mathcal{T}$}
-    \STATE $\epsilon \sim \mathcal{N}(0, I)$ \COMMENT{Sample noise}
-    \STATE $x_t \leftarrow \sqrt{\bar{\alpha}_t} \cdot x_0 + \sqrt{1 - \bar{\alpha}_t} \cdot \epsilon$ \COMMENT{Forward diffusion}
-    \STATE $\hat{\epsilon} \leftarrow M_\theta(x_t, t)$ \COMMENT{Noise prediction}
-    \STATE $\hat{x}_0 \leftarrow \frac{x_t - \sqrt{1 - \bar{\alpha}_t} \cdot \hat{\epsilon}}{\sqrt{\bar{\alpha}_t}}$ \COMMENT{Reconstruction}
-    \STATE $e_t \leftarrow \frac{\|x_0 - \hat{x}_0\|_2^2}{H \times W \times C}$ \COMMENT{Normalized error}
-    \STATE $\texttt{errors}.\text{append}(e_t)$
-\ENDFOR
-\STATE $s(x_0) \leftarrow Q_{0.25}(\texttt{errors})$ \COMMENT{25th percentile aggregation}
-\STATE \textbf{return} $s(x_0)$
-\end{algorithmic}
-\end{algorithm}
+\section{Gaussian QR Training Details}
+\label{app:training}
 
 \begin{algorithm}[h]
 \caption{Gaussian Quantile Regression Training}
@@ -769,54 +811,19 @@ All datasets achieve $d > 18$ and ratio $> 19\times$, providing substantial marg
 \REQUIRE Auxiliary non-member data $\mathcal{D}_{\text{aux}}$, ensemble size $B$, bootstrap ratio $r$
 \ENSURE Trained ensemble $\{f_{\theta}^{(b)}\}_{b=1}^{B}$
 \FOR{$b = 1$ to $B$}
-    \STATE $\mathcal{D}_b \leftarrow \text{BootstrapSample}(\mathcal{D}_{\text{aux}}, r)$ \COMMENT{Sample 80\% with replacement}
-    \STATE $\mathcal{D}_{\text{train}}, \mathcal{D}_{\text{val}} \leftarrow \text{Split}(\mathcal{D}_b, 0.9)$ \COMMENT{90/10 train/val split}
+    \STATE $\mathcal{D}_b \leftarrow \text{BootstrapSample}(\mathcal{D}_{\text{aux}}, r)$ \COMMENT{80\% with replacement}
+    \STATE $\mathcal{D}_{\text{train}}, \mathcal{D}_{\text{val}} \leftarrow \text{Split}(\mathcal{D}_b, 0.9)$
     \STATE Initialize $f_{\theta}^{(b)}$ with ResNet-18 backbone
     \REPEAT
         \FOR{batch $(x, s(x), \phi(x))$ in $\mathcal{D}_{\text{train}}$}
-            \STATE $y \leftarrow \log(1 + s(x))$ \COMMENT{Log-transform target}
-            \STATE $(\mu, \log\sigma) \leftarrow f_{\theta}^{(b)}(x, \phi(x))$ \COMMENT{Forward pass}
-            \STATE $\sigma \leftarrow \exp(\log\sigma)$
-            \STATE $\mathcal{L} \leftarrow \frac{(y - \mu)^2}{2\sigma^2} + \log\sigma$ \COMMENT{Gaussian NLL}
-            \STATE Update $\theta$ via gradient descent on $\mathcal{L}$
+            \STATE $y \leftarrow \log(1 + s(x))$
+            \STATE $(\mu, \log\sigma) \leftarrow f_{\theta}^{(b)}(x, \phi(x))$
+            \STATE $\mathcal{L} \leftarrow (y - \mu)^2 / (2\sigma^2) + \log\sigma$
+            \STATE Update $\theta$ via gradient descent
         \ENDFOR
-        \STATE Evaluate on $\mathcal{D}_{\text{val}}$
     \UNTIL{early stopping (patience = 10)}
-    \STATE Save best $f_{\theta}^{(b)}$
 \ENDFOR
 \STATE \textbf{return} $\{f_{\theta}^{(b)}\}_{b=1}^{B}$
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[h]
-\caption{Ownership Verification Protocol}
-\label{alg:verification}
-\begin{algorithmic}
-\REQUIRE Models $M_A, M_B$, baselines $\{M_{\text{ref}}^{(i)}\}$, watermark set $\mathcal{W}$, hash commitment $H_{\text{claimed}}$
-\ENSURE $\textsc{Verified}$ or $\textsc{Rejected}$
-\STATE \textbf{// Step 1: Verify commitment}
-\STATE $H_{\text{computed}} \leftarrow \text{SHA-256}(\text{sort}(\mathcal{W}))$
-\IF{$H_{\text{computed}} \neq H_{\text{claimed}}$}
-    \STATE \textbf{return} $\textsc{Rejected}$ \COMMENT{Hash mismatch}
-\ENDIF
-\STATE \textbf{// Step 2: Compute t-error scores}
-\STATE $S_A \leftarrow \{s_{M_A}(x) : x \in \mathcal{W}\}$ \COMMENT{Owner Model A}
-\STATE $S_B \leftarrow \{s_{M_B}(x) : x \in \mathcal{W}\}$ \COMMENT{Suspect Model B}
-\STATE $S_{\text{ref}} \leftarrow \{s_{M_{\text{ref}}}(x) : x \in \mathcal{W}\}$ \COMMENT{Best baseline}
-\STATE \textbf{// Step 3: Check three criteria}
-\STATE \textbf{O1 (Consistency):} $p_1 \leftarrow \text{TTest}(S_A, S_B)$
-\IF{$p_1 < 0.05$}
-    \STATE \textbf{return} $\textsc{Rejected}$ \COMMENT{Models inconsistent}
-\ENDIF
-\STATE \textbf{O2 (Separation):} $p_2, d \leftarrow \text{TTest}(S_A, S_{\text{ref}}), \text{CohenD}(S_A, S_{\text{ref}})$
-\IF{$p_2 > 10^{-6}$ \textbf{or} $|d| < 2.0$}
-    \STATE \textbf{return} $\textsc{Rejected}$ \COMMENT{Insufficient separation}
-\ENDIF
-\STATE \textbf{O3 (Ratio):} $r \leftarrow \text{mean}(S_{\text{ref}}) / \text{mean}(S_A)$
-\IF{$r < 5.0$}
-    \STATE \textbf{return} $\textsc{Rejected}$ \COMMENT{Ratio too low}
-\ENDIF
-\STATE \textbf{return} $\textsc{Verified}$
 \end{algorithmic}
 \end{algorithm}
 
