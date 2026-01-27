@@ -108,21 +108,21 @@ MIA is a necessary building block, but alone cannot constitute ownership evidenc
 \label{sec:related}
 
 \paragraph{Model Watermarking.}
-Traditional watermarking embeds identifiable patterns into model behavior~\citep{adi2018turning,zhang2018protecting}.
+Traditional watermarking embeds identifiable patterns into model behavior~\citep{adi2018turning,zhang2018protecting,fernandez2023stable,wen2023tree}.
 These methods insert trigger-based backdoors or adversarial examples that produce specific outputs.
 While effective when watermarks remain intact, they are vulnerable to removal attacks and require modifying the training process.
 Our approach differs fundamentally: we leverage \emph{intrinsic} memorization signals rather than \emph{embedded} triggers.
 
 \paragraph{Membership Inference Attacks.}
 MIA methods determine if a sample was in the training set~\citep{shokri2017membership,yeom2018privacy,salem2019ml}.
-For diffusion models, recent work uses reconstruction error~\citep{carlini2023extracting,duan2023diffusion} or loss-based signals~\citep{matsumoto2023membership}.
+For diffusion models, recent work uses reconstruction error~\citep{carlini2023extracting,duan2023diffusion,kong2024efficient}, loss-based signals~\citep{matsumoto2023membership,hu2023loss}, or quantile regression~\citep{bertran2023scalable,tang2024membership}.
 However, prior MIA work focuses on per-sample binary classification.
 We argue this is \textbf{necessary but insufficient} for ownership verification, which requires: (1) population-level statistical comparison, (2) reference baselines to establish the null hypothesis, and (3) formal hypothesis testing.
 Our work bridges MIA and ownership verification by adding these missing components.
 
 \paragraph{Diffusion Model Analysis.}
 \citet{carlini2023extracting} demonstrate that diffusion models memorize training data and can regenerate it verbatim.
-\citet{somepalli2023diffusion} study the extent of content replication.
+\citet{somepalli2023diffusion} study the extent of content replication, with follow-up work on detection and mitigation~\citep{wen2024detecting,chen2024towards}.
 These works focus on detection rather than actionable verification protocols.
 We provide a complete framework with statistical criteria for ownership claims.
 
@@ -335,41 +335,37 @@ Given owner models (A, B), public baselines, and watermark set \Wset:
 
 Table~\ref{tab:main_results} presents main ownership verification results.
 
-\begin{table*}[t]
-\caption{Ownership verification results across datasets. All metrics computed on watermark set ($K=5000$ for CIFAR/CelebA, $K=1000$ for STL-10). T-error reported as mean $\pm$ std. All datasets satisfy all three verification criteria.}
+\begin{table}[t]
+\caption{Ownership verification results. T-error (mean) on watermark set. All $p < 10^{-100}$ for baseline separation.}
 \label{tab:main_results}
 \vskip 0.1in
 \begin{center}
 \begin{small}
-\begin{tabular}{lccccc}
+\begin{tabular}{@{}llcc@{}}
 \toprule
-Dataset & Model & T-Error & Cohen's $d$ & $p$-value & Ratio \\
+Dataset & Model & T-Error & $|d|$ / Ratio \\
 \midrule
-\multirow{3}{*}{CIFAR-10} 
-& Owner (A) & $28.59 \pm 10.80$ & --- & --- & --- \\
-& Owner (B) & $28.64 \pm 10.82$ & $-0.005$ & $0.802$ & $1.00$ \\
-& Baseline & $697.62 \pm 38.03$ & $-23.93$ & $<10^{-100}$ & $24.40$ \\
+\multirow{2}{*}{CIFAR-10} 
+& Owner & $28.6$ & --- \\
+& Baseline & $697.6$ & $23.9$ / $24.4\times$ \\
 \midrule
-\multirow{3}{*}{CIFAR-100}
-& Owner (A) & $33.17 \pm 14.68$ & --- & --- & --- \\
-& Owner (B) & $33.22 \pm 14.72$ & $-0.003$ & $0.880$ & $1.00$ \\
-& Baseline & $636.61 \pm 43.80$ & $-18.47$ & $<10^{-100}$ & $19.19$ \\
+\multirow{2}{*}{CIFAR-100}
+& Owner & $33.2$ & --- \\
+& Baseline & $636.6$ & $18.5$ / $19.2\times$ \\
 \midrule
-\multirow{3}{*}{STL-10}
-& Owner (A) & $70.70 \pm 27.50$ & --- & --- & --- \\
-& Owner (B) & $71.18 \pm 27.59$ & $-0.018$ & $0.695$ & $1.01$ \\
-& Baseline & $7152.88 \pm 298.60$ & $-33.40$ & $<10^{-100}$ & $101.17$ \\
+\multirow{2}{*}{STL-10}
+& Owner & $70.7$ & --- \\
+& Baseline & $7152.9$ & $33.4$ / $101\times$ \\
 \midrule
-\multirow{3}{*}{CelebA}
-& Owner (A) & $63.54 \pm 18.38$ & --- & --- & --- \\
-& Owner (B) & $63.52 \pm 18.52$ & $0.002$ & $0.939$ & $1.00$ \\
-& Baseline & $1691.76 \pm 86.14$ & $-26.14$ & $<10^{-100}$ & $26.62$ \\
+\multirow{2}{*}{CelebA}
+& Owner & $63.5$ & --- \\
+& Baseline & $1691.8$ & $26.1$ / $26.6\times$ \\
 \bottomrule
 \end{tabular}
 \end{small}
 \end{center}
 \vskip -0.1in
-\end{table*}
+\end{table}
 
 \textbf{Key Findings}: (1) All datasets achieve Cohen's $d > 18$, far exceeding the $d > 2.0$ threshold (STL-10 achieves $d = -33.40$). (2) Consistency between Model A and B is maintained ($p > 0.05$). (3) Ratios range from $19.19\times$ to $101.17\times$, well above the $5\times$ threshold.
 

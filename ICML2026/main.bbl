@@ -1,4 +1,4 @@
-\begin{thebibliography}{12}
+\begin{thebibliography}{20}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -12,17 +12,38 @@ Adi, Y., Baum, C., Ciss{\'e}, M., Pinkas, B., and Keshet, J.
   networks by backdooring.
 \newblock In \emph{USENIX Security Symposium}, pp.\  1615--1631, 2018.
 
-\bibitem[Carlini et~al.(2023)Carlini, Hayes, Nasr, Jagielski, Sez, Tram{\`e}r,
-  Balle, Ippolito, and Wallace]{carlini2023extracting}
-Carlini, N., Hayes, J., Nasr, M., Jagielski, M., Sez, V., Tram{\`e}r, F.,
+\bibitem[Bertran et~al.(2023)Bertran, Tang, Kearns, Morgenstern, Roth, and
+  Wu]{bertran2023scalable}
+Bertran, M., Tang, S., Kearns, M., Morgenstern, J., Roth, A., and Wu, Z.~S.
+\newblock Scalable membership inference attacks via quantile regression.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, volume~36, 2023.
+
+\bibitem[Carlini et~al.(2023)Carlini, Hayes, Nasr, Jagielski, Sehwag,
+  Tram{\`e}r, Balle, Ippolito, and Wallace]{carlini2023extracting}
+Carlini, N., Hayes, J., Nasr, M., Jagielski, M., Sehwag, V., Tram{\`e}r, F.,
   Balle, B., Ippolito, D., and Wallace, E.
 \newblock Extracting training data from diffusion models.
-\newblock In \emph{USENIX Security Symposium}, pp.\  5253--5270, 2023.
+\newblock In \emph{Proceedings of the 32nd USENIX Security Symposium (USENIX
+  Security 2023)}, pp.\  5253--5270, 2023.
+
+\bibitem[Chen et~al.(2024)Chen, Liu, and Xu]{chen2024towards}
+Chen, C., Liu, D., and Xu, C.
+\newblock Towards memorization-free diffusion models.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision
+  and Pattern Recognition (CVPR)}, pp.\  8425--8434, 2024.
 
 \bibitem[Duan et~al.(2023)Duan, Kong, Wang, Gu, et~al.]{duan2023diffusion}
 Duan, J., Kong, F., Wang, R., Gu, K., et~al.
 \newblock Diffusion model membership inference via reverse process discrepancy.
 \newblock In \emph{International Conference on Machine Learning (ICML)}, 2023.
+
+\bibitem[Fernandez et~al.(2023)Fernandez, Couairon, J{\'e}gou, Douze, and
+  Furon]{fernandez2023stable}
+Fernandez, P., Couairon, G., J{\'e}gou, H., Douze, M., and Furon, T.
+\newblock The stable signature: Rooting watermarks in latent diffusion models.
+\newblock In \emph{Proceedings of the IEEE/CVF International Conference on
+  Computer Vision (ICCV)}, 2023.
 
 \bibitem[Gretton et~al.(2012)Gretton, Borgwardt, Rasch, Sch{\"o}lkopf, Smola,
   et~al.]{gretton2012kernel}
@@ -37,6 +58,21 @@ Ho, J., Jain, A., and Abbeel, P.
 \newblock Denoising diffusion probabilistic models.
 \newblock In \emph{Advances in Neural Information Processing Systems
   (NeurIPS)}, volume~33, pp.\  6840--6851, 2020.
+
+\bibitem[Hu \& Pang(2023)Hu and Pang]{hu2023loss}
+Hu, H. and Pang, J.
+\newblock Loss and likelihood based membership inference of diffusion models.
+\newblock In \emph{Proceedings of the 26th Information Security Conference
+  (ISC)}, volume 14411 of \emph{Lecture Notes in Computer Science}, pp.\
+  121--141. Springer, 2023.
+
+\bibitem[Kong et~al.(2024)Kong, Duan, Ma, Shen, Shi, Zhu, and
+  Xu]{kong2024efficient}
+Kong, F., Duan, J., Ma, R., Shen, H.~T., Shi, X., Zhu, X., and Xu, K.
+\newblock An efficient membership inference attack for the diffusion model by
+  proximal initialization.
+\newblock In \emph{Proceedings of the 12th International Conference on Learning
+  Representations (ICLR)}, 2024.
 
 \bibitem[Matsumoto et~al.(2023)Matsumoto, Miura, and
   Yanai]{matsumoto2023membership}
@@ -73,6 +109,29 @@ Song, J., Meng, C., and Ermon, S.
 \newblock Denoising diffusion implicit models.
 \newblock In \emph{International Conference on Learning Representations
   (ICLR)}, 2021.
+
+\bibitem[Tang et~al.(2024)Tang, Wu, Ayd{\"o}re, Kearns, and
+  Roth]{tang2024membership}
+Tang, S., Wu, Z.~S., Ayd{\"o}re, S., Kearns, M., and Roth, A.
+\newblock Membership inference attacks on diffusion models via quantile
+  regression.
+\newblock In \emph{Proceedings of the 41st International Conference on Machine
+  Learning (ICML)}, volume 235 of \emph{Proceedings of Machine Learning
+  Research}, 2024.
+
+\bibitem[Wen et~al.(2023)Wen, Kirchenbauer, Geiping, and
+  Goldstein]{wen2023tree}
+Wen, Y., Kirchenbauer, J., Geiping, J., and Goldstein, T.
+\newblock Tree-ring watermarks: Fingerprints for diffusion images that are
+  invisible and robust.
+\newblock \emph{arXiv preprint arXiv:2305.20030}, 2023.
+
+\bibitem[Wen et~al.(2024)Wen, Liu, Chen, and Lyu]{wen2024detecting}
+Wen, Y., Liu, Y., Chen, C., and Lyu, L.
+\newblock Detecting, explaining, and mitigating memorization in diffusion
+  models.
+\newblock In \emph{Proceedings of the 12th International Conference on Learning
+  Representations (ICLR)}, 2024.
 
 \bibitem[Yeom et~al.(2018)Yeom, Giacomelli, Fredrikson, and
   Jha]{yeom2018privacy}
