@@ -94,118 +94,125 @@ Across CIFAR-10/100, STL-10, and CelebA, the resulting watermark signal exhibits
 \vspace{-2mm}
 \centering
 \begin{tikzpicture}[
-  scale=0.50, transform shape,
-  font=\small,
-  line/.style={-Latex, very thick, draw=black},
-  thinline/.style={-Latex, thick, draw=black},
-  box/.style={draw=black, rounded corners=2pt, align=left, inner sep=6pt, fill=gray!8},
-  stepbox/.style={draw=black, rounded corners=2pt, align=left, inner sep=6pt, fill=gray!6, minimum width=58mm},
-  outbox/.style={draw=black, rounded corners=2pt, align=left, inner sep=6pt, fill=gray!6, minimum width=52mm},
-  diamondbox/.style={draw=black, diamond, aspect=2.2, inner sep=2.5pt, fill=gray!4},
-  decision/.style={draw=black, rounded corners=2pt, align=center, inner sep=6pt, fill=gray!6, minimum width=30mm},
+  font=\footnotesize,
+  line/.style={-Latex, thick, draw=black},
+  thinline/.style={-Latex, semithick, draw=black},
+  box/.style={draw=black, rounded corners=2pt, align=left, inner sep=5pt, fill=gray!8, text width=3.2cm},
+  stepbox/.style={draw=black, rounded corners=2pt, align=left, inner sep=5pt, fill=gray!6, text width=5.6cm},
+  outbox/.style={draw=black, rounded corners=2pt, align=left, inner sep=5pt, fill=gray!6, text width=4.0cm},
+  diamondbox/.style={draw=black, diamond, aspect=2.4, inner sep=2pt, fill=gray!4, font=\scriptsize},
+  decision/.style={draw=black, rounded corners=2pt, align=center, inner sep=5pt, fill=gray!6, text width=5.2cm},
   notelabel/.style={font=\scriptsize, text=black}
 ]
 
-% -----------------------------
-% Inputs box (left)
-% -----------------------------
-\node[box, minimum width=46mm] (inputs) {\textbf{Inputs}\vspace{1mm}\par
+% ========== LEFT: Inputs ==========
+\node[box] (inputs) at (0,0) {%
+\textbf{Inputs}\vspace{1mm}\par
 \begin{tabular}{@{}l@{}}
 Owner model $\mathcal{M}_{\text{own}}$\\
 Suspect model $\mathcal{M}_{\text{sus}}$\\
-Public reference models $\{\mathcal{M}_j\}$\\
-Private watermark set $\mathcal{W}_D$\\
+Public refs $\{\mathcal{M}_j\}$\\
+Watermark set $\mathcal{W}_D$\\
 \end{tabular}
 };
 
-% -----------------------------
-% Main pipeline (center)
-% -----------------------------
-\node[stepbox, right=20mm of inputs, yshift=26mm] (s1)
+% ========== CENTER: Pipeline (5 steps, vertical) ==========
+\node[stepbox, right=18mm of inputs.north east, anchor=north west, yshift=5mm] (s1)
 {\textbf{1. t-error calculation}\par
-Forward noise + single-step \textbf{reconstruction}\par
-\hspace*{0mm}\emph{(compute $e_t(x)$ from $x\in\mathcal{W}_D$)}
+Forward noise + single-step reconstruction\par
+\emph{compute $e_t(x)$ for $x\in\mathcal{W}_D$, $t\sim\mathrm{Unif}(\mathcal{T})$}
 };
 
-\node[stepbox, below=7mm of s1] (s2)
-{\textbf{2. $K$ timesteps + $Q_{0.25}$ aggregation}\par
-Sample $t_i\sim \mathrm{Unif}(\mathcal{T}),\, i=1..K$;\;
-$s(x)=Q_{0.25}\!\left(\{e_{t_i}(x)\}\right)$
+\node[stepbox, below=4mm of s1] (s2)
+{\textbf{2. Multi-timestep aggregation ($K{=}50$)}\par
+$s(x)=Q_{0.25}\!\bigl(\{e_{t_i}(x)\}_{i=1}^K\bigr)$
 };
 
-\node[stepbox, below=7mm of s2] (s3)
-{\textbf{3. Log-score computation}\par
-$y=\log\!\bigl(1+s(x)\bigr)$
+\node[stepbox, below=4mm of s2] (s3)
+{\textbf{3. Log-score transformation}\par
+$y=\log(1+s(x))$
 };
 
-\node[stepbox, below=7mm of s3] (s4)
-{\textbf{4. Gaussian QR output + FPR-controlled threshold}\par
-Fit conditional Gaussian in log-score space: $\mu(x),\,\sigma(x)$\par
-$\tau(\mathrm{FPR})=\mu(x)+\sigma(x)\,\Phi^{-1}\!\bigl(1-\mathrm{FPR}\bigr)$
+\node[stepbox, below=4mm of s3] (s4)
+{\textbf{4. Gaussian QR threshold}\par
+Fit $\mu(x),\sigma(x)$; threshold $\tau=\mu+\sigma\Phi^{-1}(1{-}\text{FPR})$
 };
 
-\node[stepbox, below=7mm of s4] (s5)
-{\textbf{5. Three-point criteria (AND)}\par
+\node[stepbox, below=4mm of s4] (s5)
+{\textbf{5. Three-point verification (AND)}
 };
 
-% Criteria diamonds
-\node[diamondbox, below=9mm of s5, xshift=-18mm] (c1) {Consistency};
-\node[diamondbox, right=10mm of c1] (c2) {Separation};
-\node[diamondbox, right=10mm of c2] (c3) {Ratio};
+% ========== DIAMONDS: evenly spaced, centered under s5 ==========
+\path (s5.south) ++(0,-10mm) coordinate (diamondrow);
+\node[diamondbox] (c2) at (diamondrow) {Separation};
+\node[diamondbox, left=20mm of c2] (c1) {Consistency};
+\node[diamondbox, right=20mm of c2] (c3) {Ratio};
 
-\node[notelabel, below=1.5mm of c1] {$\Delta(\text{own},\text{sus})$};
-\node[notelabel, below=1.5mm of c2] {$p$-value, Cohen's $d$};
-\node[notelabel, below=1.5mm of c3] {error ratio};
+% Metric labels below each diamond (with enough gap)
+\node[notelabel, below=4mm of c1] (lbl1) {$\Delta(\text{own},\text{sus})$};
+\node[notelabel, below=4mm of c2] (lbl2) {$p$-value, Cohen's $d$};
+\node[notelabel, below=4mm of c3] (lbl3) {error ratio};
 
-% Decision box
-\node[decision, below=10mm of c2, minimum width=62mm] (verdict)
-{\textbf{Verdict}\par
-\textbf{VERIFIED} \quad / \quad \textbf{REJECTED}
+% ========== VERDICT: centered below diamonds (extra space for bus line) ==========
+\node[decision, below=20mm of c2] (verdict)
+{\textbf{Verdict: VERIFIED / REJECTED}\par
+(pass threshold AND all three criteria)
 };
 
-% -----------------------------
-% Output / Evidence report (right, aligned to evidence/decision)
-% -----------------------------
-\node[outbox, right=18mm of c3, yshift=-2mm] (report)
-{\textbf{Evidence / Report}\vspace{1mm}\par
-Decision: pass $\tau(\mathrm{FPR})$ \textbf{AND} all three criteria hold\par\vspace{1mm}
+% ========== RIGHT: Evidence/Report ==========
+% Position to the right of the pipeline, aligned vertically with s4/s5
+\node[outbox, right=14mm of s4.east, anchor=west, yshift=-8mm] (report)
+{\textbf{Evidence Report}\vspace{1mm}\par
 \begin{tabular}{@{}l@{}}
-$\bullet$ threshold at target FPR\\
-$\bullet$ $p$-value\\
+$\bullet$ FPR threshold $\tau$\\
+$\bullet$ $p$-value vs refs\\
 $\bullet$ Cohen's $d$\\
 $\bullet$ error ratio\\
 \end{tabular}
 };
 
-% -----------------------------
-% Arrows
-% -----------------------------
-% Pipeline arrows
+\node[notelabel, above=2mm of report, text width=3.8cm, align=center]
+{Population-level forensics:\\$\mathcal{M}_{\text{sus}}$ vs $\{\mathcal{M}_j\}$};
+
+% ========== ARROWS: Pipeline flow ==========
 \draw[line] (s1) -- (s2);
 \draw[line] (s2) -- (s3);
 \draw[line] (s3) -- (s4);
 \draw[line] (s4) -- (s5);
-\draw[thinline] (s5) -- (c2);
 
-% Criteria to verdict (AND logic)
-\draw[thinline] (c1.south) -- ++(0,-5mm) -| (verdict.north);
-\draw[thinline] (c2.south) -- (verdict.north);
-\draw[thinline] (c3.south) -- ++(0,-5mm) -| (verdict.north);
+% s5 to diamonds: single arrow to c2, then fan out
+\draw[thinline] (s5.south) -- (c2.north);
 
-% Split inputs into two labeled arrows (fix semantics)
-\draw[thinline] (inputs.east) -- node[above, notelabel] {models} ($(s1.west)+(0,2mm)$);
-\draw[thinline] (inputs.east) -- node[below, notelabel] {$x\in\mathcal{W}_D$} ($(s1.west)+(0,-2mm)$);
+% ========== ARROW: Inputs to s1 (single arrow) ==========
+\draw[thinline] (inputs.east) -- (s1.west);
 
-% Report connection (from criteria/decision region, not from the middle of pipeline)
-\draw[thinline] (c3.east) -- (report.west);
-\draw[thinline] (verdict.east) -- ++(8mm,0) |- (report.south);
+% ========== ARROWS: Diamonds to Verdict via horizontal bus ==========
+% Bus line immediately below diamonds (ABOVE labels)
+\path (c2.south) ++(0,-2mm) coordinate (bus_y);
+\path (bus_y -| c1) coordinate (bus_l);
+\path (bus_y -| c2) coordinate (bus_c);
+\path (bus_y -| c3) coordinate (bus_r);
 
-% Optional: small note for public references usage
-\node[notelabel, above=2mm of report] {Compare $\mathcal{M}_{\text{sus}}$ vs $\{\mathcal{M}_j\}$ (population-level forensics)};
+% c1: short drop to bus, then horizontal to center
+\draw[semithick] (c1.south) -- (bus_l) -- (bus_c);
+% c2: short drop to bus center
+\draw[semithick] (c2.south) -- (bus_c);
+% c3: short drop to bus, then horizontal to center
+\draw[semithick] (c3.south) -- (bus_r) -- (bus_c);
+
+% Single arrow from bus center down (past labels) to verdict
+\draw[thinline] (bus_c) -- (verdict.north);
+
+% ========== ARROWS: Report connections ==========
+% s5 to Report: horizontal arrow
+\draw[thinline] (s5.east) -- (report.west);
+
+% Verdict to Report: right then up (one bend, avoids Ratio)
+\draw[thinline] (verdict.east) -| (report.south);
 
 \end{tikzpicture}
-\vspace{-3mm}
-\caption{\textbf{Overview.} We treat the private evidence set $\mathcal{W}_D$ as a watermark. Multi-timestep t-error scoring is robustly aggregated, then a conditional Gaussian model in log-score space yields a closed-form threshold at a target FPR. Ownership is supported via population-level evidence against public reference models using three criteria (consistency, separation, ratio).}
+\vspace{-2mm}
+\caption{\textbf{System overview.} A private evidence set $\mathcal{W}_D$ serves as a watermark. We compute multi-timestep t-error scores, aggregate with a robust lower quantile to obtain $s(x)$, and fit a conditional Gaussian model in log-score space to derive a closed-form threshold at a target FPR. Ownership is supported via population-level evidence against public reference models using consistency, separation, and ratio criteria.}
 \vspace{-2mm}
 \label{fig:overview}
 \end{figure*}
