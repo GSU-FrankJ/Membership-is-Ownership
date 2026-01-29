@@ -289,9 +289,25 @@ Without public baselines, pure \MIA cannot constitute ownership evidence.
 
 \textbf{Adversary Knowledge and Capabilities}:
 The adversary has white-box access to the stolen model (weights, architecture) and may possess similar-domain data disjoint from \Wset.
-The adversary knows that a verification protocol exists but cannot identify \Wset---guessing $K$ samples from $N$ training samples has probability $1/\binom{N}{K}$, which is negligible for typical sizes (e.g., $K{=}5000$, $N{=}50000$; see Appendix~\ref{app:combinatorial}).
+The adversary knows that a verification protocol exists but cannot identify \Wset---guessing $K$ samples from $N$ training samples has probability $1/\binom{N}{K}$, which is negligible for typical sizes.
 Permitted operations include fine-tuning, distillation, and pruning.
 Full retraining from scratch is outside scope: it severs the provenance link entirely.
+
+\paragraph{Combinatorial hardness.}
+The claim that an adversary cannot feasibly guess \Wset rests on a counting argument rather than a cryptographic assumption.
+Specifically, we bound the probability that an adversary, knowing $N$ and $K$ but not the owner's random seed, selects the exact watermark subset by chance.
+This analysis formalizes the security margin under best-effort secrecy; it does \emph{not} assume information-theoretic hiding or resistance to side-channel leakage of \Wset itself.
+
+For watermark size $K$ sampled uniformly from a training set of size $N$, the probability of an adversary guessing the exact watermark set is:
+\begin{equation}
+P(\text{exact match}) = \frac{1}{\binom{N}{K}}.
+\end{equation}
+Using the elementary bound $\binom{N}{K} \ge (N/K)^K$, our CIFAR-10 setting ($N = 50{,}000$, $K = 5{,}000$) yields:
+\begin{equation}
+\binom{50000}{5000} \;\ge\; \left(\frac{50000}{5000}\right)^{5000} = 10^{5000}.
+\end{equation}
+Thus, $P(\text{exact match}) \le 10^{-5000}$, making exact guessing infeasible under any realistic compute budget.
+The verification protocol (described next) therefore assumes that partial overlap between a guessed set and \Wset is insufficient to pass the three-point criteria, a claim supported by ablation experiments in Section~\ref{sec:ablation}.
 
 \textbf{Verifier Protocol}:
 The verifier (1) checks that $\text{SHA-256}(\text{sort}(\Wset))$ matches a hash commitment timestamped before the dispute; (2) computes t-error scores on \Wset for the suspect model and $\geq 3$ public baselines; (3) evaluates the three-point criteria (Section~\ref{sec:criteria}); and (4) outputs \textsc{Verified} or \textsc{Rejected} with the statistical evidence (p-values, Cohen's $d$, ratio).
@@ -823,21 +839,6 @@ Feature extractor & CLIP ViT-B/32 (frozen) \\
 \end{tabular}
 \end{center}
 \end{table}
-
-\section{Combinatorial Hardness Analysis}
-\label{app:combinatorial}
-
-For watermark size $K$ sampled from training set of size $N$, the probability of an adversary guessing the exact watermark set is:
-\begin{equation}
-P(\text{exact match}) = \frac{1}{\binom{N}{K}}
-\end{equation}
-
-For our CIFAR-10 setting ($N = 50,000$, $K = 5,000$):
-\begin{equation}
-\binom{50000}{5000} \approx 10^{10000}
-\end{equation}
-
-This is astronomically larger than the number of atoms in the observable universe ($\sim 10^{80}$), making exact guessing computationally infeasible.
 
 \section{Perceptual Hash Evaluation}
 \label{app:phash}
