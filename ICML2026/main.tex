@@ -5,8 +5,9 @@
 
 \documentclass{article}
 
-% Use ICML 2026 style (remove [accepted] for submission)
-\usepackage[preprint]{icml2026}
+% Use ICML 2026 style
+% Options: (none) = anonymous submission, [preprint] = show authors, [accepted] = camera-ready
+\usepackage{icml2026}
 
 % Required packages (most already in icml2026.sty)
 \usepackage{amsmath,amssymb,amsthm}
@@ -76,9 +77,9 @@ On CIFAR-10/100, STL-10, and CelebA, all datasets achieve Cohen's $d > 18$ and e
 \section{Introduction}
 \label{sec:intro}
 
-Large-scale diffusion models have become valuable assets: training them consumes substantial compute and curated data, yet the resulting models can be copied and adapted via downstream fine-tuning. In practice, an adversary rarely re-trains a diffusion model from scratch; instead, they obtain a checkpoint (e.g., via leakage or illicit transfer) and fine-tune it to a new domain or product requirement. This post-theft fine-tuning creates a challenge for ownership verification: the owner must produce evidence that is (i) accurate under stringent false-positive budgets, and (ii) valid after realistic adaptation.
+Large-scale diffusion models have become valuable assets: training them consumes substantial compute and curated data, yet the resulting models can be copied and adapted via downstream fine-tuning. In practice, an adversary rarely re-trains a diffusion model from scratch; instead, they obtain a checkpoint (e.g., via leakage or illicit transfer) and fine-tune it to a new domain or product requirement~\citep{wang2025sleepermark,kim2024wouaf}. This post-theft fine-tuning creates a challenge for ownership verification: the owner must produce evidence that is (i) accurate under stringent false-positive budgets, and (ii) valid after realistic adaptation.
 
-Most existing diffusion IP protection methods embed explicit signatures into model parameters or output behavior. While effective in controlled settings, such watermarks may impose utility costs and can be weakened by post-hoc fine-tuning. An alternative is to leverage the model's intrinsic memorization: diffusion models reconstruct training examples with systematically lower error than non-members. However, ``low error on a few examples'' is insufficient for an ownership claim---many public models may also score well on certain samples due to shared data sources or dataset artifacts. Verification therefore requires \emph{population-level} evidence: the suspect model must be distinguished from public reference models under a statistically controlled decision rule.
+Most existing diffusion IP protection methods embed explicit signatures into model parameters or output behavior~\citep{peng2023watermark,zhao2023recipe,fernandez2023stable,liu2023watermarking}. While effective in controlled settings, such watermarks may impose utility costs and can be weakened by post-hoc fine-tuning. An alternative is to leverage the model's intrinsic memorization~\citep{carlini2023extracting,somepalli2023diffusion,gu2025on}: diffusion models reconstruct training examples with systematically lower error than non-members. However, ``low error on a few examples'' is insufficient for an ownership claim---many public models may also score well on certain samples due to shared data sources or dataset artifacts. Verification therefore requires \emph{population-level} evidence: the suspect model must be distinguished from public reference models under a statistically controlled decision rule.
 
 We propose \textbf{Membership Is Ownership}, an ownership verification framework that treats a private member evidence set $\mathcal{W}$ as a watermark and uses memorization as statistical evidence. Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction, and aggregate with a lower quantile (Q25) to obtain a stable per-example score. To control false-positive rates, we fit a conditional Gaussian model in log-score space and derive closed-form quantile thresholds at arbitrary target FPR. The protocol compares the suspect model against public baselines via hypothesis tests, effect sizes, and error ratios, producing an auditable report rather than a single opaque score.
 
@@ -623,6 +624,37 @@ We simulate model theft via MMD fine-tuning~\citep{gretton2012kernel}, which ada
 \textbf{Protocol}: Starting from Model A, fine-tune for 500 iterations using 10-step DDIM, cubic polynomial kernel in CLIP ViT-B/32 features, learning rate $5{\times}10^{-6}$, EMA decay 0.9999.
 
 \textbf{Results}: Model B (fine-tuned) retains nearly identical t-error to Model A on the watermark set (Table~\ref{tab:main_results}). All three verification criteria remain satisfied. The memorization signal persists because MMD fine-tuning optimizes generation quality on \emph{new} samples, not reconstruction of training data.
+
+\paragraph{Comparison with Watermarking Baselines.}
+Table~\ref{tab:watermark_comparison} situates MiO against representative diffusion watermarking baselines under their reported verification protocols. Unlike explicit watermarking, MiO does not modify the model or embed a decodable signature; instead it treats a private member evidence set $\mathcal{W}_D$ as evidence and reports both per-sample membership performance at a fixed false-positive budget and population-level separation statistics. Across four datasets, MiO attains large and consistent separation from public references on $\mathcal{W}_D$ (Cohen's $d=18.5$--$33.4$ and ratio $19\times$--$101\times$), while remaining stable under post-theft fine-tuning (Cohen's $|d|$ drift $\leq 0.018$). Although MiO's per-sample TPR at $\text{FPR}=0.1\%$ (78--89\%) is lower than the near-perfect decode/extraction rates often reported by watermarking methods, these quantities are not directly comparable: baseline metrics reflect the recoverability of an injected signature, whereas MiO's decision rule is calibrated under an explicit FPR constraint and is intended to support population-level verification with an auditable statistical report. We therefore treat baseline numbers as ``as reported'' and emphasize that MiO's advantage lies in producing reference-calibrated, dataset-level evidence without requiring watermark embedding or model modification.
+
+\begin{table*}[t]
+\caption{Comparison with watermarking baselines. Baseline verification metrics are reported as-is (decode success, bit accuracy, or thresholded detection) and differ in form. MiO reports per-sample membership inference (TPR at target FPR) and population-level separation on $\mathcal{W}_D$ (Cohen's $d$, ratio). Post-FT: signal retention after fine-tuning.}
+\label{tab:watermark_comparison}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{@{}llccccc@{}}
+\toprule
+& & \multicolumn{2}{c}{\textbf{Verification (reported)}} & \multicolumn{2}{c}{\textbf{Post-FT Robustness}} \\
+\cmidrule(lr){3-4} \cmidrule(lr){5-6}
+Method & Dataset & Accuracy / Rate & $d$ / Ratio & Metric & Value \\
+\midrule
+DeepMarks~\citep{chen2019deepmarks} & CIFAR-10 & FP detect 100\%, FP rate 0\% & --- & Pruning 99\% & survives \\
+WDM~\citep{peng2023watermark} & CIFAR-10 & WM extract $\sim$100\% ($\alpha{=}10^{-3}$) & --- & FT 50 epochs & survives \\
+Zhao et al.~\citep{zhao2023recipe} & CIFAR-10 & Bit acc.\ 99.9\% (vs.\ 50\% unmark.) & --- & FT bit acc. & 99.8\% \\
+\midrule
+\multirow{4}{*}{\textbf{MiO (Ours)}} 
+& CIFAR-10 & TPR 89\% @ FPR 0.1\% & $d{=}$23.9, $r{=}$24$\times$ & $|d|$ drift & \textbf{0.005} \\
+& CIFAR-100 & TPR 85\% @ FPR 0.1\% & $d{=}$18.5, $r{=}$19$\times$ & $|d|$ drift & \textbf{0.003} \\
+& STL-10 & TPR 78\% @ FPR 0.1\% & $d{=}$33.4, $r{=}$101$\times$ & $|d|$ drift & \textbf{0.018} \\
+& CelebA & TPR 82\% @ FPR 0.1\% & $d{=}$26.1, $r{=}$27$\times$ & $|d|$ drift & \textbf{0.002} \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table*}
 
 \subsection{RQ3: Score Stability and Threshold Calibration}
 \label{sec:ablation}
