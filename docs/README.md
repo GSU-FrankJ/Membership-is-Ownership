@@ -24,7 +24,8 @@ docs/
 │   ├── ATTACK_SCORE_ANALYSIS.md       # T-error score definition
 │   ├── GAUSSIAN_QR_MARGIN_BASED_METRICS.md    # Evaluation metrics
 │   ├── COMPUTE_SCORES_CLARIFICATION.md        # Score utilities
-│   └── REQUIRED_ATTACKS_FILES.md      # Module reference
+│   ├── REQUIRED_ATTACKS_FILES.md      # Module reference
+│   └── USAGE_WITH_EXISTING_CHECKPOINTS.md     # Using pre-trained checkpoints
 └── methodology/           # Research methodology (for paper writing)
     ├── METHODOLOGY_OVERVIEW.md        # Complete methodology overview
     ├── T_ERROR_OWNERSHIP.md           # T-error and ownership verification
@@ -78,7 +79,7 @@ python scripts/eval_ownership.py \
 ### 5. Full Pipeline
 
 ```bash
-bash run_all.sh 2>&1 | tee run_all.log
+bash scripts/run_all.sh 2>&1 | tee run_all.log
 ```
 
 ---
@@ -106,6 +107,8 @@ bash run_all.sh 2>&1 | tee run_all.log
 - **[Compute Scores Clarification](guides/COMPUTE_SCORES_CLARIFICATION.md)**: Quick reference for score computation utilities.
 
 - **[Module Reference](guides/REQUIRED_ATTACKS_FILES.md)**: Source code module documentation and import examples.
+
+- **[Using Existing Checkpoints](guides/USAGE_WITH_EXISTING_CHECKPOINTS.md)**: Guide for using pre-trained checkpoints without retraining.
 
 ### Methodology (Paper Reference)
 

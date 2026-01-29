@@ -471,7 +471,7 @@ python scripts/generate_splits.py --dataset all
 python scripts/eval_ownership.py --dataset cifar10 --split watermark_private
 
 # Full pipeline
-bash run_all.sh 2>&1 | tee run_all_$(date +%Y%m%d).log
+bash scripts/run_all.sh 2>&1 | tee run_all_$(date +%Y%m%d).log
 ```
 
 ---

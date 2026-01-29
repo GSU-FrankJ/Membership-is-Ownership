@@ -6,7 +6,7 @@
 ## ✅ 验证配置
 首先运行验证脚本确认所有路径正确：
 ```bash
-python3 verify_config_paths.py
+python3 scripts/verify_config_paths.py
 ```
 
 ## 📊 当前状态
@@ -143,7 +143,7 @@ print('✅ CIFAR-10 数据集验证成功！')
 ### 完整的MIA实验流程（CIFAR-10）
 ```bash
 # Step 1: 验证配置
-python3 verify_config_paths.py
+python3 scripts/verify_config_paths.py
 
 # Step 2: 构建 t-error pairs（使用已有checkpoint）
 python scripts/2_build_t_error_pairs.py \
@@ -198,9 +198,8 @@ python src/ddpm_ddim/train_ddim.py \
 但这会花费大量时间（CIFAR-10约30小时）。
 
 ## 📖 相关文档
-- [完整更新说明](CONFIGURATION_UPDATE_SUMMARY.md) - 详细的配置更改记录
-- [项目文档](docs/README.md) - 完整的项目文档
-- [方法论](docs/methodology/) - 研究方法说明
+- [项目文档](../README.md) - 完整的项目文档
+- [方法论](../methodology/) - 研究方法说明
 
 ## 🐛 故障排除
 
@@ -208,7 +207,7 @@ python src/ddpm_ddim/train_ddim.py \
 ```bash
 FileNotFoundError: [Errno 2] No such file or directory: 'data/cifar10'
 ```
-**解决**：运行 `python3 verify_config_paths.py` 确认配置已更新
+**解决**：运行 `python3 scripts/verify_config_paths.py` 确认配置已更新
 
 ### 问题：找不到checkpoint
 ```bash

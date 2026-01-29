@@ -3,7 +3,7 @@
 # run_all.sh - 多数据集 MIA 水印实验全流程 Pipeline
 #
 # 使用方法:
-#   bash run_all.sh 2>&1 | tee run_all_$(date +%Y%m%d_%H%M%S).log
+#   bash scripts/run_all.sh 2>&1 | tee run_all_$(date +%Y%m%d_%H%M%S).log
 #
 # 支持: 失败即停 (set -e), 日志重定向, 产物保护
 #
@@ -14,7 +14,8 @@ set -euo pipefail  # 失败即停, 未定义变量报错
 # 配置区
 ###############################################################################
 
-PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+# Script is now in scripts/, so go up one level to get project root
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # 设置 PYTHONPATH，确保 Python 能找到项目根目录的模块 (如 mia_logging)

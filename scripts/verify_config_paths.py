@@ -2,7 +2,7 @@
 """验证所有配置文件的路径是否正确指向 /data/short/ 中的资源。
 
 Usage:
-    python verify_config_paths.py
+    python scripts/verify_config_paths.py
 """
 
 import os
