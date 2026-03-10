@@ -34,6 +34,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 # Import adapters to trigger registration
 import scripts.baselines.mio_adapter  # noqa: F401
+import scripts.baselines.wdm_adapter  # noqa: F401
+import scripts.baselines.zhao_adapter  # noqa: F401
 from scripts.baselines import METHODS
 from scripts.baselines.mio_adapter import compute_cohens_d, three_point_check
 

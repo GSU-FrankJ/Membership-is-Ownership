@@ -128,6 +128,7 @@ class WDMAdapter:
     def __init__(
         self,
         checkpoint: pathlib.Path,
+        model_cfg: dict | None = None,
         device: str = "cuda",
         trigger_path: str | None = None,
         gamma1: float = 0.8,

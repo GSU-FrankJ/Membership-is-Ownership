@@ -130,6 +130,7 @@ class ZhaoAdapter:
     def __init__(
         self,
         checkpoint: pathlib.Path,
+        model_cfg: dict | None = None,
         device: str = "cuda",
         decoder_path: str | None = None,
         bit_length: int = 64,
