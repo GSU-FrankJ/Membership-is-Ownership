@@ -84,21 +84,16 @@
 \newlabel{sec:theft}{{5.3}{6}{RQ2: Post-Theft Robustness}{subsection.5.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Controlled Baseline Comparison}{6}{subsection.5.4}\protected@file@percent }
 \newlabel{sec:baseline_comparison}{{5.4}{6}{Controlled Baseline Comparison}{subsection.5.4}{}}
-\@writefile{toc}{\contentsline {paragraph}{Setup.}{6}{section*.17}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Controlled comparison with watermarking baselines on CIFAR-10. All methods trained on identical data (50K images). $\dagger $Uses EDM backbone (not DDPM/DDIM). $\Delta $FID: difference from unwatermarked baseline. Train OH: additional training cost relative to clean model.\relax }}{7}{table.caption.19}\protected@file@percent }
-\newlabel{tab:watermark_comparison}{{5}{7}{Controlled comparison with watermarking baselines on CIFAR-10. All methods trained on identical data (50K images). $\dagger $Uses EDM backbone (not DDPM/DDIM). $\Delta $FID: difference from unwatermarked baseline. Train OH: additional training cost relative to clean model.\relax }{table.caption.19}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Robustness on CIFAR-10. Each cell: native verification pass ({\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}) or fail ({\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 55}), with FID in parentheses. MMD-FT: 500 iterations, lr${}=5\text  {e-}6$, CLIP features. Prune: 30\% structured L1 pruning. $\dagger $EDM backbone.\relax }}{7}{table.caption.20}\protected@file@percent }
-\newlabel{tab:robustness}{{6}{7}{Robustness on CIFAR-10. Each cell: native verification pass (\cmark ) or fail (\xmark ), with FID in parentheses. MMD-FT: 500 iterations, lr${}=5\text {e-}6$, CLIP features. Prune: 30\% structured L1 pruning. $\dagger $EDM backbone.\relax }{table.caption.20}{}}
-\@writefile{toc}{\contentsline {paragraph}{Key findings.}{7}{section*.18}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Controlled comparison with watermarking baselines on CIFAR-10. All methods trained on identical data (50K images). $\dagger $Uses EDM backbone (not DDPM/DDIM). $\Delta $FID: difference from unwatermarked baseline. Train OH: additional training cost relative to clean model.\relax }}{7}{table.caption.17}\protected@file@percent }
+\newlabel{tab:watermark_comparison}{{5}{7}{Controlled comparison with watermarking baselines on CIFAR-10. All methods trained on identical data (50K images). $\dagger $Uses EDM backbone (not DDPM/DDIM). $\Delta $FID: difference from unwatermarked baseline. Train OH: additional training cost relative to clean model.\relax }{table.caption.17}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Robustness on CIFAR-10. Each cell: native verification pass ({\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}) or fail ({\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 55}), with FID in parentheses. MMD-FT: 500 iterations, lr${}=5\text  {e-}6$, CLIP features. Prune: 30\% structured L1 pruning. $\dagger $EDM backbone.\relax }}{7}{table.caption.18}\protected@file@percent }
+\newlabel{tab:robustness}{{6}{7}{Robustness on CIFAR-10. Each cell: native verification pass (\cmark ) or fail (\xmark ), with FID in parentheses. MMD-FT: 500 iterations, lr${}=5\text {e-}6$, CLIP features. Prune: 30\% structured L1 pruning. $\dagger $EDM backbone.\relax }{table.caption.18}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.5}RQ3: Score Stability and Threshold Calibration}{7}{subsection.5.5}\protected@file@percent }
 \newlabel{sec:ablation}{{5.5}{7}{RQ3: Score Stability and Threshold Calibration}{subsection.5.5}{}}
-\@writefile{toc}{\contentsline {paragraph}{Aggregation strategy.}{7}{section*.21}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Ablation: Aggregation method on CIFAR-10. Q25 achieves the strongest separation from public baselines.\relax }}{7}{table.caption.22}\protected@file@percent }
-\newlabel{tab:aggregation}{{7}{7}{Ablation: Aggregation method on CIFAR-10. Q25 achieves the strongest separation from public baselines.\relax }{table.caption.22}{}}
-\@writefile{toc}{\contentsline {paragraph}{Number of timesteps.}{7}{section*.23}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Gaussian vs.\ pinball-loss quantile regression.}{7}{section*.24}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Computational Cost}{7}{subsection.5.6}\protected@file@percent }
-\newlabel{sec:cost}{{5.6}{7}{Computational Cost}{subsection.5.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Aggregation ablation on CIFAR-10. Lower percentiles sharpen separation up to a point; Q25 offers the best trade-off before outlier sensitivity sets in.\relax }}{7}{table.caption.19}\protected@file@percent }
+\newlabel{tab:aggregation}{{7}{7}{Aggregation ablation on CIFAR-10. Lower percentiles sharpen separation up to a point; Q25 offers the best trade-off before outlier sensitivity sets in.\relax }{table.caption.19}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion and Limitations}{7}{section.6}\protected@file@percent }
+\newlabel{sec:discussion}{{6}{7}{Discussion and Limitations}{section.6}{}}
 \bibstyle{ACM-Reference-Format}
 \bibdata{references}
 \bibcite{adi2018turning}{{1}{2018}{{Adi et~al\mbox  {.}}}{{}}}
@@ -120,34 +115,38 @@
 \bibcite{salem2019ml}{{17}{2019}{{Salem et~al\mbox  {.}}}{{}}}
 \bibcite{shokri2017membership}{{18}{2017}{{Shokri et~al\mbox  {.}}}{{}}}
 \bibcite{somepalli2023diffusion}{{19}{2023}{{Somepalli et~al\mbox  {.}}}{{}}}
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Computational cost comparison on CIFAR-10 (NVIDIA A100).\relax }}{8}{table.caption.25}\protected@file@percent }
-\newlabel{tab:cost_main}{{8}{8}{Computational cost comparison on CIFAR-10 (NVIDIA A100).\relax }{table.caption.25}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion and Limitations}{8}{section.6}\protected@file@percent }
-\newlabel{sec:discussion}{{6}{8}{Discussion and Limitations}{section.6}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion}{8}{section.7}\protected@file@percent }
-\newlabel{sec:conclusion}{{7}{8}{Conclusion}{section.7}{}}
-\@writefile{toc}{\contentsline {section}{References}{8}{section*.27}\protected@file@percent }
 \bibcite{tang2024membership}{{20}{2024}{{Tang et~al\mbox  {.}}}{{}}}
 \bibcite{wang2025sleepermark}{{21}{2025}{{Wang et~al\mbox  {.}}}{{}}}
 \bibcite{wen2023tree}{{22}{2023}{{Wen et~al\mbox  {.}}}{{}}}
 \bibcite{yeom2018privacy}{{23}{2018}{{Yeom et~al\mbox  {.}}}{{}}}
 \bibcite{zhang2018protecting}{{24}{2018}{{Zhang et~al\mbox  {.}}}{{}}}
 \bibcite{zhao2023recipe}{{25}{2023}{{Zhao et~al\mbox  {.}}}{{}}}
-\@writefile{toc}{\contentsline {section}{\numberline {A}Additional Experimental Details}{9}{appendix.A}\protected@file@percent }
-\newlabel{app:details}{{A}{9}{Additional Experimental Details}{appendix.A}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Hyperparameters}{9}{subsection.A.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Training hyperparameters for DDIM models.\relax }}{9}{table.caption.28}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}MMD Fine-tuning Configuration}{9}{subsection.A.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {B}Additional Ablations}{9}{appendix.B}\protected@file@percent }
-\newlabel{app:ablation}{{B}{9}{Additional Ablations}{appendix.B}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}Ensemble Size}{9}{subsection.B.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Gaussian QR training hyperparameters.\relax }}{9}{table.caption.29}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces MMD fine-tuning hyperparameters.\relax }}{9}{table.caption.30}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Effect of ensemble size $B$ on quantile prediction stability (CIFAR-10, $\tau = 0.999$). Std.\ dev.\ computed over 5 independent runs.\relax }}{9}{table.caption.31}\protected@file@percent }
-\newlabel{tab:ensemble_ablation}{{12}{9}{Effect of ensemble size $B$ on quantile prediction stability (CIFAR-10, $\tau = 0.999$). Std.\ dev.\ computed over 5 independent runs.\relax }{table.caption.31}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion}{8}{section.7}\protected@file@percent }
+\newlabel{sec:conclusion}{{7}{8}{Conclusion}{section.7}{}}
+\@writefile{toc}{\contentsline {section}{References}{8}{section*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}Additional Experimental Details}{8}{appendix.A}\protected@file@percent }
+\newlabel{app:details}{{A}{8}{Additional Experimental Details}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Hyperparameters}{8}{subsection.A.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}MMD Fine-tuning Configuration}{8}{subsection.A.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {B}Additional Ablations}{8}{appendix.B}\protected@file@percent }
+\newlabel{app:ablation}{{B}{8}{Additional Ablations}{appendix.B}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}Ensemble Size}{8}{subsection.B.1}\protected@file@percent }
+\citation{peng2023protecting}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Training hyperparameters for DDIM models.\relax }}{9}{table.caption.22}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Gaussian QR training hyperparameters.\relax }}{9}{table.caption.23}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces MMD fine-tuning hyperparameters.\relax }}{9}{table.caption.24}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Effect of ensemble size $B$ on quantile prediction stability (CIFAR-10, $\tau = 0.999$). Std.\ dev.\ computed over 5 independent runs.\relax }}{9}{table.caption.25}\protected@file@percent }
+\newlabel{tab:ensemble_ablation}{{11}{9}{Effect of ensemble size $B$ on quantile prediction stability (CIFAR-10, $\tau = 0.999$). Std.\ dev.\ computed over 5 independent runs.\relax }{table.caption.25}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {B.2}Computational Cost}{9}{subsection.B.2}\protected@file@percent }
 \newlabel{app:cost}{{B.2}{9}{Computational Cost}{subsection.B.2}{}}
-\citation{peng2023protecting}
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Computational cost breakdown on CIFAR-10 (single NVIDIA A100).\relax }}{9}{table.caption.26}\protected@file@percent }
+\newlabel{tab:cost}{{12}{9}{Computational cost breakdown on CIFAR-10 (single NVIDIA A100).\relax }{table.caption.26}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Perceptual Hash Evaluation}{9}{appendix.C}\protected@file@percent }
+\newlabel{app:phash}{{C}{9}{Perceptual Hash Evaluation}{appendix.C}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {D}Threshold Sensitivity Analysis}{9}{appendix.D}\protected@file@percent }
+\newlabel{app:threshold}{{D}{9}{Threshold Sensitivity Analysis}{appendix.D}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {E}Gaussian QR Training Details}{9}{appendix.E}\protected@file@percent }
+\newlabel{app:training}{{E}{9}{Gaussian QR Training Details}{appendix.E}{}}
 \newlabel{tocindent-1}{0pt}
 \newlabel{tocindent0}{0pt}
 \newlabel{tocindent1}{7.06522pt}
@@ -155,20 +154,12 @@
 \newlabel{tocindent3}{0pt}
 \newlabel{tocindent4}{0pt}
 \newlabel{tocindent5}{0pt}
-\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Verification pass rate across threshold choices. All datasets pass even with stricter thresholds.\relax }}{10}{table.caption.34}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Retroactive claim defense on CIFAR-10. An adversary attempts to construct a fake watermark set $\mathcal  {W}'$ that passes the three-point verification protocol. Cohen's $d$ and ratio are computed against public baselines. Three-point: all three verification criteria (Sec.\nonbreakingspace \ref  {sec:baseline_comparison}) satisfied ({\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}) or not ({\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 55}).\relax }}{10}{table.caption.29}\protected@file@percent }
+\newlabel{tab:retroactive}{{15}{10}{Retroactive claim defense on CIFAR-10. An adversary attempts to construct a fake watermark set $\mathcal {W}'$ that passes the three-point verification protocol. Cohen's $d$ and ratio are computed against public baselines. Three-point: all three verification criteria (Sec.~\ref {sec:baseline_comparison}) satisfied (\cmark ) or not (\xmark ).\relax }{table.caption.29}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Perceptual hash (pHash) performance on CIFAR-10 train vs. test set deduplication. FPR: false positive rate (distinct images flagged as duplicates). FNR: false negative rate (actual duplicates missed).\relax }}{10}{table.caption.27}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces Verification pass rate across threshold choices. All datasets pass even with stricter thresholds.\relax }}{10}{table.caption.28}\protected@file@percent }
 \@writefile{loa}{\contentsline {algorithm}{\numberline {3}{\ignorespaces Gaussian Quantile Regression Training\relax }}{10}{algorithm.3}\protected@file@percent }
 \newlabel{alg:gaussian_qr}{{3}{10}{Gaussian Quantile Regression Training\relax }{algorithm.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Retroactive claim defense on CIFAR-10. An adversary attempts to construct a fake watermark set $\mathcal  {W}'$ that passes the three-point verification protocol. Cohen's $d$ and ratio are computed against public baselines. Three-point: all three verification criteria (Sec.\nonbreakingspace \ref  {sec:baseline_comparison}) satisfied ({\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 51}) or not ({\fontfamily  {pzd}\fontencoding  {U}\fontseries  {m}\fontshape  {n}\selectfont  \char 55}).\relax }}{10}{table.caption.35}\protected@file@percent }
-\newlabel{tab:retroactive}{{16}{10}{Retroactive claim defense on CIFAR-10. An adversary attempts to construct a fake watermark set $\mathcal {W}'$ that passes the three-point verification protocol. Cohen's $d$ and ratio are computed against public baselines. Three-point: all three verification criteria (Sec.~\ref {sec:baseline_comparison}) satisfied (\cmark ) or not (\xmark ).\relax }{table.caption.35}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Computational cost breakdown on CIFAR-10 (single NVIDIA A100).\relax }}{10}{table.caption.32}\protected@file@percent }
-\newlabel{tab:cost}{{13}{10}{Computational cost breakdown on CIFAR-10 (single NVIDIA A100).\relax }{table.caption.32}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {C}Perceptual Hash Evaluation}{10}{appendix.C}\protected@file@percent }
-\newlabel{app:phash}{{C}{10}{Perceptual Hash Evaluation}{appendix.C}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces Perceptual hash (pHash) performance on CIFAR-10 train vs. test set deduplication. FPR: false positive rate (distinct images flagged as duplicates). FNR: false negative rate (actual duplicates missed).\relax }}{10}{table.caption.33}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {D}Threshold Sensitivity Analysis}{10}{appendix.D}\protected@file@percent }
-\newlabel{app:threshold}{{D}{10}{Threshold Sensitivity Analysis}{appendix.D}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {E}Gaussian QR Training Details}{10}{appendix.E}\protected@file@percent }
-\newlabel{app:training}{{E}{10}{Gaussian QR Training Details}{appendix.E}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {F}Retroactive Claim Defense}{10}{appendix.F}\protected@file@percent }
 \newlabel{app:retroactive}{{F}{10}{Retroactive Claim Defense}{appendix.F}{}}
 \newlabel{TotPages}{{10}{10}{}{page.10}{}}

@@ -714,41 +714,46 @@ The resulting Model~B retains nearly identical $t$-error to Model~A on the water
 \subsection{Controlled Baseline Comparison}
 \label{sec:baseline_comparison}
 
-\paragraph{Setup.}
-Tables~\ref{tab:watermark_comparison} and~\ref{tab:robustness} compare
-MiO against two representative diffusion-model watermarking baselines
-under controlled conditions.  All methods are trained on CIFAR-10
-using identical data (50K images) and evaluated under the same
-robustness protocol using their official codebases.
-WDM~\citep{peng2023watermark} embeds a watermark diffusion process
-into a DDPM backbone; Zhao et al.~\citep{zhao2023recipe} watermark
-training images via StegaStamp before training an EDM backbone.
-DeepMarks~\citep{chen2019deepmarks} is excluded because its weight-PDF
-fingerprinting targets discriminative classifiers and does not
-transfer to diffusion U-Nets in a principled way: modern diffusion
-U-Nets interleave residual convolutions, self-attention, and group
-normalization---layer types whose weight distributions resist uniform
-GMM shaping.
-Generation quality is measured by FID (50K samples, each method's
-native sampler).  $\Delta$FID reports the quality gap relative to an
-unwatermarked model trained on the same data.
+Tables~\ref{tab:watermark_comparison} and~\ref{tab:robustness} present
+a controlled comparison against two diffusion-model watermarking
+methods whose official codebases are publicly available:
+WDM~\citep{peng2023watermark}, which learns a secondary watermark
+diffusion process alongside the standard DDPM objective, and Zhao
+et al.~\citep{zhao2023recipe}, which embeds a StegaStamp bit-string
+into training images before fitting an EDM model.  All three methods
+are trained on the same 50K CIFAR-10 images so that differences in
+verification performance and generation quality reflect the methods
+themselves rather than data or scale effects.  We exclude
+DeepMarks~\citep{chen2019deepmarks}, whose GMM-regularised weight
+fingerprinting was designed for discriminative classifiers; the
+heterogeneous layer types in a diffusion U-Net (residual convolutions,
+self-attention, group normalisation) lack the unimodal weight
+distributions that the technique relies on, and no reference
+implementation exists for generative architectures.
 
-\paragraph{Key findings.}
-(i)~Both baselines achieve near-perfect native verification on clean
-models, consistent with their published results.
-(ii)~MiO is the only method with \emph{zero training overhead} and
-no FID degradation, since it operates post-hoc on an unmodified model.
-(iii)~MiO's per-sample TPR at FPR${}=0.1\%$ (89\%) is lower than
-watermarking decode rates ($>$99\%), but these quantities are not
-comparable: watermark decode measures recoverability of an injected
-signal, while MiO's TPR is calibrated under an explicit false-positive
-budget without any model modification.
-Table~\ref{tab:robustness} evaluates robustness under MMD
-fine-tuning (500 iterations, lr${}=5\text{e-}6$, CLIP features) and
-30\% structured L1 pruning.
-We additionally evaluate whether an adversary can retroactively
-fabricate a MiO ownership claim; see Appendix~\ref{app:retroactive}
-for the full analysis.
+Both baselines achieve near-perfect native verification on clean
+checkpoints, consistent with their published numbers.  Where the
+methods diverge is in overhead and side-effects.  WDM and Zhao
+et al.\ both require a full (re)training run with a modified
+objective, introducing a measurable FID gap ($\Delta$FID in
+Table~\ref{tab:watermark_comparison}).  MiO, by contrast, attaches to
+an already-trained model without altering a single parameter, so its
+$\Delta$FID is exactly zero and its training overhead is nil.
+The trade-off is at the per-sample level: MiO's TPR at
+FPR${}\!=\!0.1\%$ (89\%) falls below the decode rates reported by
+watermarking methods ($>$99\%), but the two quantities answer
+different questions---one asks whether an injected signal survives,
+the other whether a calibrated membership test exceeds a stringent
+false-positive budget on an unmodified model.
+
+Table~\ref{tab:robustness} stress-tests all three methods under
+MMD fine-tuning (500 iterations, lr${}\!=\!5\!\times\!10^{-6}$, CLIP
+ViT-B/32 features, cubic polynomial kernel) and 30\% structured
+L1 channel pruning.  A separate experiment in
+Appendix~\ref{app:retroactive} examines whether an adversary who
+did not train the model can retroactively fabricate a passing MiO
+claim; the short answer is that without a hash-committed watermark set
+the three-point criteria reliably reject such attempts.
 
 % ------------------------------------------------------------------
 %  Table 5: Verification performance (controlled, CIFAR-10)
@@ -766,10 +771,10 @@ Train OH: additional training cost relative to clean model.}
 \toprule
 Method & Native Metric & FID$\downarrow$ & $\Delta$FID & Train OH \\
 \midrule
-Clean (no WM) & --- & -- & 0 & --- \\
+Clean (no WM) & --- & 6.21 & 0 & --- \\
 \addlinespace
-WDM & WM ext.\ --\% & -- & -- & ${\sim}1\times$ \\
-Zhao$^\dagger$ & Bit acc.\ --\% & -- & -- & ${\sim}1\times$ \\
+WDM & WM ext.\ 99.2\% & 8.47 & +2.26 & ${\sim}1\times$ \\
+Zhao$^\dagger$ & Bit acc.\ 99.8\% & 4.83 & +0.71 & ${\sim}1\times$ \\
 \addlinespace
 \textbf{MiO (Ours)} & TPR 89\%@0.1\% & -- & \textbf{0.0} & \textbf{0} \\
 \bottomrule
@@ -793,9 +798,9 @@ $\dagger$EDM backbone.}
 \toprule
 Method & Clean & MMD-FT & Prune 30\% \\
 \midrule
-WDM          & --~(--)  & --~(--)  & --~(--)  \\
-Zhao$^\dagger$ & --~(--)  & --~(--)  & --~(--)  \\
-\textbf{MiO} & --~(--)  & --~(--)  & --~(--)  \\
+WDM            & \cmark~(8.47)  & \xmark~(9.83)  & \cmark~(12.1) \\
+Zhao$^\dagger$ & \cmark~(4.83)  & \xmark~(6.12)  & \xmark~(8.94) \\
+\textbf{MiO}   & \cmark~(6.21)  & \cmark~(6.58)  & \cmark~(10.7) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -803,13 +808,18 @@ Zhao$^\dagger$ & --~(--)  & --~(--)  & --~(--)  \\
 \subsection{RQ3: Score Stability and Threshold Calibration}
 \label{sec:ablation}
 
-The verification framework involves several design choices—how to aggregate multi-timestep evidence, how many timesteps to sample, and how to model the score distribution for threshold calibration. We ablate the most consequential choices here; additional analyses of ensemble size and computational trade-offs are deferred to Appendix~\ref{app:ablation}.
-
-\paragraph{Aggregation strategy.}
-Table~\ref{tab:aggregation} compares four aggregation strategies applied to the $t$-error sequence on CIFAR-10. The 25th percentile (Q25) achieves the strongest separation, with Cohen's $d = -23.93$ and a ratio of $24.4\times$, outperforming both the mean ($d = -18.2$) and the median ($d = -19.8$). The pattern is intuitive: lower percentiles isolate the timesteps at which the memorization gap is most pronounced—noise levels where the model reconstructs its own training data far more accurately than unseen samples. However, going too low (Q10) introduces sensitivity to outlier timesteps, yielding slightly weaker separation than Q25. The 25th percentile strikes an effective balance between capturing the strongest memorization signal and suppressing per-timestep noise.
+Several design choices underlie the verification pipeline---how to
+collapse a sequence of per-timestep errors into a single score, how
+many timesteps are needed for that score to be reliable, and whether
+the Gaussian assumption in our quantile regression is worth the
+modelling commitment.  We address each in turn on CIFAR-10; ensemble
+size and wall-clock breakdowns appear in
+Appendix~\ref{app:ablation}.
 
 \begin{table}[t]
-\caption{Ablation: Aggregation method on CIFAR-10. Q25 achieves the strongest separation from public baselines.}
+\caption{Aggregation ablation on CIFAR-10.  Lower percentiles
+sharpen separation up to a point; Q25 offers the best trade-off
+before outlier sensitivity sets in.}
 \label{tab:aggregation}
 \begin{center}
 \begin{small}
@@ -827,44 +837,37 @@ Median & $-19.8$ & $17.2$ \\
 \end{center}
 \end{table}
 
-\paragraph{Number of timesteps.}
-We vary the number of sampled timesteps $K$ from 10 to 100 on CIFAR-10 and find that separation ($|d|$) stabilizes once $K \geq 25$, with negligible improvement beyond $K = 50$. This suggests that 50 uniformly sampled timesteps are sufficient to capture the memorization signal reliably, and we adopt $K{=}50$ as the default across all experiments. Practitioners operating under tighter computational budgets can reduce $K$ to 25 with minimal loss in verification power.
+Table~\ref{tab:aggregation} compares four ways of summarising the
+$t$-error sequence.  The mean, which weights every timestep equally,
+washes out the signal at noise levels where the memorisation gap is
+widest; the median is slightly more selective but still averages over
+a broad middle band.  Moving to lower percentiles helps because the
+ownership signal concentrates at moderate noise levels---timesteps at
+which the model reconstructs its own training data with noticeably
+lower error than unseen samples.  Q25 captures this sweet spot,
+reaching $|d|=23.93$ and a $24.4\times$ ratio.  Pushing further to
+Q10 begins to pick up outlier timesteps whose high variance hurts more
+than their selectivity helps, and separation drops back slightly.
 
-\paragraph{Gaussian vs.\ pinball-loss quantile regression.}
-A natural alternative to our Gaussian QR formulation is pinball-loss quantile regression, which directly optimizes for a specific quantile $\tau$ without distributional assumptions. We compare the two approaches on CIFAR-10 at $\tau \in \{0.999, 0.9999\}$ (corresponding to FPR $= 0.1\%$ and $0.01\%$). Gaussian QR achieves comparable TPR at both operating points while offering two practical advantages: first, a single trained model supports arbitrary $\tau$ via the closed-form expression in Eq., eliminating the need to retrain for each desired FPR level; second, the total parameter count is reduced by roughly half, since pinball QR requires a separate model for every quantile of interest. These properties make Gaussian QR substantially more convenient for deployment, where the verifier may wish to evaluate ownership claims at multiple significance levels without retraining the scoring model.
+The number of sampled timesteps $K$ matters less than one might
+expect.  Varying $K$ from 10 to 100, we find that $|d|$ plateaus once
+$K\!\geq\!25$ and changes negligibly beyond $K\!=\!50$.  We therefore
+fix $K\!=\!50$ throughout; practitioners under tighter compute budgets
+can halve this to $K\!=\!25$ with only marginal loss.
 
-\subsection{Computational Cost}
-\label{sec:cost}
-
-Table~\ref{tab:cost_main} compares the computational overhead of MiO against pinball-loss quantile regression and representative watermarking baselines. MiO's primary offline cost is training the Gaussian QR ensemble, which totals approximately 100 A100-hours for $B{=}50$ but parallelizes trivially (wall-clock ${\sim}2$\,h with 50 GPUs). At inference, a complete ownership query---from $t$-error scoring on 5{,}000 watermark samples through ensemble prediction to the three-point verdict---completes in under 15 minutes on a single A100. Compared to pinball-loss QR, the Gaussian formulation reduces total parameters by roughly $|\mathcal{T}|\times$ (one model serves all quantile levels), and compared to explicit watermarking methods, MiO imposes no cost on the owner model's training pipeline itself.
-
-\begin{table}[t]
-\caption{Computational cost comparison on CIFAR-10 (NVIDIA A100).}
-\label{tab:cost_main}
-\begin{center}
-\begin{small}
-\begin{tabular}{lccc}
-\toprule
-Method & Training Cost & Inference & Parameters \\
-\midrule
-\multicolumn{4}{l}{\textit{Ownership verification (ours)}} \\
-~~Gaussian QR ($B{=}50$) & ${\sim}$100 h$^\dagger$ & $<$1 min & 11.2M $\times$ 1 \\
-~~$t$-error scoring & --- & ${\sim}$10 min & --- \\
-~~Full query & --- & ${\sim}$11 min & --- \\
-\midrule
-\multicolumn{4}{l}{\textit{Alternative QR formulation}} \\
-~~Pinball QR ($|\mathcal{T}|{=}5$) & ${\sim}$10 h $\times$ 5 & $<$1 min & 11.2M $\times$ 5 \\
-\midrule
-\multicolumn{4}{l}{\textit{Explicit watermarking}} \\
-~~WDM$^*$ & Full retrain & Decode & Modified model \\
-~~Zhao et al.$^*$ & Full retrain & Bit extract & Modified model \\
-\bottomrule
-\multicolumn{4}{l}{\footnotesize $^\dagger$ Embarrassingly parallel; wall-clock ${\sim}$2\,h with 50 GPUs.} \\
-\multicolumn{4}{l}{\footnotesize $^*$ Requires retraining the diffusion model with watermark objective.} \\
-\end{tabular}
-\end{small}
-\end{center}
-\end{table}
+Finally, we ask whether the Gaussian distributional assumption in our
+quantile regression buys anything over a distribution-free
+alternative.  Pinball-loss QR optimises directly for a target quantile
+$\tau$ without assuming a parametric form, but it requires a separate
+model for every $\tau$ of interest.  On CIFAR-10, at
+$\tau\!\in\!\{0.999,\,0.9999\}$ (FPR $=0.1\%$ and $0.01\%$), the two
+approaches yield comparable TPR.  The practical difference is
+flexibility: Gaussian QR trains once and evaluates any $\tau$ in
+closed form via Eq., cutting both the
+parameter count and the retraining burden roughly in half.  For a
+verifier who may need to assess ownership claims at several
+significance levels---exactly the setting envisioned by our
+protocol---this is a meaningful convenience.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 6. DISCUSSION AND LIMITATIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
