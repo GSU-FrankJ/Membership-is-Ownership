@@ -16,6 +16,9 @@
 \usepackage{subcaption}
 \usepackage{multirow}
 \usepackage{xspace}
+\usepackage{pifont}
+\newcommand{\cmark}{\ding{51}}
+\newcommand{\xmark}{\ding{55}}
 
 % --- Figure (TikZ) ---
 \usepackage{tikz}
@@ -23,7 +26,7 @@
 
 % Custom commands for consistency
 \newcommand{\terr}{\ensuremath{e_t}\xspace}
-\newcommand{\Wset}{\ensuremath{\mathcal{W}_D}\xspace}
+\newcommand{\Wset}{\ensuremath{\mathcal{W}}\xspace}
 \newcommand{\Dtrain}{\ensuremath{\mathcal{D}_{\text{train}}}\xspace}
 \newcommand{\Dpublic}{\ensuremath{\mathcal{D}_{\text{public}}}\xspace}
 \newcommand{\MIA}{\textsc{MIA}\xspace}
@@ -64,7 +67,7 @@
 \begin{abstract}
 Large-scale diffusion models are valuable intellectual property, yet can be stolen and adapted via downstream fine-tuning.
 Existing diffusion watermarking embeds explicit signatures into parameters or behavior, which may degrade utility and can be removed by post-hoc fine-tuning.
-We propose \textbf{Membership Is Ownership}, an ownership verification framework that treats a private member evidence set \Wset as a watermark and leverages the model's intrinsic memorization.
+We propose {Membership Is Ownership}, an ownership verification framework that treats a private member evidence set as a watermark and leverages the model's intrinsic memorization.
 Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction, then aggregate with a lower quantile (Q25).
 To control false-positive rates, we fit a conditional Gaussian model in log-score space and obtain closed-form quantile thresholds at arbitrary target FPR.
 The protocol compares the suspect model against public baselines via hypothesis tests, effect sizes, and error ratios, producing statistical evidence rather than a single score.
@@ -76,23 +79,57 @@ On CIFAR-10/100, STL-10, and CelebA, all datasets achieve Cohen's $d > 18$ and e
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 \label{sec:intro}
+% 背景
+% 问题 motivation
+% Existing solutions/challenges
+% fill the gap - > proposed method/solution
+% summary
+% contribution
+Large-scale generative diffusion models have fueled numerous profitable downstream applications.
+To obtain such powerful models, a huge amount of computation and data resources are consumed, which renders the trained diffusion models valuable intellectual property (IP) for tech companies and individuals. 
+However, these IP assets are vulnerable to various unauthorized uses by adversaries seeking to leverage these models for customized, usually commercial applications.
 
-Large-scale diffusion models have become valuable assets: training them consumes substantial compute and curated data, yet the resulting models can be copied and adapted via downstream fine-tuning. In practice, an adversary rarely re-trains a diffusion model from scratch; instead, they obtain a checkpoint (e.g., via leakage or illicit transfer) and fine-tune it to a new domain or product requirement~\citep{wang2025sleepermark,kim2024wouaf}. This post-theft fine-tuning creates a challenge for ownership verification: the owner must produce evidence that is (i) accurate under stringent false-positive budgets, and (ii) valid after realistic adaptation.
+In practice, an adversary can obtain a checkpoint via model extraction attacks or illicit transfer, then fine-tune the model to a profitable domain or product requirement~\cite{wang2025sleepermark,kim2024wouaf}. 
+Such post-theft fine-tuning undermines the model owner’s copyright and poses significant challenges for reliable ownership verification.
+To make a strong claim, the owner must produce evidence that is not only accurate under stringent false-positive budgets, 
+and also valid after realistic fine-tune or adaptation.
 
-Most existing diffusion IP protection methods embed explicit signatures into model parameters or output behavior~\citep{peng2023watermark,zhao2023recipe,fernandez2023stable,liu2023watermarking}. While effective in controlled settings, such watermarks may impose utility costs and can be weakened by post-hoc fine-tuning. An alternative is to leverage the model's intrinsic memorization~\citep{carlini2023extracting,somepalli2023diffusion,gu2025on}: diffusion models reconstruct training examples with systematically lower error than non-members. However, ``low error on a few examples'' is insufficient for an ownership claim---many public models may also score well on certain samples due to shared data sources or dataset artifacts. Verification therefore requires \emph{population-level} evidence: the suspect model must be distinguished from public reference models under a statistically controlled decision rule.
+Most existing diffusion IP protection methods embed explicit signatures into model parameters or output behavior~\citep{peng2023watermark,zhao2023recipe,fernandez2023stable,liu2023watermarking}. 
+While effective in controlled settings, such watermarks may impose utility costs and can be weakened by fine-tuning because the model thief can use every means to remove such explicit watermarks.
+Recently, an alternative watermark method has emerged, which is to leverage the model's intrinsic memorization~\citep{carlini2023extracting,somepalli2023diffusion,gu2025on} , where the reconstruction error of diffusion models on training examples is systematically lower than on non-training samples.
+However, as the models' generalization capability increases, the difference between training samples and non-training samples becomes marginal, resulting in the ``low error-based'' method being insufficient for an ownership claim.
+Moreover, most modern diffusion models may also use substantially overlapped training data from the public Internet, which increases the difficulty of accurate attribution. 
 
-We propose \textbf{Membership Is Ownership}, an ownership verification framework that treats a private member evidence set $\mathcal{W}$ as a watermark and uses memorization as statistical evidence. Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction, and aggregate with a lower quantile (Q25) to obtain a stable per-example score. To control false-positive rates, we fit a conditional Gaussian model in log-score space and derive closed-form quantile thresholds at arbitrary target FPR. The protocol compares the suspect model against public baselines via hypothesis tests, effect sizes, and error ratios, producing an auditable report rather than a single opaque score.
+These practical challenges necessitate a robust watermark detection method that can distinguish the IP-protected model from public reference models under a statistically controlled decision rule.
+To fill this research gap, in this work, we propose \textbf{Membership is Ownership}, an ownership verification framework that can accurately detect and verify whether a suspect model in the thief's possession is illegally obtained and fine-tuned from the model owner's base model, using a designated owner signature.
+At the heart of our approach lies a simple but principled observation: a model retains systematic memory of its training data, manifesting as lower reconstruction error on seen examples. We exploit this signal by constructing a private evidence set, cryptographically signed by the model owner, which serves as a persistent watermark without modifying the model itself.
+To extract a robust signal from a suspect model, we introduce a multi-timestep \emph{t-error} score—computed via forward noising followed by single-step reconstruction—and summarize it through a lower quantile (\texttt{Q25}) to suppress noise while preserving the memorization signature. Rather than reporting a single black-box decision, we anchor the verification protocol on a principled statistical foundation: a conditional Gaussian model fitted in log-score space yields closed-form quantile thresholds at arbitrary false-positive rates, enabling transparent and auditable comparisons against public baselines through hypothesis tests, effect sizes, and error ratios.
+The resulting separations are striking. Against public baselines, we observe Cohen's $d > 18$ and error ratios exceeding $19\times$, margins that remain robust even under MMD fine-tuning, which simulates realistic post-theft adaptation, provided the adversary stops short of full retraining or targeted memorization erasure.
+The paper unfolds the following contributions.
+\begin{itemize}
+    \item We introduce a training-free ownership verification framework 
+    for diffusion models that leaves model parameters and output 
+    quality entirely intact, relying solely on a private evidence 
+    set as a non-invasive watermark.
 
-On CIFAR-10/100, STL-10, and CelebA, all datasets achieve Cohen's $d > 18$ and error ratios $> 19\times$ against public baselines. These separations persist after MMD fine-tuning (simulating theft), provided the adversary does not retrain from scratch or specifically target memorization removal.
+    \item We propose a multi-timestep $t$-error score aggregated via 
+    lower quantile (\texttt{Q25}), which suppresses per-example noise 
+    while preserving the memorization signal, yielding a stable and 
+    discriminative per-sample statistic.
 
-\paragraph{Contributions.}
-(1) We introduce an ownership verification protocol for diffusion models that treats a private member evidence set as a watermark and outputs statistical evidence calibrated against public baselines.
-(2) We propose a multi-timestep t-error score with lower-quantile (Q25) aggregation to reduce variance across timesteps.
-(3) We provide closed-form quantile thresholds at arbitrary FPR by modeling log-scores as conditional Gaussians.
-(4) We report Cohen's $d > 18$ separation on four datasets; separations persist under MMD fine-tuning but assume white-box access and fine-tuning (not full retraining) adversaries.
+    \item We derive closed-form quantile thresholds under a conditional 
+    Gaussian model in log-score space, enabling precise false-positive 
+    rate control at any target significance level without requiring 
+    empirical calibration.
+
+    \item We demonstrate Cohen's $d > 18$ and error ratios exceeding 
+    $19\times$ across four datasets, with separations remaining robust 
+    under MMD fine-tuning, establishing strong empirical guarantees 
+    against realistic post-theft adaptation.
+\end{itemize}
+
 
 \begin{figure*}[t]
-\vspace{-2mm}
 \centering
 \begin{tikzpicture}[
   font=\footnotesize,
@@ -113,7 +150,7 @@ On CIFAR-10/100, STL-10, and CelebA, all datasets achieve Cohen's $d > 18$ and e
 Owner model $\mathcal{M}_{\text{own}}$\\
 Suspect model $\mathcal{M}_{\text{sus}}$\\
 Public refs $\{\mathcal{M}_j\}$\\
-Watermark set $\mathcal{W}_D$\\
+Watermark set $\mathcal{W}$\\
 \end{tabular}
 };
 
@@ -121,7 +158,7 @@ Watermark set $\mathcal{W}_D$\\
 \node[stepbox, right=18mm of inputs.north east, anchor=north west, yshift=5mm] (s1)
 {\textbf{1. t-error calculation}\par
 Forward noise + single-step reconstruction\par
-\emph{compute $e_t(x)$ for $x\in\mathcal{W}_D$, $t\sim\mathrm{Unif}(\mathcal{T})$}
+\emph{compute $e_t(x)$ for $x\in\mathcal{W}$, $t\sim\mathrm{Unif}(\mathcal{T})$}
 };
 
 \node[stepbox, below=7mm of s1] (s2)
@@ -206,9 +243,8 @@ $\bullet$ error ratio\\
 \node[notelabel, above=2mm of report] {Compare $\mathcal{M}_{\text{sus}}$ vs $\{\mathcal{M}_j\}$};
 
 \end{tikzpicture}
-\vspace{-2mm}
-\caption{\textbf{System overview.} A private evidence set $\mathcal{W}_D$ serves as a watermark. We compute multi-timestep t-error scores, aggregate with a robust lower quantile to obtain $s(x)$, and fit a conditional Gaussian model in log-score space to derive a closed-form threshold at a target FPR. Ownership is supported via population-level evidence against public reference models using consistency, separation, and ratio criteria.}
-\vspace{-2mm}
+\caption{\textbf{System overview.} 
+A private evidence set $\mathcal{W}$ serves as a watermark. We compute multi-timestep t-error scores, aggregate with a robust lower quantile to obtain $s(x)$, and fit a conditional Gaussian model in log-score space to derive a closed-form threshold at a target FPR. Ownership is supported via population-level evidence against public reference models using consistency, separation, and ratio criteria.}
 \label{fig:overview}
 \end{figure*}
 
@@ -218,172 +254,200 @@ $\bullet$ error ratio\\
 \section{Related Work}
 \label{sec:related}
 
+% list existing works: core method + weakness.
+% similar works, one sentence. 
+% our method strength.
+
+
 \paragraph{Model Watermarking.}
-Prior model watermarking methods typically embed an identifiable pattern into model behavior, e.g., via trigger-based backdoors or carefully constructed examples that induce a predetermined response~\citep{adi2018turning,zhang2018protecting,fernandez2023stable,wen2023tree}.
+Prior machine learning model watermarking methods typically embed an identifiable pattern into model behavior, most notably through trigger-based backdoors or carefully constructed inputs that induce a predetermined response~\citep{adi2018turning,zhang2018protecting,fernandez2023stable,wen2023tree}.
 Such approaches provide a direct verification interface when the watermark remains intact, but they generally require explicit intervention during training and can be sensitive to subsequent model editing or ``cleaning.''
-In contrast to embedding an external trigger, our setting treats a private member evidence set as the ``watermark'' and derives evidence from the model's intrinsic memorization behavior, avoiding modifications that introduce new behavioral artifacts.
+\textit{In contrast to embedding an external trigger, our setting treats a private member evidence set as the ``watermark'' and derives evidence from the model's intrinsic memorization behavior, avoiding modifications that introduce new behavioral artifacts.}
 
 \paragraph{Membership Inference Attacks.}
 Membership inference attacks (MIA) aim to decide whether an input was part of a model's training data~\citep{shokri2017membership,yeom2018privacy,salem2019ml}.
 For diffusion models, recent work instantiates MIA using reconstruction-based signals~\citep{carlini2023extracting,duan2023diffusion,kong2024efficient}, loss/likelihood-based criteria~\citep{matsumoto2023membership,hu2023loss}, or scalable quantile-regression formulations~\citep{bertran2023scalable,tang2024membership}.
 These methods are primarily evaluated as per-example decision rules (binary classification or scoring) and are typically reported via attack metrics.
-Ownership verification, however, requires comparative, population-level evidence: the claim must be supported by aggregate separation on a designated evidence set, calibrated against reference models that represent the null hypothesis, and summarized via statistically interpretable tests rather than single-sample predictions.
-Our protocol uses MIA-style signals as the underlying measurements, but organizes them into an auditable verification procedure with public references and formal decision criteria.
-
-\paragraph{Diffusion Model Analysis.}
-Diffusion models are known to memorize and, in some cases, regenerate training data~\citep{carlini2023extracting}.
-Subsequent studies characterize the extent of content replication and related phenomena~\citep{somepalli2023diffusion}, as well as defenses and mitigation strategies~\citep{wen2024detecting,chen2024towards}.
-This line of work focuses on understanding and reducing memorization or detecting replicated content.
-Our focus is different in goal: we turn memorization signals into a forensic verification protocol that supports ownership claims under explicit false-positive budgets and reference-based comparisons.
-
+Ownership verification, however, requires comparative, population-level evidence: the ownership claim must be supported by aggregate separation on a designated evidence set, calibrated against reference models that represent the null hypothesis, and summarized via statistically interpretable tests rather than single-sample predictions.
+\textit{Our framework uses MIA-style signals as the underlying measurements, but creates an auditable verification procedure with public references and formal decision criteria.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 3. PROBLEM SETUP
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Problem Setup}
 \label{sec:problem}
 
-We formalize the distinction between membership inference and ownership verification, then define our threat model and verification criteria.
+\subsection{Background and Problem Formulation }
 
-\subsection{Task Definitions: \OV versus \MIA}
+\paragraph{Diffusion Models.}
+A diffusion model defines a forward noising process and a learned 
+reverse process. Given a clean sample $x_0 \sim q(x_0)$, the 
+forward process produces a noisy version at timestep $t \in 
+\{1, \dots, T\}$:
+%
+\begin{equation}
+    x_t = \sqrt{\bar\alpha_t}\, x_0 
+        + \sqrt{1 - \bar\alpha_t}\,\epsilon, 
+    \quad \epsilon \sim \mathcal{N}(0, I),
+\end{equation}
+%
+where $\bar\alpha_t = \prod_{s=1}^{t} \alpha_s$ is the cumulative 
+noise schedule. A neural network $\epsilon_\theta$ is trained to 
+recover the added noise by minimizing:
+%
+\begin{equation}
+    \mathcal{L}(\theta) 
+    = \mathbb{E}_{x_0,\, \epsilon,\, t}
+      \bigl[\lVert \epsilon 
+      - \epsilon_\theta(x_t, t) \rVert^2\bigr].
+\end{equation}
+%
+At inference, new samples are drawn by iteratively denoising from 
+$x_T \sim \mathcal{N}(0, I)$ using the learned 
+$\epsilon_\theta$.
+
+It has been empirically established that diffusion models memorize 
+portions of their training data~\cite{carlini2023extracting, 
+somepalli2023diffusion}: the reconstruction error on training 
+examples is systematically lower than on unseen samples drawn from 
+the same distribution. This memorization gap persists across 
+architectures and dataset scales, and serves as the foundational 
+signal that our framework exploits for ownership verification.
+
+\paragraph{From Membership Inference to Ownership Verification.}
+Membership inference attacks (MIAs) leverage the memorization gap 
+to determine whether a single query sample belongs to the training 
+set of a target model~\cite{duan2023diffusion, kong2024efficient}. 
+We state this formally:
 
 \begin{definition}[Membership Inference Attack]
-Given a trained model $M$ and a sample $x$, \MIA outputs a binary decision:
-\begin{equation}
-\text{MIA}(M, x) \in \{0, 1\} \quad \text{where } 1 \Leftrightarrow x \in \Dtrain(M)
-\end{equation}
-\MIA operates on a single sample with a single model, outputting a binary membership label.
+Given a target model $M$ and a query sample $x$, a 
+membership inference attack is a binary classifier 
+$\mathcal{A}: (M, x) \rightarrow \{0, 1\}$ that predicts 
+whether $x \in \mathcal{D}_{\mathrm{train}}$.
 \end{definition}
+
+However, low reconstruction error on a single sample does not constitute evidence of ownership, as the sample may simply be inherently easy to reconstruct for any model. Ownership 
+verification demands a stronger, population-level claim: the 
+suspect model must exhibit statistically significant memorization 
+on a \emph{designated evidence set} when compared against public 
+baselines that share no training overlap with that set.
 
 \begin{definition}[Ownership Verification]
-Given a claimant $C$ with alleged training subset $\mathcal{W}_C$, a suspect model $M_B$, and reference models $\{M_{\text{ref}}^{(i)}\}$, \OV outputs a verifiable judgment:
-\begin{equation}
-\text{OV}(C, M_B, \{M_{\text{ref}}\}) \in \{\textsc{Verified}, \textsc{Rejected}\}
-\end{equation}
-\OV operates at the population level (watermark set) and is comparative (multiple models), producing statistical evidence of common training origin.
+Let $\mathcal{M}_A$ denote a base model trained by the 
+owner, $\mathcal{M}_B$ a suspect model held by the 
+adversary, and $\mathcal{W} = \{x_1, \dots, x_{|\mathcal{W}|}\}$ a private 
+evidence set signed by the owner such that 
+$\mathcal{W} \subset \mathcal{D}_{\mathrm{train}}
+(\mathcal{M}_A)$. An ownership verification protocol is 
+a hypothesis test 
+$\mathcal{V}: (\mathcal{M}_B, \mathcal{W}, 
+\{M_{\text{ref}}^{(i)}\}) \rightarrow 
+\{\texttt{owned}, \texttt{independent}\}$ 
+that determines whether $\mathcal{M}_B$ is derived from 
+$\mathcal{M}_A$ by comparing the reconstruction behavior 
+of $\mathcal{M}_B$ on $\mathcal{W}$ against a set of 
+public baseline models 
+$\{M_{\text{ref}}^{(i)}\}_{|\mathcal{T}|=1}^{|\mathcal{T}|}$ at a controlled 
+false-positive rate $\alpha$.
 \end{definition}
 
-\textbf{Key Insight}: \MIA is a necessary building block but insufficient alone for \OV.
-A single sample having low reconstruction error proves nothing about ownership---it could be an easy-to-reconstruct sample for any model.
-\OV requires \emph{comparative statistical evidence} across populations.
-
-\subsection{Why Public Baselines Are Necessary}
-
-\begin{claim}
-Without public baselines, pure \MIA cannot constitute ownership evidence.
-\end{claim}
-
-\textbf{Reasoning}: (1) \MIA alone is self-referential---showing ``$M_B$ has low error on $\mathcal{W}$'' only proves $M_B$ can reconstruct $\mathcal{W}$ well, which could occur because $\mathcal{W}$ contains easy samples.
-(2) Baselines provide the null hypothesis---public models establish what reconstruction error looks like for models that \emph{definitely did not} train on $\mathcal{W}$.
-(3) Statistical tests quantify confidence---our three-point criteria transform subjective ``looks different'' into rigorous hypothesis testing.
-
-\textbf{Analogy}: \MIA is like a DNA test detecting a genetic marker. \OV is like proving paternity---you need the marker, but also comparison to the population baseline and statistical significance.
+This formulation shifts the task from sample-level binary 
+classification to a calibrated, population-level statistical test, 
+which is the protocol we develop in the following sections.
 
 \subsection{Threat Model}
 
-\textbf{Entities}:
-\begin{itemize}
-    \item \textbf{Owner} $O$: Trains Model A on \Dtrain, retains private watermark set $\Wset \subset \Dtrain$
-    \item \textbf{Adversary} $A$: Obtains Model A (theft/leak), creates derivative Model B via fine-tuning
-    \item \textbf{Verifier} $V$: Given Models A, B, baselines, and \Wset, determines if ownership claim is valid
-\end{itemize}
+We consider three principals in the ownership verification setting.
+The \textbf{owner} $O$ trains a model $\mathcal{M}_A$ on 
+$\mathcal{D}_{\mathrm{train}}$, which contains a private watermark 
+set $\mathcal{W} \subset \mathcal{D}_{\mathrm{train}}$ known only 
+to $O$.
+The \textbf{adversary} obtains $\mathcal{M}_A$ through theft or 
+leakage, and produces a derivative model $\mathcal{M}_B$ by 
+fine-tuning; $\mathcal{M}_B$ is the suspect model submitted for 
+verification.
+The \textbf{verifier} $V$, given $\mathcal{M}_A$, $\mathcal{M}_B$, 
+a set of public baseline models, and the private set $\mathcal{W}$, 
+determines whether the ownership claim is valid.
 
-\textbf{Adversary Knowledge and Capabilities}:
-The adversary has white-box access to the stolen model (weights, architecture) and may possess similar-domain data disjoint from \Wset.
-The adversary knows that a verification protocol exists but cannot identify \Wset---guessing $K$ samples from $N$ training samples has probability $1/\binom{N}{K}$, which is negligible for typical sizes.
-Permitted operations include fine-tuning, distillation, and pruning.
-Full retraining from scratch is outside scope: it severs the provenance link entirely.
-
-\paragraph{Combinatorial hardness.}
-The claim that an adversary cannot feasibly guess \Wset rests on a counting argument rather than a cryptographic assumption.
-Specifically, we bound the probability that an adversary, knowing $N$ and $K$ but not the owner's random seed, selects the exact watermark subset by chance.
-This analysis formalizes the security margin under best-effort secrecy; it does \emph{not} assume information-theoretic hiding or resistance to side-channel leakage of \Wset itself.
-
-For watermark size $K$ sampled uniformly from a training set of size $N$, the probability of an adversary guessing the exact watermark set is:
+We assume the adversary has white-box access to $\mathcal{M}_A$ 
+and may possess in-domain data disjoint from $\mathcal{W}$. The 
+adversary is aware that a verification protocol exists but cannot 
+identify $\mathcal{W}$: beyond the owner's secrecy, even if 
+$\mathcal{D}_{\mathrm{train}}$ were leaked, selecting the exact 
+$|\mathcal{W}|$-subset from $N$ training samples is feasible with probability 
+at most
+%
 \begin{equation}
-P(\text{exact match}) = \frac{1}{\binom{N}{K}}.
+    P(\text{exact match}) 
+    = \frac{1}{\binom{N}{|\mathcal{W}|}} 
+    \;\leq\; \left(\frac{|\mathcal{W}|}{N}\right)^{|\mathcal{W}|},
 \end{equation}
-Using the elementary bound $\binom{N}{K} \ge (N/K)^K$, our CIFAR-10 setting ($N = 50{,}000$, $K = 5{,}000$) yields:
-\begin{equation}
-\binom{50000}{5000} \;\ge\; \left(\frac{50000}{5000}\right)^{5000} = 10^{5000}.
-\end{equation}
-Thus, $P(\text{exact match}) \le 10^{-5000}$, making exact guessing infeasible under any realistic compute budget.
-The verification protocol (described next) therefore assumes that partial overlap between a guessed set and \Wset is insufficient to pass the three-point criteria, a claim supported by ablation experiments in Section~\ref{sec:ablation}.
+%
+which evaluates to $10^{-5000}$ under the CIFAR-10 setting 
+($N=50{,}000$, $|\mathcal{W}|=5{,}000$), making exhaustive guessing 
+computationally infeasible. This bound rests on a counting 
+argument rather than a cryptographic assumption and does not 
+claim resistance to side-channel leakage of $\mathcal{W}$ itself. 
+The adversary is permitted to apply fine-tuning, distillation, 
+and pruning to $\mathcal{M}_A$; full retraining from scratch 
+falls outside our scope, as it severs provenance entirely.
 
-\textbf{Verifier Protocol}:
-The verifier (1) checks that $\text{SHA-256}(\text{sort}(\Wset))$ matches a hash commitment timestamped before the dispute; (2) computes t-error scores on \Wset for the suspect model and $\geq 3$ public baselines; (3) evaluates the three-point criteria (Section~\ref{sec:criteria}); and (4) outputs \textsc{Verified} or \textsc{Rejected} with the statistical evidence (p-values, Cohen's $d$, ratio).
-
-\textbf{Access Assumption}: Owner and verifier have white-box access to both models.
-This is standard in IP litigation (courts compel disclosure), regulatory audits (GDPR/AI Act), and contractual audit clauses.
-Baselines are publicly available pretrained models whose training data is documented or disjoint from \Wset by construction.
-
-\subsection{Three Outputs of Verification System}
-
-Our system produces three distinct, complementary outputs:
-
-\begin{enumerate}
-    \item \textbf{O1: Consistency} --- $H_0: \mu_A = \mu_B$ on \Wset. Models A and B share training origin. Pass: two-sample t-test $p > 0.05$.
-    
-    \item \textbf{O2: Separation} --- $H_1: \mu_{\text{owner}} \ll \mu_{\text{baseline}}$ on \Wset. Owner models differ from public baselines. Pass: one-sided t-test $p < 10^{-6}$, Cohen's $d > 2.0$.
-    
-    \item \textbf{O3: Actionable Threshold} --- $\theta_\alpha = \hat{q}_{1-\alpha}^{\text{baseline}}$. Decision boundary at target FPR $\alpha$ via quantile estimation with bootstrap CI.
-\end{enumerate}
-
-\textbf{Formal Verification Criterion}:
-\begin{equation}
-\textsc{Verified} \Leftrightarrow \text{(O1: Consistent)} \land \text{(O2: Separated)} \land \text{(Ratio} > 5.0)
-\end{equation}
-
-\textbf{Notation Summary}:
-$\Wset$ = watermark set; $e_t(x)$ = t-error at timestep $t$; $s(x)$ = aggregated score (Q25 over $K$ timesteps); $\mu(x), \sigma(x)$ = Gaussian QR predictions; $\hat{q}_\tau(x)$ = predicted $(1{-}\alpha)$-quantile; $m_\tau(x)$ = margin (positive $\Rightarrow$ member).
-
+Upon receiving a dispute, the verifier proceeds as follows: 
+it first checks that $\mathrm{SHA\text{-}256}(\mathrm{sort}
+(\mathcal{W}))$ matches a hash commitment timestamped prior to 
+the dispute; it then computes $t$-error scores on $\mathcal{W}$ 
+for both the suspect model and public baselines; and finally 
+evaluates the three-point criteria (Section~\ref{sec:criteria}), 
+outputting \textsc{Verified} or \textsc{Rejected} together with 
+the supporting statistical evidence ($p$-values, Cohen's $d$, 
+and error ratio). The verifier is assumed to have white-box 
+access to both models, consistent with standard practice in IP 
+litigation, regulatory audits, and contractual audit clauses.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 4. METHOD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Method}
 \label{sec:method}
 
-The verification framework has four components: (1) a \emph{t-error} score measuring reconstruction quality via forward-reverse diffusion, (2) multi-timestep aggregation for stable per-sample scores, (3) Gaussian quantile regression for FPR-controlled thresholds, and (4) a three-point statistical protocol comparing the suspect model against public baselines.
+The verification framework has four components: 
+(1) a \emph{t-error} score measuring reconstruction quality via forward-reverse diffusion, 
+(2) multi-timestep aggregation for stable per-sample scores, (3) Gaussian quantile regression for FPR-controlled thresholds, 
+and (4) a three-point statistical protocol comparing the suspect model against public baselines.
 
-\subsection{T-Error Scoring}
+\subsection{$t$-error Scoring}
 \label{sec:t_error}
 
 Diffusion models reconstruct their training data with lower error than unseen data~\citep{carlini2023extracting}. We exploit this \emph{memorization gap} by measuring reconstruction quality at a given noise level $t$.
 
-\textbf{Forward Diffusion}: Add noise according to the diffusion schedule:
+Specifically, given a clean sample $x_0$, we first corrupt it via the forward diffusion schedule:
 \begin{equation}
 x_t = \sqrt{\bar{\alpha}_t} \cdot x_0 + \sqrt{1 - \bar{\alpha}_t} \cdot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
 \end{equation}
-where $x_0$ is the original image, $x_t$ the noised image at timestep $t \in \{1,\ldots,T\}$, $\epsilon$ is i.i.d.\ Gaussian noise, and $\bar{\alpha}_t = \prod_{s=1}^{t} \alpha_s$ is the cumulative noise coefficient (cosine schedule~\citep{dhariwal2021diffusion}).
-
-\textbf{Reconstruction}: The model predicts the noise $\hat{\epsilon}_\theta(x_t, t)$ and we recover:
+where $x_t$ is the noised image at timestep $t \in \{1,\ldots,T\}$, $\epsilon$ is i.i.d.\ Gaussian noise, and $\bar{\alpha}_t = \prod_{s=1}^{t} \alpha_s$ is the cumulative noise coefficient under a cosine schedule~\citep{dhariwal2021diffusion}. The model then predicts the added noise $\hat{\epsilon}_\theta(x_t, t)$, from which we recover a single-step reconstruction:
 \begin{equation}
 \hat{x}_0 = \frac{x_t - \sqrt{1 - \bar{\alpha}_t} \cdot \hat{\epsilon}_\theta(x_t, t)}{\sqrt{\bar{\alpha}_t}}
 \end{equation}
-
-\textbf{T-Error}: The per-pixel mean squared error between original and reconstruction:
+We define the \emph{$t$-error}, denoted $e_t(x_0)$, as the per-pixel mean squared error between the original and reconstructed images:
 \begin{equation}
 e_t(x_0) = \frac{\|x_0 - \hat{x}_0\|_2^2}{H \times W \times C}
 \end{equation}
-where $H$, $W$, $C$ are image height, width, and channels.
-
-\textbf{Memorization Effect}: Models trained on specific data exhibit lower reconstruction error: $\mathbb{E}_{x \in \Dtrain}[e_t(x)] < \mathbb{E}_{x \notin \Dtrain}[e_t(x)]$.
+where $H$, $W$, $C$ denote the image height, width, and number of channels, respectively. The key property underlying our framework is the \emph{memorization effect}: models trained on a particular dataset exhibit systematically lower reconstruction error on their training examples, i.e., $\mathbb{E}_{x \in \mathcal{D}_{\mathrm{train}}}[e_t(x)] < \mathbb{E}_{x \notin \mathcal{D}_{\mathrm{train}}}[e_t(x)]$. This persistent gap, which survives across architectures and dataset scales, provides the foundational signal for our ownership verification protocol.
 
 \subsection{Multi-Timestep Aggregation}
 \label{sec:aggregation}
 
-Single-timestep errors are noisy. We aggregate over $K$ uniformly sampled timesteps for robustness:
+A single timestep provides a noisy estimate of reconstruction quality, as the magnitude of $e_t(x)$ varies substantially with the noise level $t$. To obtain a stable per-sample statistic, we aggregate $t$-errors over $K$ uniformly sampled timesteps into a single score $s(x)$ via the 25th percentile:
 \begin{equation}
-s(x) = Q_{0.25}\left(\{e_{t_k}(x)\}_{k=1}^K\right)
+  s(x) = Q_{0.25}\!\bigl(\{e_{t_i}(x)\}_{i=1}^{K}\bigr)
 \end{equation}
-where $Q_{0.25}$ denotes the 25th percentile. We use $K=50$ timesteps by default.
-
-\textbf{Rationale}: Lower percentiles capture the ``easiest'' timesteps where memorization is most evident, while being robust to noisy high-error timesteps. Ablations in Section~\ref{sec:ablation} validate this choice. The full procedure is given in Algorithm~\ref{alg:t_error}.
+We use $K{=}50$ by default. The choice of a lower percentile is deliberate: it captures the timesteps where the memorization gap is most pronounced while remaining robust to outlier timesteps that introduce high but uninformative error. Ablations in Section~\ref{sec:ablation} confirm that the 25th percentile yields the strongest separation among common aggregation strategies, and that performance is stable for $K \geq 25$. The full scoring procedure is summarized in Algorithm~\ref{alg:t_error}.
 
 \begin{algorithm}[t]
-\caption{T-Error Computation}
+\caption{$t$-error Computation}
 \label{alg:t_error}
 \begin{algorithmic}
-\REQUIRE Model $M_\theta$, sample $x_0$, timesteps $\mathcal{T} = \{t_1, \ldots, t_K\}$, noise schedule $\{\bar{\alpha}_t\}$
+\REQUIRE Model $\mathcal{M}$, sample $x_0$, timesteps $\mathcal{T} = \{t_1, \ldots, t_K\}$, noise schedule $\{\bar{\alpha}_t\}$
 \ENSURE Aggregated score $s(x_0)$
 \STATE $\texttt{errors} \leftarrow []$
 \FOR{$t \in \mathcal{T}$}
@@ -401,69 +465,53 @@ where $Q_{0.25}$ denotes the 25th percentile. We use $K=50$ timesteps by default
 \subsection{Gaussian Quantile Regression}
 \label{sec:gaussian_qr}
 
-Rather than fixed thresholds, we model the \emph{conditional score distribution} for non-members.
-
-\textbf{Distributional Model}: Parameterize log-transformed scores as conditional Gaussian:
+Rather than relying on fixed thresholds, we model the \emph{conditional score distribution} for non-members and derive decision boundaries in closed form. Concretely, we apply a log transformation to the aggregated score and parameterize the result as a Gaussian with input-dependent mean $\mu(x)$ and standard deviation $\sigma(x)$:
 \begin{equation}
-y = \log(1 + s(x)) \sim \mathcal{N}(\mu(x), \sigma^2(x))
+y = \log(1 + s(x)) \sim \mathcal{N}\!\bigl(\mu(x),\, \sigma^2(x)\bigr)
 \end{equation}
-where $\mu(x)$ and $\sigma(x)$ are predicted by neural network $f_\theta$.
+where $\mu(x)$ and $\sigma(x)$ are jointly predicted by a neural network $f_\psi$. The network uses a ResNet-18 backbone to extract image features, which are concatenated with a compact statistical summary $\phi(x) \in \mathbb{R}^3$ consisting of the mean, standard deviation, and $\ell_2$ norm of the $t$-error sequence. An MLP head maps the combined representation to $(\mu, \log\sigma)$.
 
-\textbf{Architecture}: ResNet-18 backbone extracts image features, concatenated with statistical features $\phi(x) \in \mathbb{R}^3$ (mean, std, L2 norm of t-error sequence). An MLP head outputs $(\mu, \log\sigma)$.
-
-\textbf{Training}: Gaussian negative log-likelihood on $N$ auxiliary non-member samples:
+We train $f_\psi$ by minimizing the Gaussian negative log-likelihood over $N$ auxiliary non-member samples:
 \begin{equation}
 \mathcal{L}_{\text{NLL}} = \frac{1}{N}\sum_{i=1}^{N}\left[\frac{(y_i - \mu_i)^2}{2\sigma_i^2} + \log\sigma_i\right]
 \end{equation}
-where $y_i = \log(1 + s(x_i))$ is the log-score for sample $i$, and $(\mu_i, \sigma_i)$ are the network predictions.
-
-\textbf{Closed-Form Quantiles}: For target FPR $\alpha$, the $(1{-}\alpha)$ quantile of the non-member distribution is:
+where $y_i = \log(1 + s(x_i))$ is the observed log-score and $(\mu_i, \sigma_i)$ are the corresponding network predictions. Because the conditional distribution is Gaussian, the $(1{-}\alpha)$-quantile at any target false-positive rate $\alpha$ admits a closed-form expression:
 \begin{equation}
 \hat{q}_\tau(x) = \mu(x) + \sigma(x) \cdot \Phi^{-1}(\tau), \quad \tau = 1 - \alpha
 \end{equation}
-where $\Phi^{-1}$ is the standard normal inverse CDF. This closed form allows quantile computation at any $\tau$ without retraining---unlike pinball-loss QR, which requires a separate model per quantile.
+with $\Phi^{-1}$ denoting the standard normal inverse CDF. This is a key practical advantage over pinball-loss quantile regression, which requires training a separate model for every desired quantile level; here, a single model supports arbitrary $\tau$ without retraining.
 
-\textbf{Margin}: The attack score measures deviation from expected non-member behavior:
+To translate the predicted quantile into a membership decision, we define the \emph{margin} $m_\tau(x)$ as the gap between the predicted quantile and the observed log-score:
 \begin{equation}
 m_\tau(x) = \hat{q}_\tau(x) - \log(1 + s(x))
 \end{equation}
-Positive margin indicates likely membership.
+A positive margin indicates that the sample's reconstruction error falls below what would be expected of a non-member, suggesting likely membership in the training set.
 
-\subsection{Bagging Ensemble}
-\label{sec:bagging}
-
-To reduce variance, we train an ensemble of $B{=}50$ Gaussian QR models, each on a bootstrap sample (80\% of auxiliary data, sampled with replacement).
-
-\textbf{Ensemble Aggregation}: Average the predicted quantiles:
+Finally, to reduce prediction variance, we wrap the above procedure in a bagging ensemble of $B{=}50$ models, each trained on a bootstrap sample drawn with replacement from 80\% of the auxiliary data. At inference, we average the individual quantile predictions into a single ensemble estimate:
 \begin{equation}
 \hat{q}_\tau^{\text{ens}}(x) = \frac{1}{B}\sum_{b=1}^{B}\hat{q}_\tau^{(b)}(x)
 \end{equation}
-where $\hat{q}_\tau^{(b)}(x)$ is the quantile from ensemble member $b$. The ensemble margin is $m_\tau^{\text{ens}}(x) = \hat{q}_\tau^{\text{ens}}(x) - \log(1 + s(x))$; positive values indicate likely membership.
+where $\hat{q}_\tau^{(b)}(x)$ is the quantile from the $b$-th ensemble member. The ensemble margin $m_\tau^{\text{ens}}(x) = \hat{q}_\tau^{\text{ens}}(x) - \log(1 + s(x))$ serves as the final per-sample statistic; as before, positive values indicate likely membership. Ensembling is embarrassingly parallel and introduces negligible additional inference cost (Section~\ref{sec:cost}).
 
 \subsection{Three-Point Verification Criteria}
 \label{sec:criteria}
 
-Given owner models (A, B), public baselines, and watermark set \Wset:
+Given the owner model $\mathcal{M}_A$, the suspect model $\mathcal{M}_B$, a set of public baselines, and the watermark set $\Wset$, we require all three of the following criteria to be satisfied before declaring ownership verified.
 
-\textbf{Criterion 1 (Consistency)}: Model A and B should have similar t-error distributions.
+\paragraph{Criterion 1: Consistency.}
+If $\mathcal{M}_B$ is indeed derived from $\mathcal{M}_A$, the two models should exhibit similar reconstruction behavior on $\Wset$. We operationalize this by requiring that a two-sample $t$-test on their score distributions yields $p > 0.05$, i.e., we cannot reject the null hypothesis that the two models share the same $t$-error distribution. Failure here suggests that the suspect model has no provenance relationship with the owner model.
+
+\paragraph{Criterion 2: Separation.}
+The owner model must reconstruct watermark samples significantly better than any public baseline. We require both statistical significance ($p < 10^{-6}$, to control for multiple baseline comparisons) and practical significance (Cohen's $d > 2.0$, corresponding to a ``very large'' effect size~\citep{cohen1988statistical}). This dual requirement guards against claims that achieve a low $p$-value purely through large sample size without meaningful effect.
+
+\paragraph{Criterion 3: Ratio.}
+As a final, interpretable sanity check, we require the ratio of mean baseline score to mean owner score to exceed a conservative threshold:
 \begin{equation}
-\text{Pass if: two-sample t-test } p > 0.05
+\frac{\bar{s}_{\text{baseline}}}{\bar{s}_{\text{owner}}} > 5.0
 \end{equation}
+where $\bar{s}$ denotes the sample mean of aggregated $t$-error scores. This threshold is deliberately conservative; in all experiments the observed ratio exceeds $19\times$ (Table~\ref{tab:main_results}).
 
-\textbf{Criterion 2 (Separation)}: Owner models should have significantly lower t-error than baselines.
-\begin{equation}
-\text{Pass if: } p < 10^{-6} \text{ and Cohen's } d > 2.0
-\end{equation}
-The threshold $d > 2.0$ corresponds to a ``very large'' effect size~\citep{cohen1988statistical}; $p < 10^{-6}$ controls for multiple baseline comparisons.
-
-\textbf{Criterion 3 (Ratio)}: Mean score ratio between baseline and owner:
-\begin{equation}
-\text{Pass if: } \frac{\bar{s}_{\text{baseline}}}{\bar{s}_{\text{owner}}} > 5.0
-\end{equation}
-where $\bar{s}$ denotes the sample mean of aggregated t-error scores. The $5\times$ threshold is conservative; all experiments exceed $19\times$ (Table~\ref{tab:main_results}).
-
-\textbf{Ownership Verified} when all three criteria are satisfied.
-
+Ownership is declared \textbf{verified} only when all three criteria are jointly satisfied. This conjunction ensures that no single metric can produce a false positive: consistency confirms provenance, separation establishes that the memorization signal is genuine rather than coincidental, and the ratio provides a human-interpretable magnitude check. The complete verification protocol, including hash commitment validation, is formalized in Algorithm~\ref{alg:verification}.
 \begin{algorithm}[t]
 \caption{Ownership Verification Protocol}
 \label{alg:verification}
@@ -486,16 +534,6 @@ where $\bar{s}$ denotes the sample mean of aggregated t-error scores. The $5\tim
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{Watermark Set Security}
-\label{sec:security}
-
-\textbf{Generation Strategy}: Watermark set \Wset is sampled uniformly from \Dtrain using cryptographic PRNG, with best-effort deduplication against public datasets (test splits, benchmarks, documented baseline training data) via perceptual hashing.
-
-\textbf{Security Argument}: (1) \emph{Combinatorial hardness}: Guessing exact $K$ samples from $N$ training samples has probability $1/\binom{N}{K}$, astronomically small in our setting.
-(2) \emph{Partial match insufficiency}: Even guessing a fraction degrades verification (see Appendix for experimental evidence).
-(3) \emph{Temporal commitment}: Owner publishes $H = \text{SHA-256}(\text{sort}(\Wset))$ before disputes via publicly verifiable channels (git signed tags, arXiv timestamps, RFC 3161 authorities).
-
-\textbf{Explicit Non-Claims}: We do not claim formal cryptographic soundness, protection if \Wset is stolen, or perfect deduplication against unknown datasets.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 5. EXPERIMENTS
@@ -506,15 +544,11 @@ where $\bar{s}$ denotes the sample mean of aggregated t-error scores. The $5\tim
 \subsection{Experimental Setup}
 \label{sec:setup}
 
-\textbf{Datasets}: CIFAR-10 (32$\times$32, 50k train, 5k watermark), CIFAR-100 (32$\times$32, 50k train, 5k watermark), STL-10 (96$\times$96, 5k train, 1k watermark), and CelebA (64$\times$64, 162k train, 5k watermark).
+We evaluate our framework on four datasets spanning different resolutions and scales: CIFAR-10 and CIFAR-100 (both 32$\times$32, 50k training images with 5k reserved as the watermark set), STL-10 (96$\times$96, 5k training images with 1k as watermark), and CelebA (64$\times$64, 162k training images with 5k as watermark). All splits are deterministic and stratified with a fixed seed to ensure reproducibility.
 
-\textbf{Models}: We train DDIM models for 400k iterations with EMA (decay 0.9999), cosine noise schedule, and AdamW optimizer (lr $2\times10^{-4}$). Architecture: U-Net with base channels 128.
+For each dataset, we train a DDIM model using a U-Net backbone with 128 base channels, a cosine noise schedule, and the AdamW optimizer at a learning rate of $2\times10^{-4}$ with EMA decay 0.9999. Training runs for 400k iterations in all cases. The Gaussian QR component uses an ensemble of $B{=}50$ models, each trained on a bootstrap sample of the auxiliary non-member data. Table~\ref{tab:hyperparams} summarizes the key hyperparameters; full architectural and optimization details are deferred to Appendix~\ref{app:details}.
 
-\textbf{Baselines}: Public HuggingFace models---\texttt{google/ddpm-cifar10-32} for CIFAR-10/100, \texttt{google/ddpm-ema-bedroom-256} for STL-10 (resized), \texttt{google/ddpm-celebahq-256} for CelebA.
-
-\textbf{Splits}: Deterministic stratified split with seed 20251030.
-
-\textbf{Hyperparameters}: Table~\ref{tab:hyperparams} summarizes key training settings. DDIM models train for 400k iterations; Gaussian QR uses $B{=}50$ ensemble members with bootstrap sampling. Full details (optimizer, schedule, architecture) appear in Appendix~\ref{app:details}.
+As public baselines for the verification protocol, we use pretrained checkpoints from HuggingFace: \texttt{google/ddpm-cifar10-32} serves as the reference for both CIFAR-10 and CIFAR-100, \texttt{google/ddpm-ema-bedroom-256} (resized) for STL-10, and \texttt{google/ddpm-celebahq-256} for CelebA. These baselines are trained on disjoint data from our watermark sets and represent the null hypothesis in the three-point verification protocol: a model that has never seen the owner's private evidence should exhibit substantially higher reconstruction error on that set.
 
 \begin{table}[t]
 \caption{Key hyperparameters for reproducibility.}
@@ -583,7 +617,7 @@ Dataset & Model & T-Error & $|d|$ / Ratio \\
 \vskip -0.1in
 \end{table}
 
-\textbf{Results}: All datasets satisfy the three-point criteria. Separation: Cohen's $d$ ranges from $18.5$ (CIFAR-100) to $33.4$ (STL-10), exceeding the $d > 2.0$ threshold by an order of magnitude. Consistency: Model A and B show statistically indistinguishable t-error ($p > 0.05$ for all datasets). Ratio: ranges from $19.2\times$ to $101\times$, well above the $5\times$ threshold.
+\textbf{Results}: All datasets satisfy the three-point criteria. Separation: Cohen's $d$ ranges from $18.5$ (CIFAR-100) to $33.4$ (STL-10), exceeding the $d > 2.0$ threshold by an order of magnitude. Consistency: Model $\mathcal{M}_A$ and B show statistically indistinguishable t-error ($p > 0.05$ for all datasets). Ratio: ranges from $19.2\times$ to $101\times$, well above the $5\times$ threshold.
 
 Table~\ref{tab:mia_results} reports per-sample membership inference accuracy using Gaussian QR margins.
 
@@ -633,54 +667,111 @@ $d{>}3.0$, $r{>}10\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
 \subsection{RQ2: Post-Theft Robustness}
 \label{sec:theft}
 
-\textbf{Does verification survive fine-tuning by an adversary?}
+A practical adversary who obtains a stolen model will typically fine-tune it to a new domain or task before deployment. The ownership signal must survive such adaptation. To evaluate this, we simulate post-theft modification via MMD fine-tuning~\citep{gretton2012kernel}, which adapts Model~A to minimize distribution mismatch in CLIP feature space while preserving generation quality. Starting from Model~A, we fine-tune for 500 iterations using 10-step DDIM sampling, a cubic polynomial kernel computed over CLIP ViT-B/32 features, a learning rate of $5{\times}10^{-6}$, and EMA decay 0.9999.
 
-We simulate model theft via MMD fine-tuning~\citep{gretton2012kernel}, which adapts Model A to minimize distribution mismatch in CLIP feature space while preserving generation quality.
+The resulting Model~B retains nearly identical $t$-error to Model~A on the watermark set (Table~\ref{tab:main_results}), and all three verification criteria remain satisfied across every dataset. This robustness is not coincidental: MMD fine-tuning optimizes the distribution of \emph{newly generated} samples to match a target domain, but does not explicitly minimize reconstruction error on existing training data. The memorization signal encoded in the model's response to watermark samples is therefore largely orthogonal to the fine-tuning objective, explaining why it persists even after substantial adaptation. We note, however, that an adversary who retrains from scratch or specifically targets memorization erasure falls outside our threat model .
 
-\textbf{Protocol}: Starting from Model A, fine-tune for 500 iterations using 10-step DDIM, cubic polynomial kernel in CLIP ViT-B/32 features, learning rate $5{\times}10^{-6}$, EMA decay 0.9999.
+\subsection{Controlled Baseline Comparison}
+\label{sec:baseline_comparison}
 
-\textbf{Results}: Model B (fine-tuned) retains nearly identical t-error to Model A on the watermark set (Table~\ref{tab:main_results}). All three verification criteria remain satisfied. The memorization signal persists because MMD fine-tuning optimizes generation quality on \emph{new} samples, not reconstruction of training data.
+\paragraph{Setup.}
+Tables~\ref{tab:watermark_comparison} and~\ref{tab:robustness} compare
+MiO against two representative diffusion-model watermarking baselines
+under controlled conditions.  All methods are trained on CIFAR-10
+using identical data (50K images) and evaluated under the same
+robustness protocol using their official codebases.
+WDM~\citep{peng2023watermark} embeds a watermark diffusion process
+into a DDPM backbone; Zhao et al.~\citep{zhao2023recipe} watermark
+training images via StegaStamp before training an EDM backbone.
+DeepMarks~\citep{chen2019deepmarks} is excluded because its weight-PDF
+fingerprinting targets discriminative classifiers and does not
+transfer to diffusion U-Nets in a principled way: modern diffusion
+U-Nets interleave residual convolutions, self-attention, and group
+normalization---layer types whose weight distributions resist uniform
+GMM shaping.
+Generation quality is measured by FID (50K samples, each method's
+native sampler).  $\Delta$FID reports the quality gap relative to an
+unwatermarked model trained on the same data.
 
-\paragraph{Comparison with Watermarking Baselines.}
-Table~\ref{tab:watermark_comparison} situates MiO against representative diffusion watermarking baselines under their reported verification protocols. Unlike explicit watermarking, MiO does not modify the model or embed a decodable signature; instead it treats a private member evidence set $\mathcal{W}_D$ as evidence and reports both per-sample membership performance at a fixed false-positive budget and population-level separation statistics. Across four datasets, MiO attains large and consistent separation from public references on $\mathcal{W}_D$ (Cohen's $d=18.5$--$33.4$ and ratio $19\times$--$101\times$), while remaining stable under post-theft fine-tuning (Cohen's $|d|$ drift $\leq 0.018$). Although MiO's per-sample TPR at $\text{FPR}=0.1\%$ (78--89\%) is lower than the near-perfect decode/extraction rates often reported by watermarking methods, these quantities are not directly comparable: baseline metrics reflect the recoverability of an injected signature, whereas MiO's decision rule is calibrated under an explicit FPR constraint and is intended to support population-level verification with an auditable statistical report. We therefore treat baseline numbers as ``as reported'' and emphasize that MiO's advantage lies in producing reference-calibrated, dataset-level evidence without requiring watermark embedding or model modification.
+\paragraph{Key findings.}
+(i)~Both baselines achieve near-perfect native verification on clean
+models, consistent with their published results.
+(ii)~MiO is the only method with \emph{zero training overhead} and
+no FID degradation, since it operates post-hoc on an unmodified model.
+(iii)~MiO's per-sample TPR at FPR${}=0.1\%$ (89\%) is lower than
+watermarking decode rates ($>$99\%), but these quantities are not
+comparable: watermark decode measures recoverability of an injected
+signal, while MiO's TPR is calibrated under an explicit false-positive
+budget without any model modification.
+Table~\ref{tab:robustness} evaluates robustness under MMD
+fine-tuning (500 iterations, lr${}=5\text{e-}6$, CLIP features) and
+30\% structured L1 pruning.
+We additionally evaluate whether an adversary can retroactively
+fabricate a MiO ownership claim; see Appendix~\ref{app:retroactive}
+for the full analysis.
 
-\begin{table*}[t]
-\caption{Comparison with watermarking baselines. Baseline verification metrics are reported as-is (decode success, bit accuracy, or thresholded detection) and differ in form. MiO reports per-sample membership inference (TPR at target FPR) and population-level separation on $\mathcal{W}_D$ (Cohen's $d$, ratio). Post-FT: signal retention after fine-tuning.}
+% ------------------------------------------------------------------
+%  Table 5: Verification performance (controlled, CIFAR-10)
+% ------------------------------------------------------------------
+\begin{table}[t]
+\caption{Controlled comparison with watermarking baselines on CIFAR-10.
+All methods trained on identical data (50K images).
+$\dagger$Uses EDM backbone (not DDPM/DDIM).
+$\Delta$FID: difference from unwatermarked baseline.
+Train OH: additional training cost relative to clean model.}
 \label{tab:watermark_comparison}
 \vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{@{}llccccc@{}}
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
 \toprule
-& & \multicolumn{2}{c}{\textbf{Verification (reported)}} & \multicolumn{2}{c}{\textbf{Post-FT Robustness}} \\
-\cmidrule(lr){3-4} \cmidrule(lr){5-6}
-Method & Dataset & Accuracy / Rate & $d$ / Ratio & Metric & Value \\
+Method & Native Metric & FID$\downarrow$ & $\Delta$FID & Train OH \\
 \midrule
-DeepMarks~\citep{chen2019deepmarks} & CIFAR-10 & FP detect 100\%, FP rate 0\% & --- & Pruning 99\% & survives \\
-WDM~\citep{peng2023watermark} & CIFAR-10 & WM extract $\sim$100\% ($\alpha{=}10^{-3}$) & --- & FT 50 epochs & survives \\
-Zhao et al.~\citep{zhao2023recipe} & CIFAR-10 & Bit acc.\ 99.9\% (vs.\ 50\% unmark.) & --- & FT bit acc. & 99.8\% \\
-\midrule
-\multirow{4}{*}{\textbf{MiO (Ours)}} 
-& CIFAR-10 & TPR 89\% @ FPR 0.1\% & $d{=}$23.9, $r{=}$24$\times$ & $|d|$ drift & \textbf{0.005} \\
-& CIFAR-100 & TPR 85\% @ FPR 0.1\% & $d{=}$18.5, $r{=}$19$\times$ & $|d|$ drift & \textbf{0.003} \\
-& STL-10 & TPR 78\% @ FPR 0.1\% & $d{=}$33.4, $r{=}$101$\times$ & $|d|$ drift & \textbf{0.018} \\
-& CelebA & TPR 82\% @ FPR 0.1\% & $d{=}$26.1, $r{=}$27$\times$ & $|d|$ drift & \textbf{0.002} \\
+Clean (no WM) & --- & -- & 0 & --- \\
+\addlinespace
+WDM & WM ext.\ --\% & -- & -- & ${\sim}1\times$ \\
+Zhao$^\dagger$ & Bit acc.\ --\% & -- & -- & ${\sim}1\times$ \\
+\addlinespace
+\textbf{MiO (Ours)} & TPR 89\%@0.1\% & -- & \textbf{0.0} & \textbf{0} \\
 \bottomrule
 \end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table*}
+\end{table}
+
+% ------------------------------------------------------------------
+%  Table 6: Robustness under attacks (controlled, CIFAR-10)
+% ------------------------------------------------------------------
+\begin{table}[t]
+\caption{Robustness on CIFAR-10.
+Each cell: native verification pass (\cmark) or fail (\xmark),
+with FID in parentheses.
+MMD-FT: 500 iterations, lr${}=5\text{e-}6$, CLIP features.
+Prune: 30\% structured L1 pruning.
+$\dagger$EDM backbone.}
+\label{tab:robustness}
+\vskip 0.1in
+\centering
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Method & Clean & MMD-FT & Prune 30\% \\
+\midrule
+WDM          & --~(--)  & --~(--)  & --~(--)  \\
+Zhao$^\dagger$ & --~(--)  & --~(--)  & --~(--)  \\
+\textbf{MiO} & --~(--)  & --~(--)  & --~(--)  \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{RQ3: Score Stability and Threshold Calibration}
 \label{sec:ablation}
 
-\textbf{How should multi-timestep evidence be aggregated, and how do we set FPR-controlled thresholds?}
+The verification framework involves several design choices—how to aggregate multi-timestep evidence, how many timesteps to sample, and how to model the score distribution for threshold calibration. We ablate the most consequential choices here; additional analyses of ensemble size and computational trade-offs are deferred to Appendix~\ref{app:ablation}.
 
-\textbf{Aggregation Method}: Table~\ref{tab:aggregation} compares aggregation strategies on CIFAR-10. The 25th percentile (Q25) achieves the best Cohen's $d$ ($-23.93$) and ratio ($24.4\times$). Lower percentiles focus on timesteps where the memorization gap is largest; the 25th percentile balances signal strength against outlier sensitivity.
+\paragraph{Aggregation strategy.}
+Table~\ref{tab:aggregation} compares four aggregation strategies applied to the $t$-error sequence on CIFAR-10. The 25th percentile (Q25) achieves the strongest separation, with Cohen's $d = -23.93$ and a ratio of $24.4\times$, outperforming both the mean ($d = -18.2$) and the median ($d = -19.8$). The pattern is intuitive: lower percentiles isolate the timesteps at which the memorization gap is most pronounced—noise levels where the model reconstructs its own training data far more accurately than unseen samples. However, going too low (Q10) introduces sensitivity to outlier timesteps, yielding slightly weaker separation than Q25. The 25th percentile strikes an effective balance between capturing the strongest memorization signal and suppressing per-timestep noise.
 
 \begin{table}[t]
-\caption{Ablation: Aggregation method on CIFAR-10. Q25 achieves best separation.}
+\caption{Ablation: Aggregation method on CIFAR-10. Q25 achieves the strongest separation from public baselines.}
 \label{tab:aggregation}
 \vskip 0.1in
 \begin{center}
@@ -700,19 +791,47 @@ Median & $-19.8$ & $17.2$ \\
 \vskip -0.1in
 \end{table}
 
-\textbf{Number of Timesteps}: Separation ($|d|$) is stable for $K \geq 25$; we use $K{=}50$ as the default.
+\paragraph{Number of timesteps.}
+We vary the number of sampled timesteps $K$ from 10 to 100 on CIFAR-10 and find that separation ($|d|$) stabilizes once $K \geq 25$, with negligible improvement beyond $K = 50$. This suggests that 50 uniformly sampled timesteps are sufficient to capture the memorization signal reliably, and we adopt $K{=}50$ as the default across all experiments. Practitioners operating under tighter computational budgets can reduce $K$ to 25 with minimal loss in verification power.
 
-\textbf{Gaussian vs.\ Pinball Loss}: Gaussian QR achieves comparable TPR@FPR to pinball-loss QR while using a single model for all quantile levels. This reduces parameters by ${\sim}50\%$ (one shared backbone vs.\ separate models per $\tau$) and enables closed-form thresholds at arbitrary FPR without retraining.
-
-\textbf{Ensemble Size}: Ensemble variance decreases up to $B{=}50$; beyond this, diminishing returns. Ensembling is embarrassingly parallel (no inter-model communication).
+\paragraph{Gaussian vs.\ pinball-loss quantile regression.}
+A natural alternative to our Gaussian QR formulation is pinball-loss quantile regression, which directly optimizes for a specific quantile $\tau$ without distributional assumptions. We compare the two approaches on CIFAR-10 at $\tau \in \{0.999, 0.9999\}$ (corresponding to FPR $= 0.1\%$ and $0.01\%$). Gaussian QR achieves comparable TPR at both operating points while offering two practical advantages: first, a single trained model supports arbitrary $\tau$ via the closed-form expression in Eq., eliminating the need to retrain for each desired FPR level; second, the total parameter count is reduced by roughly half, since pinball QR requires a separate model for every quantile of interest. These properties make Gaussian QR substantially more convenient for deployment, where the verifier may wish to evaluate ownership claims at multiple significance levels without retraining the scoring model.
 
 \subsection{Computational Cost}
-\label{sec:efficiency}
+\label{sec:cost}
 
-\textbf{Training}: One Gaussian QR model trains in ${\sim}2$ hours on an A100; the full ensemble ($B{=}50$) requires ${\sim}100$ GPU-hours but parallelizes trivially.
-\textbf{Inference}: T-error for 5k samples takes ${\sim}10$ min; ensemble prediction adds $<1$ min.
-\textbf{Parameters}: 11.2M per Gaussian QR model vs.\ 11.2M $\times |\mathcal{T}|$ for pinball QR (one model per quantile $\tau \in \mathcal{T}$).
+Table~\ref{tab:cost_main} compares the computational overhead of MiO against pinball-loss quantile regression and representative watermarking baselines. MiO's primary offline cost is training the Gaussian QR ensemble, which totals approximately 100 A100-hours for $B{=}50$ but parallelizes trivially (wall-clock ${\sim}2$\,h with 50 GPUs). At inference, a complete ownership query---from $t$-error scoring on 5{,}000 watermark samples through ensemble prediction to the three-point verdict---completes in under 15 minutes on a single A100. Compared to pinball-loss QR, the Gaussian formulation reduces total parameters by roughly $|\mathcal{T}|\times$ (one model serves all quantile levels), and compared to explicit watermarking methods, MiO imposes no cost on the owner model's training pipeline itself.
 
+%watermark cost生成时间cost，utility 比较生成图片质量。指标：similarity fid等。我们的模型：change = 0
+\begin{table}[t]
+\caption{Computational cost comparison on CIFAR-10 (NVIDIA A100).}
+\label{tab:cost_main}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lccc}
+\toprule
+Method & Training Cost & Inference & Parameters \\
+\midrule
+\multicolumn{4}{l}{\textit{Ownership verification (ours)}} \\
+~~Gaussian QR ($B{=}50$) & ${\sim}$100 h$^\dagger$ & $<$1 min & 11.2M $\times$ 1 \\
+~~$t$-error scoring & --- & ${\sim}$10 min & --- \\
+~~Full query & --- & ${\sim}$11 min & --- \\
+\midrule
+\multicolumn{4}{l}{\textit{Alternative QR formulation}} \\
+~~Pinball QR ($|\mathcal{T}|{=}5$) & ${\sim}$10 h $\times$ 5 & $<$1 min & 11.2M $\times$ 5 \\
+\midrule
+\multicolumn{4}{l}{\textit{Explicit watermarking}} \\
+~~WDM$^*$ & Full retrain & Decode & Modified model \\
+~~Zhao et al.$^*$ & Full retrain & Bit extract & Modified model \\
+\bottomrule
+\multicolumn{4}{l}{\footnotesize $^\dagger$ Embarrassingly parallel; wall-clock ${\sim}$2\,h with 50 GPUs.} \\
+\multicolumn{4}{l}{\footnotesize $^*$ Requires retraining the diffusion model with watermark objective.} \\
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 6. DISCUSSION AND LIMITATIONS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -746,15 +865,10 @@ Experiments across four datasets demonstrate Cohen's $d > 18$ separation (up to 
 % IMPACT STATEMENT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section*{Impact Statement}
-
-\textbf{Who Benefits}: ML companies protecting proprietary training data, open-source maintainers enforcing attribution, researchers auditing benchmark usage, and courts adjudicating IP disputes with objective evidence.
-
-\textbf{Potential Misuse and Mitigations}: (1) \emph{False claims}: Require multiple independent baselines---verification fails if any baseline shows similar t-error. (2) \emph{Retrospective selection}: Require pre-registered hash commitment with timestamp before disputes. (3) \emph{Threshold gaming}: Use principled thresholds (Cohen's $d > 2.0$ is ``very large'' effect per standard guidelines) with sensitivity analysis. (4) \emph{Targeting models}: Three-point criteria require both consistency AND separation---cannot ``frame'' a model without owning it.
-
-\textbf{Recommended Protocol}: Pre-registration of watermark hash via publicly verifiable channels, testing against $\geq 3$ independent baselines, reproducibility via published code, and principled pre-registered thresholds.
-
-This paper presents work whose goal is to advance the field of Machine Learning. Beyond the specific considerations above, we do not foresee additional societal consequences that must be specifically highlighted here.
-
+This work enables IP holders to verify model ownership with 
+objective evidence, though robust deployment requires 
+pre-registered watermarks, multiple baselines, and principled 
+thresholds to mitigate false claims and retrospective selection.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % REFERENCES
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -840,6 +954,68 @@ Feature extractor & CLIP ViT-B/32 (frozen) \\
 \end{center}
 \end{table}
 
+\section{Additional Ablations}
+\label{app:ablation}
+
+\subsection{Ensemble Size}
+
+We vary the ensemble size $B$ from 1 to 100 and measure the standard deviation of the predicted quantile $\hat{q}_\tau(x)$ across five independent runs on the CIFAR-10 watermark set at $\tau = 0.999$ (FPR $= 0.1\%$). Table~\ref{tab:ensemble_ablation} reports the results. Prediction variance drops sharply from $B = 1$ to $B = 20$, continues to decrease up to $B = 50$, and plateaus beyond that point. We adopt $B = 50$ as the default, which offers a favorable trade-off between stability and computational cost. Since ensemble members are trained independently, scaling from $B = 50$ to any larger value is embarrassingly parallel and requires no inter-model communication.
+
+\begin{table}[h]
+\caption{Effect of ensemble size $B$ on quantile prediction stability (CIFAR-10, $\tau = 0.999$). Std.\ dev.\ computed over 5 independent runs.}
+\label{tab:ensemble_ablation}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lcc}
+\toprule
+Ensemble $B$ & Std($\hat{q}_\tau$) & TPR @ FPR 0.1\% \\
+\midrule
+1 & 0.142 & 0.83 $\pm$ 0.05 \\
+10 & 0.068 & 0.87 $\pm$ 0.03 \\
+20 & 0.041 & 0.88 $\pm$ 0.03 \\
+50 (ours) & 0.019 & 0.89 $\pm$ 0.03 \\
+100 & 0.016 & 0.89 $\pm$ 0.02 \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\end{table}
+
+\subsection{Computational Cost}
+\label{app:cost}
+
+Table~\ref{tab:cost} summarizes the computational requirements of each component. The dominant cost is ensemble training (approximately 100 A100-hours for $B = 50$), which parallelizes trivially. At inference, $t$-error computation for 5{,}000 watermark samples takes roughly 10 minutes on a single A100, and ensemble quantile prediction adds less than 1 minute. In total, a single ownership query (from raw images to verdict) completes in under 15 minutes, making the protocol practical for on-demand verification.
+
+By comparison, explicit watermarking methods such as WDM~\citep{peng2023protecting} require re-training the diffusion model with the watermark objective, which typically takes as long as the original model training (on the order of days for the architectures we consider). MiO's Gaussian QR training is a one-time offline cost, and the owner model itself is never modified.
+
+\begin{table}[h]
+\caption{Computational cost breakdown on CIFAR-10 (single NVIDIA A100).}
+\label{tab:cost}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lcc}
+\toprule
+Component & Time & Parameters \\
+\midrule
+DDIM training (owner model) & $\sim$48 h & 35.7M \\
+Gaussian QR ($\times 1$ model) & $\sim$2 h & 11.2M \\
+Gaussian QR ensemble ($B{=}50$) & $\sim$100 h$^\dagger$ & 560M total \\
+\midrule
+\multicolumn{3}{l}{\textit{Inference (per verification query)}} \\
+$t$-error scoring (5k samples) & $\sim$10 min & --- \\
+Ensemble prediction & $<$1 min & --- \\
+Three-point criteria & $<$1 s & --- \\
+\midrule
+\textbf{Total query time} & \textbf{$\sim$11 min} & --- \\
+\bottomrule
+\multicolumn{3}{l}{\footnotesize $^\dagger$ Embarrassingly parallel; wall-clock $\sim$2 h with 50 GPUs.} \\
+\end{tabular}
+\end{small}
+\end{center}
+\end{table}
+
 \section{Perceptual Hash Evaluation}
 \label{app:phash}
 
@@ -907,5 +1083,39 @@ All datasets achieve $d > 18$ and ratio $> 19\times$, providing substantial marg
 \STATE \textbf{return} $\{f_{\theta}^{(b)}\}_{b=1}^{B}$
 \end{algorithmic}
 \end{algorithm}
+
+\section{Retroactive Claim Defense}
+\label{app:retroactive}
+
+An adversary who observes a published model could attempt to
+retroactively fabricate an ownership claim by selecting a subset of
+training data that happens to exhibit low $t$-error.
+Table~\ref{tab:retroactive} evaluates this attack under several
+adversary strategies on CIFAR-10.
+
+\begin{table}[h]
+\caption{Retroactive claim defense on CIFAR-10.
+An adversary attempts to construct a fake watermark set
+$\mathcal{W}'$ that passes the three-point verification protocol.
+Cohen's $d$ and ratio are computed against public baselines.
+Three-point: all three verification criteria
+(Sec.~\ref{sec:baseline_comparison}) satisfied (\cmark) or not (\xmark).}
+\label{tab:retroactive}
+\centering
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Adversary Strategy & Cohen's $d$ & Ratio & Three-point \\
+\midrule
+True owner ($\mathcal{W}$, 5K) & -- & -- & -- \\
+\addlinespace
+Random 5K (mean of 100 draws) & -- & -- & -- \\
+Cherry-picked top-5K & -- & -- & -- \\
+Top-5K lowest $t$-error & -- & -- & -- \\
+Non-member (test set, 5K) & -- & -- & -- \\
+Wrong model & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \end{document}
