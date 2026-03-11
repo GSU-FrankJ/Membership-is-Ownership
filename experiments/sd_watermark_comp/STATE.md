@@ -1,8 +1,8 @@
 # STATE — SD Watermark Comparison Experiment
 
 > Last updated: 2026-03-11
-> Current phase: **03 — Not started**
-> Overall progress: ██░░░░░░ 2/8
+> Current phase: **04 — Not started**
+> Overall progress: ███░░░░░ 3/8
 
 ---
 
@@ -12,7 +12,7 @@
 |-------|-----------|-----------|-------|
 | 01    | ✅ DONE   | 2026-03-11 | Environment & dependencies |
 | 02    | ✅ DONE   | 2026-03-11 | Download models & COCO2014 |
-| 03    | ⬜ TODO   | —         | Member/non-member splits |
+| 03    | ✅ DONE   | 2026-03-11 | Member/non-member splits |
 | 04    | ⬜ TODO   | —         | LoRA fine-tuning |
 | 05    | ⬜ TODO   | —         | SleeperMark checkpoint |
 | 06    | ⬜ TODO   | —         | MiO inference — LoRA |
@@ -38,10 +38,11 @@
 - SleeperMark UNet md5: —
 
 ## Dataset
-- Member count: — (target: 10,000)
-- Non-member count: — (target: 10,000)
+- Member count: 10,000 (COCO2014 train)
+- Non-member count: 10,000 (COCO2014 val)
 - Split file: `data/splits/split_seed42.json`
-- Split md5: —
+- Split md5: 9be5fa04dea9a4b6d2f845d5f6f7a3d1
+- LoRA train dir: `data/lora_train_dir/` (10,000 symlinks + metadata.jsonl)
 
 ## LoRA Training Log
 - Start time: —
@@ -101,3 +102,9 @@ _None yet._
 - Actions: Downloaded SD v1.4 (UNet 1.7GB safetensors, md5 e711500e), COCO2014 (82,783 train + 40,504 val + 414,113 captions), verified generation test on GPU3
 - Result: Phase 02 complete
 - Next: Begin Phase 03
+
+### Session 1 (cont.) — 2026-03-11
+- Phase: 03
+- Actions: Built split_seed42.json (10k members from train, 10k non-members from val, 0 overlap, 0 missing), created lora_train_dir with 10k symlinks + metadata.jsonl
+- Result: Phase 03 complete
+- Next: Begin Phase 04
