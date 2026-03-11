@@ -1,8 +1,8 @@
 # STATE — SD Watermark Comparison Experiment
 
 > Last updated: 2026-03-11
-> Current phase: **01 — Not started**
-> Overall progress: ░░░░░░░░ 0/8
+> Current phase: **02 — Not started**
+> Overall progress: █░░░░░░░ 1/8
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Phase | Status    | Completed | Notes |
 |-------|-----------|-----------|-------|
-| 01    | ⬜ TODO   | —         | Environment & dependencies |
+| 01    | ✅ DONE   | 2026-03-11 | Environment & dependencies |
 | 02    | ⬜ TODO   | —         | Download models & COCO2014 |
 | 03    | ⬜ TODO   | —         | Member/non-member splits |
 | 04    | ⬜ TODO   | —         | LoRA fine-tuning |
@@ -22,12 +22,15 @@
 ---
 
 ## Environment
-- Conda env: `mio-sd`
-- Python: —
-- PyTorch: —
-- Diffusers: —
-- CUDA: —
-- GPU confirmed: 4× V100 32GB (unverified)
+- Conda env: `mio-sd` (~/miniconda3/envs/mio-sd)
+- Python: 3.10.20
+- PyTorch: 2.1.2+cu118
+- Diffusers: 0.25.1
+- Transformers: 4.37.2
+- Accelerate: 0.26.1
+- Peft: 0.8.2
+- CUDA: 11.8 (via PyTorch wheels)
+- GPU confirmed: 4× Tesla V100-SXM2-32GB ✅
 
 ## Model Checksums
 - SD v1.4 UNet md5: —
@@ -85,3 +88,10 @@ _None yet._
 - Actions: Created CLAUDE.md, STATE.md, phases/phase_01–08.md
 - Result: Experiment framework ready
 - Next: Begin Phase 01
+
+### Session 1 — 2026-03-11
+- Phase: 01
+- Actions: Installed miniconda to ~/miniconda3, created mio-sd env (Python 3.10, PyTorch 2.1.2+cu118, diffusers 0.25.1, peft 0.8.2, accelerate 0.26.1), verified 4× V100 GPUs, created directory structure
+- Note: Downgraded numpy<2 and huggingface_hub<0.25 for compatibility with torch 2.1/diffusers 0.25.1
+- Result: Phase 01 complete
+- Next: Begin Phase 02

@@ -8,15 +8,42 @@ Research project implementing **model ownership verification for diffusion model
 
 Two paper submissions live in `ICML2026/` and `ACM/` directories (kept in sync).
 
+## Active Experiments
+
+| Experiment | Directory | Status | Env | Description |
+|---|---|---|---|---|
+| Baseline comparison (DDIM) | `experiments/baseline_comparison/` | Paused | `mio` | Original DDIM pipeline on CIFAR/STL/CelebA |
+| **→ SD watermark comparison** | `experiments/sd_watermark_comp/` | **Active** | `mio-sd` | SD v1.4 LoRA + SleeperMark baseline |
+
+The **→** arrow marks the current focus. Default to this experiment unless the user says otherwise.
+
+**On every new session:**
+1. Run `tmux ls` — check for leftover sessions from previous work
+2. Read `experiments/sd_watermark_comp/STATE.md` (the active experiment)
+3. Read `experiments/sd_watermark_comp/CLAUDE.md` for experiment-specific rules
+4. Load only the current phase prompt from `phases/`
+5. Activate the correct conda env (`mio-sd` for the active experiment)
+
+Each experiment has its own `CLAUDE.md` with experiment-specific rules. Read it before starting work.
+
 ## Environment Setup
 
+### `mio` — Original DDIM pipeline
 ```bash
-pip install -r requirements.txt
-# or
-conda env create -f environment.yml
+conda activate mio
+# or: pip install -r requirements.txt / conda env create -f environment.yml
 ```
+Use for: everything under `src/`, `scripts/`, baseline comparison experiment.
 
-Requires Python 3.10+, PyTorch 2.1+, CUDA GPU.
+### `mio-sd` — Stable Diffusion experiments
+```bash
+conda activate mio-sd
+```
+Use for: everything under `experiments/sd_watermark_comp/`.
+Requires: diffusers, peft, accelerate (see `experiments/sd_watermark_comp/phases/phase_01.md`).
+
+### Switching rule
+**Always confirm the correct env is active before running any command.** If unsure, check which experiment the task belongs to and activate accordingly.
 
 **PYTHONPATH**: Must include project root for imports (e.g., `mia_logging`). The pipeline script sets this automatically.
 
@@ -75,69 +102,104 @@ YAML configs in `configs/`:
 
 CIFAR-10 (32x32), CIFAR-100 (32x32), STL-10 (96x96), CelebA (64x64). Each has its own config files and public baselines.
 
-## Experiment State
+## Safety Rules
 
-Check `experiments/baseline_comparison/STATE.md` for current execution state before modifying experiment infrastructure. Results (tables, JSONs, .tex) live in `experiments/baseline_comparison/results/`.
+1. **NEVER kill Python processes that appear to be duplicates without checking `ps -o pid,ppid`.** DataLoader workers share the same script name as the parent training process. Killing a worker crashes the entire training run.
 
-## Critical Warning
+2. **NEVER write large files to the project home directory.** All datasets, model weights, and generated outputs go to `/data/short/fjiang4/` (see Storage Policy below). The home directory is for code and configs only.
 
-**NEVER kill Python processes that appear to be duplicates without checking `ps -o pid,ppid`.** DataLoader workers share the same script name as the parent training process. Killing a worker crashes the entire training run.
+3. **NEVER run long commands directly in the terminal.** Use tmux (see Long-Running Commands below). A disconnected session means hours of lost work.
+
+4. **NEVER modify experiment configs (YAML, JSON) mid-run.** Check `tmux ls` and STATE.md first to make sure nothing is actively using them.
+
+5. **NEVER `git add` symlinks to `/data/short/`.** The `.gitignore` handles this, but double-check with `git status` before committing.
 
 ## Storage Policy
+
 - **Large data** (datasets, model weights, generated images) → `/data/short/fjiang4/`
-- **Code and configs only** in the project home directory (`~/MEMBERSHIP-I.../`)
+- **Code and configs only** in the project home directory
 - Never store datasets or model weights under `~/` or inside the git repo
 - On first session: check if `/data/short/fjiang4/` exists; if not, create it
-- Symlink from project paths to `/data/short/fjiang4/` for convenience
+- Use symlinks so code can reference `./models/` and `./data/` transparently
+
+### Resolving the project root
+```bash
+# Always use this — never hardcode ~/MEMBERSHIP-I... or ~/Membership-is-Ownership
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+```
 
 ### Standard layout on `/data/short/fjiang4/`
 ```
 /data/short/fjiang4/
 ├── models/
-│   ├── sd-v1-4/
+│   ├── sd-v1-4/                     # SD experiments
 │   ├── sd-v1-4-lora/
-│   └── sleepermark-unet/
+│   ├── sleepermark-unet/
+│   └── ddim/                        # DDIM experiments (cifar10, stl10, celeba checkpoints)
 ├── data/
-│   ├── coco2014/
+│   ├── coco2014/                    # SD experiments
 │   ├── splits/
 │   ├── lora_train_dir/
-│   └── sleepermark_train_images/
+│   ├── sleepermark_train_images/
+│   ├── cifar-10/                    # DDIM experiments
+│   ├── cifar-100/
+│   ├── stl-10/
+│   └── celeba/
 └── experiments/
-    └── sd_watermark_comp/
-        ├── scores/
-        ├── figures/
-        └── logs/
+    ├── sd_watermark_comp/
+    │   ├── scores/
+    │   ├── figures/
+    │   └── logs/
+    └── baseline_comparison/
+        └── results/
 ```
 
-### Symlinks (set up once)
+### Symlinks (set up once from project root)
 ```bash
-ln -sfn /data/short/fjiang4/models   ~/MEMBERSHIP-I.../models
-ln -sfn /data/short/fjiang4/data     ~/MEMBERSHIP-I.../data
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+ln -sfn /data/short/fjiang4/models   "$PROJECT_ROOT/models"
+ln -sfn /data/short/fjiang4/data     "$PROJECT_ROOT/data"
 ```
-This way code still references `./models/` and `./data/` but actual files live on `/data/short/`.
+
+### Verifying symlinks
+```bash
+# Should show symlinks, not real directories
+ls -la models data
+# Should resolve to /data/short/fjiang4/...
+readlink -f models
+readlink -f data
+```
 
 ### .gitignore
 Already handled by the project's existing `.gitignore`.
-Ensure `models/` and experiment output dirs (scores/figures/logs) are excluded,
-while `experiments/*/CLAUDE.md`, `STATE.md`, `phases/`, `tables/` are whitelisted.
+`models/` and experiment output dirs (`scores/`, `figures/`, `logs/`) are excluded.
+Experiment code files (`CLAUDE.md`, `STATE.md`, `phases/`, `tables/`) are tracked.
 
 ## Long-Running Commands
-Any command expected to run longer than **5 minutes** (training, inference, data download, image generation) must be launched inside a **tmux session**, not directly in the terminal.
+
+Any command expected to run longer than **5 minutes** must be launched inside a **tmux session**.
+
+### Session startup checklist
+```bash
+# ALWAYS do this at the start of every new Claude Code session:
+tmux ls 2>/dev/null || echo "No tmux sessions running"
+```
+If sessions exist from a previous run, check their status before creating new ones.
 
 ### Rules
-- Before launching: create or attach to a named tmux session
+- Before launching: create a named tmux session
 - Naming convention: `tmux new-session -d -s <task_name>`
-- Examples: `tmux new-session -d -s lora_train`, `tmux new-session -d -s mio_infer_gpu0`
-- Send the command into the tmux session: `tmux send-keys -t <task_name> '<command>' Enter`
+- Examples: `lora_train`, `mio_infer_gpu0`, `coco_download`, `sleepermark_gen`
+- Send the command: `tmux send-keys -t <task_name> '<command>' Enter`
 - Check output: `tmux capture-pane -t <task_name> -p | tail -20`
-- Multiple parallel tasks get separate sessions: one per GPU if needed
-- After task completes: capture final output, then `tmux kill-session -t <task_name>`
+- Multiple parallel tasks → one session per GPU
+- After completion: capture final output, then `tmux kill-session -t <task_name>`
 
 ### Pattern
 ```bash
 # Launch
 tmux new-session -d -s lora_train
-tmux send-keys -t lora_train 'CUDA_VISIBLE_DEVICES=0 accelerate launch train.py ... 2>&1 | tee train.log' Enter
+tmux send-keys -t lora_train 'conda activate mio-sd && CUDA_VISIBLE_DEVICES=0 accelerate launch train.py ... 2>&1 | tee train.log' Enter
 
 # Monitor
 tmux capture-pane -t lora_train -p | tail -20
