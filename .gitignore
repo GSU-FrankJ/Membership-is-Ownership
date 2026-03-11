@@ -68,9 +68,30 @@ data/
 runs/
 !runs/.gitkeep
 scores/
-experiments/
 results/
 reports/
+
+# Experiments: ignore all generated outputs, whitelist planning/state files
+experiments/**
+!experiments/*/
+!experiments/*/CLAUDE.md
+!experiments/*/STATE.md
+!experiments/*/PLAN.md
+!experiments/*/*.sh
+!experiments/*/phases/
+!experiments/*/phases/**
+!experiments/*/tables/
+!experiments/*/tables/**
+
+# =============================================================================
+# Model weights (large, lives on /data/short via symlink)
+# =============================================================================
+models/
+
+# =============================================================================
+# External cloned repos (not submodules)
+# =============================================================================
+external/
 
 # =============================================================================
 # Model checkpoints (large binary files)
