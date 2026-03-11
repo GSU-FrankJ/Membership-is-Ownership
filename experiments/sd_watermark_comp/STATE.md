@@ -1,8 +1,8 @@
 # STATE — SD Watermark Comparison Experiment
 
 > Last updated: 2026-03-11
-> Current phase: **02 — Not started**
-> Overall progress: █░░░░░░░ 1/8
+> Current phase: **03 — Not started**
+> Overall progress: ██░░░░░░ 2/8
 
 ---
 
@@ -11,7 +11,7 @@
 | Phase | Status    | Completed | Notes |
 |-------|-----------|-----------|-------|
 | 01    | ✅ DONE   | 2026-03-11 | Environment & dependencies |
-| 02    | ⬜ TODO   | —         | Download models & COCO2014 |
+| 02    | ✅ DONE   | 2026-03-11 | Download models & COCO2014 |
 | 03    | ⬜ TODO   | —         | Member/non-member splits |
 | 04    | ⬜ TODO   | —         | LoRA fine-tuning |
 | 05    | ⬜ TODO   | —         | SleeperMark checkpoint |
@@ -33,7 +33,7 @@
 - GPU confirmed: 4× Tesla V100-SXM2-32GB ✅
 
 ## Model Checksums
-- SD v1.4 UNet md5: —
+- SD v1.4 UNet md5: e711500ea7f5d40b19c8c04b5b15396b
 - LoRA checkpoint md5: —
 - SleeperMark UNet md5: —
 
@@ -95,3 +95,9 @@ _None yet._
 - Note: Downgraded numpy<2 and huggingface_hub<0.25 for compatibility with torch 2.1/diffusers 0.25.1
 - Result: Phase 01 complete
 - Next: Begin Phase 02
+
+### Session 1 (cont.) — 2026-03-11
+- Phase: 02
+- Actions: Downloaded SD v1.4 (UNet 1.7GB safetensors, md5 e711500e), COCO2014 (82,783 train + 40,504 val + 414,113 captions), verified generation test on GPU3
+- Result: Phase 02 complete
+- Next: Begin Phase 03
