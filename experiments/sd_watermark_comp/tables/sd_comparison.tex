@@ -1,0 +1,14 @@
+\begin{table}[t]
+\centering
+\caption{Ownership verification on Stable Diffusion v1.4. MiO uses private fine-tuning data as an implicit watermark---no proactive embedding, key, or decoder needed.}
+\label{tab:sd_comparison}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{lcccccc}
+\toprule
+Method & Proactive & Key & Decoder & Quality Loss & TPR@1\%FPR$\uparrow$ & AUC$\uparrow$ \\
+\midrule
+MiO (Ours) & \xmark & \xmark & \xmark & \xmark & 0.0071 & 0.5032 \\
+SleeperMark + MiO & \cmark & \cmark & \cmark & \cmark & 0.0140 & 0.5425 \\
+\bottomrule
+\end{tabular}}
+\end{table}
