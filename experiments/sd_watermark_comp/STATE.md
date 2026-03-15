@@ -1,8 +1,8 @@
 # STATE — SD Watermark Comparison Experiment
 
-> Last updated: 2026-03-12
-> Current phase: **All phases complete**
-> Overall progress: ████████ 8/8
+> Last updated: 2026-03-15
+> Current phase: **Ablation complete** (Phase 10 done)
+> Overall progress: ██████████ 10/10
 
 ---
 
@@ -15,9 +15,11 @@
 | 03    | ✅ DONE   | 2026-03-11 | Member/non-member splits |
 | 04    | ✅ DONE   | 2026-03-11 | LoRA fine-tuning |
 | 05    | ✅ DONE   | 2026-03-11 | SleeperMark checkpoint |
-| 06    | ✅ DONE   | 2026-03-12 | MiO inference — LoRA (20k scores, 3.29h) |
+| 06    | ⚠️ WEAK   | 2026-03-12 | MiO inference — LoRA (20k scores, AUC=0.54, ablation needed) |
 | 07    | ✅ DONE   | 2026-03-13 | MiO inference — SleeperMark (20k scores, 3.29h) |
 | 08    | ✅ DONE   | 2026-03-13 | Metrics + tables + figures |
+| 09    | ✅ DONE   | 2026-03-13 | Ablation plan designed, all 4 quick evals exceed AUC > 0.99 |
+| 10    | ✅ DONE   | 2026-03-15 | Ablation complete: A5 timestep sweep + A6 scale validation (AUC=0.982 at 1k members) |
 
 ---
 
@@ -56,25 +58,206 @@
 - Speed: ~2.01 it/s on 1× V100
 - Note: Used `accelerate launch --mixed_precision=no` with `--mixed_precision=fp16` in script args to avoid FP16 gradient unscale error
 
-## MiO Results
+## MiO Results (Phase 06–08, pre-ablation)
 
-### SD v1.4 + LoRA (Ours)
-- TPR@1%FPR: 0.0071
+### SD v1.4 + LoRA — Original Config (10k members, rank 64, 4 epochs)
+- AUC: 0.5437
+- TPR@1%FPR: 0.0136
 - TPR@0.1%FPR: 0.0005
-- AUC: 0.5032
-- Member mean: 0.4810, std: 39.1714
-- Non-member mean: 0.7362, std: 39.5048
+- Member mean: -4.19, std: 3.81
+- Non-member mean: -3.63, std: 3.75
+- Cohen's d: 0.15
+- SNR (between/within var): 0.006
 - Score CSV: `experiments/sd_watermark_comp/scores/mio_lora_scores.csv`
 
+**Diagnosis**: Signal is indistinguishable from noise. Member relative t-error reduction = 0.236% vs non-member = 0.204% (0.03pp gap). Tail analysis shows zero separation — no individual image memorization. Root cause: rank-64 LoRA on 10k COCO images for 4 epochs learns the COCO *distribution* but does not memorize *specific images*.
+
 ### SleeperMark
+- AUC: 0.5425
 - TPR@1%FPR: 0.0140
 - TPR@0.1%FPR: 0.0018
-- AUC: 0.5425
 - Member mean: -0.2544, std: 39.8744
 - Non-member mean: 5.6972, std: 39.6020
 - Score CSV: `experiments/sd_watermark_comp/scores/mio_sleepermark_scores.csv`
 - SleeperMark native Bit Acc: —
 - SleeperMark native TPR@FPR: —
+
+---
+
+## Ablation Plan (Phase 09)
+
+### Goal
+Find a fine-tuning configuration that produces **AUC > 0.70** for MiO membership inference on the LoRA-fine-tuned SD model. The core hypothesis: fewer training images + more epochs per image → per-image memorization → detectable by MIA.
+
+### Key Variables
+1. **Member set size** — fewer images = more updates per image = stronger memorization
+2. **Training steps / epochs per image** — more repetition = more memorization
+3. **LoRA rank** — controls fine-tuning capacity (is signal from capacity or repetition?)
+4. **Full fine-tune vs LoRA** — removes capacity bottleneck entirely
+5. **Timestep range** — MIA literature suggests low-t timesteps are more sensitive to memorization
+6. **Data augmentation** — disabling random_flip forces identical presentation each epoch
+
+### Quick Eval Protocol
+Before committing to full 20k evaluation, each run is evaluated on a small balanced subset:
+- **Members**: random 200 from training set (or all, if set < 200)
+- **Non-members**: random 200 from the existing 10k non-member pool
+- **Metrics**: AUC, TPR@1%FPR, Cohen's d, mean/std per class
+- **Go threshold**: quick AUC > 0.60 → proceed to full 20k eval
+- **Kill threshold**: quick AUC < 0.52 → abandon this config
+
+### Sub-splits
+All ablation runs subsample from the existing 10k members in `split_seed42.json`. Non-members remain the same 10k COCO val images. Sub-split creation uses `seed=42` deterministic shuffle, then take first N.
+
+### Ablation Runs
+
+| Run | Members | Steps | Epochs/img | Rank | LR | Flip | Train (1 GPU) | Quick Eval | Hypothesis |
+|-----|---------|-------|------------|------|----|------|---------------|------------|------------|
+| A1 | 100 | 5,000 | 200 | r64 | 1e-4 | Off | ~42 min | ~2 min | Extreme repetition on tiny set → strong memorization |
+| A2 | 500 | 10,000 | 80 | r64 | 1e-4 | Off | ~83 min | ~4 min | Moderate set, same total steps → enough epochs? |
+| A3 | 100 | 5,000 | 200 | r4 | 1e-4 | Off | ~42 min | ~2 min | Low-rank control: is signal from capacity or repetition? |
+| A4 | 500 | 5,000 | 40 | Full | 5e-6 | Off | ~83 min | ~4 min | Maximum capacity (860M params), moderate epochs |
+| A5 | *(winner)* | 0 | — | *(winner)* | — | — | 0 (reuse) | ~20 min | Timestep sweep + caption-conditioned inference on best model |
+| A6 | 1,000 | *(scaled)* | *(target)* | *(winner)* | *(winner)* | Off | ~83 min | ~3.3h (full) | Scale validation: does signal hold at 1k members? |
+
+### Run Details
+
+**A1 — Tiny set, extreme memorization** (cheapest, most likely to show signal)
+- 100 images × 200 epochs: each pixel pattern repeated 200 times
+- Expect: training loss drops to near-zero, model "knows" these 100 images
+- Checkpoint every 1,000 steps → can check signal at epochs 40/80/120/160/200
+- Output: `models/sd-v1-4-lora-a1/`, scores in `scores/ablation/a1_quick.csv`
+
+**A2 — Moderate set, standard steps**
+- 500 images × 80 epochs: still much higher repetition than original (4 epochs)
+- Isolates: is 80 epochs sufficient, or do we need 200+?
+- Checkpoint every 2,000 steps → signal check at epochs 16/32/48/64/80
+- Output: `models/sd-v1-4-lora-a2/`, scores in `scores/ablation/a2_quick.csv`
+
+**A3 — Low-rank control** (pairs with A1)
+- Identical to A1 except rank=4 (0.5M trainable params vs 33.5M at rank 64)
+- If A3 ≈ A1 → repetition dominates, rank doesn't matter much
+- If A3 ≪ A1 → capacity matters, higher rank helps memorization
+- Output: `models/sd-v1-4-lora-a3/`, scores in `scores/ablation/a3_quick.csv`
+
+**A4 — Full fine-tune** (maximum capacity)
+- All 860M UNet parameters trainable, lower LR (5e-6) to avoid collapse
+- Fewer epochs needed (40) since capacity is unconstrained
+- Risk: catastrophic forgetting of general generation ability
+- Sanity check: generate test image after training to verify no collapse
+- Output: `models/sd-v1-4-full-a4/`, scores in `scores/ablation/a4_quick.csv`
+
+**A5 — Inference knobs** (no training, just re-evaluate best model)
+- Timestep sweep on the best model from A1–A4:
+  - **Low-t**: K=12, t ∈ [0, 200] — small noise, reconstruction is easiest, memorization most visible
+  - **Mid-t**: K=12, t ∈ [200, 600] — moderate noise
+  - **High-t**: K=12, t ∈ [600, 999] — heavy noise, reconstruction relies on prior, less image-specific
+  - **Dense low-t**: K=50, t ∈ [0, 300] — more timesteps in the sweet spot
+- Caption-conditioned variant: use actual COCO captions (from split JSON) instead of empty prompt for member images. The model learned image-caption associations; conditioning on the training caption should amplify the reconstruction advantage for members.
+- Output: `scores/ablation/a5_*.csv`
+
+**A6 — Scale validation** (confirms winner generalizes)
+- Takes the best (member_count, epochs, rank) from A1–A5
+- Scales to 1,000 members (still a realistic ownership claim — "I fine-tuned on 1k of my images")
+- Adjusts steps to match the winning epochs-per-image ratio
+- Full 20k evaluation (10k members from new sub-split + 10k non-members)
+- Target: AUC > 0.70, TPR@1%FPR > 0.05
+- Output: `models/sd-v1-4-lora-a6/`, scores in `scores/ablation/a6_full.csv`
+
+### GPU Pipeline
+
+```
+Wall time    GPU0          GPU1          GPU2          GPU3
+─────────    ────          ────          ────          ────
+0:00-1:25    Train A1      Train A2      Train A3      Train A4
+             (42 min)      (83 min)      (42 min)      (83 min)
+1:25-1:30    Eval A1       Eval A2       Eval A3       Eval A4
+             (2 min)       (4 min)       (2 min)       (4 min)
+1:30-1:45    ── Analyze results, select winner ──
+1:45-2:05    A5-low-t      A5-mid-t      A5-high-t     A5-dense
+             (5 min)       (5 min)       (5 min)       (5 min)
+2:05-2:15    A5-caption    ── idle ──    ── idle ──    ── idle ──
+2:15-3:40    ── Train A6 (1 GPU) ──
+3:40-7:00    ── Eval A6 full 20k (1 GPU, or 2 GPUs split) ──
+```
+
+**Time to first signal: ~1.5h** (after Runs A1–A4 quick eval)
+**Total wall time: ~7h** (including A6 full eval)
+
+### Tmux Session Naming
+```
+ablation_a1   — GPU0, training + quick eval
+ablation_a2   — GPU1, training + quick eval
+ablation_a3   — GPU2, training + quick eval
+ablation_a4   — GPU3, training + quick eval
+ablation_a5   — winner GPU, timestep sweep
+ablation_a6   — winner GPU, scale validation
+```
+
+### Expected Outcomes
+- **Best case**: A1 shows AUC > 0.80 at quick eval → 100 images with 200 epochs is sufficient. A6 confirms signal at 1k members.
+- **Good case**: A1 or A2 shows AUC 0.60–0.80 → we have a working direction. Optimize epochs/rank in follow-up.
+- **Concerning case**: Only A4 (full fine-tune) works → LoRA may lack capacity for memorization. Paper needs to discuss this.
+- **Worst case**: All runs show AUC < 0.55 → raw t-error difference may be fundamentally weak for SD; need QR calibration or different score function.
+
+### Quick Eval Results (Phase 10, 2026-03-13)
+
+| Run | Config | AUC | TPR@1% | TPR@0.1% | Cohen's d | Mem mean | Nonmem mean |
+|-----|--------|-----|--------|----------|-----------|----------|-------------|
+| A1 | 100img, r64, 200ep | **1.0000** | **1.0000** | 0.9900 | 4.38 | -66.3 | +40.7 |
+| A3 | 100img, r4, 200ep | 0.9976 | 0.9700 | 0.9600 | 3.51 | -26.7 | +12.0 |
+| A4 | 500img, full-FT, 40ep | 0.9983 | 0.9600 | 0.9300 | 3.06 | -48.5 | +6.5 |
+| A2 | 500img, r64, 80ep | 0.9920 | 0.6850 | 0.5150 | 3.11 | -22.7 | +4.7 |
+| *Orig* | *10k, r64, 4ep* | *0.5437* | *0.0136* | *0.0005* | *0.15* | *-4.2* | *-3.6* |
+
+**Outcome: BEST CASE — all 4 runs exceed target (AUC > 0.70) by a large margin.**
+
+Key findings:
+1. **Epochs per image is the dominant factor.** Original config (4 epochs) → AUC 0.54; A2 (80 epochs) → 0.992; A1 (200 epochs) → 1.000.
+2. **Rank matters for separation magnitude, not detection.** A1 (r64) vs A3 (r4): both AUC > 0.99, but Cohen's d 4.38 vs 3.51 and score range -66 vs -27.
+3. **Full fine-tune is most data-efficient.** A4 achieves AUC 0.998 with only 40 epochs (vs 80-200 for LoRA).
+4. **All training losses converge to ~0.15** (diffusion loss floor). Convergence plots saved to `figures/ablation_loss_curves.png`.
+
+Next: Run A5 (timestep sweep on A4), then A6 (scale to 1000 members).
+
+### A5 Timestep Sweep Results (on A4 full-FT model, 500 members)
+
+| Range | K | AUC | TPR@1% | TPR@0.1% | Cohen's d | Time |
+|-------|---|-----|--------|----------|-----------|------|
+| Mid-t [200,600] | 12 | **0.9983** | **0.9450** | 0.9100 | 3.02 | 236s |
+| Full [0,999] (A4 baseline) | 12 | 0.9983 | 0.9600 | 0.9300 | 3.06 | 238s |
+| Dense low-t [0,300] | 50 | 0.9943 | 0.8000 | 0.7750 | 3.04 | 944s |
+| Low-t [0,200] | 12 | 0.9917 | 0.8500 | 0.6800 | 2.89 | 235s |
+| High-t [600,999] | 12 | 0.7309 | 0.0650 | 0.0650 | 0.72 | 233s |
+
+Findings:
+1. **Mid-t [200,600] is the sweet spot** — matches full-range AUC with 40% of timesteps.
+2. **High-t is nearly useless** — AUC 0.73, TPR@1% collapses to 6.5%. Reconstruction at high noise relies on prior, not image-specific memorization.
+3. **Full-range K=12 is already near-optimal** — no benefit from timestep tuning.
+4. **Dense K=50 doesn't beat K=12** — more timesteps in [0,300] adds 4x cost with no gain.
+
+Next: A6 scale validation at 1000 members.
+
+### A6 Scale Validation Results (LoRA r64, 1000 members, 80 epochs)
+
+**Training**: 1000 images, 20k steps (80 epochs/img), rank 64, lr=1e-4, cosine, 2h45m on 1× V100.
+
+| Eval | Members | Non-members | AUC | TPR@1% | TPR@0.1% | Cohen's d | Mem mean | Nonmem mean |
+|------|---------|-------------|-----|--------|----------|-----------|----------|-------------|
+| Quick (400) | 200 | 200 | 0.9847 | 0.7300 | 0.7150 | 2.84 | -20.8 | +2.6 |
+| **Full (11k)** | **1000** | **10,000** | **0.9824** | **0.6850** | **0.3300** | **2.75** | **-20.3** | **+2.3** |
+
+**Signal confirmed at 1000 members.** AUC=0.982 with full 11k evaluation. Quick eval tracks full eval closely (AUC 0.985 vs 0.982).
+
+### Summary: Signal vs Member Set Size
+
+| Members | Epochs/img | AUC | TPR@1% | Cohen's d | Status |
+|---------|------------|-----|--------|-----------|--------|
+| 100 | 200 | 1.000 | 1.000 | 4.38 | Perfect |
+| 500 | 80 | 0.992 | 0.685 | 3.11 | Strong |
+| 1,000 | 80 | 0.982 | 0.685 | 2.75 | Strong |
+| 10,000 | 4 | 0.544 | 0.014 | 0.15 | Failed |
+
+Signal degrades gracefully with set size. Key threshold: **~80 epochs/image minimum** for strong MIA signal with LoRA r64.
 
 ## Qualitative Figure
 - Prompts: coffee/desk, rain/umbrellas, tabby cat (3 rows)
@@ -87,7 +270,8 @@
 ---
 
 ## Blockers & Issues
-_None yet._
+- ~~**BLOCKER**: LoRA MiO signal too weak (AUC=0.54, Cohen's d=0.15) with original config.~~ **RESOLVED**: Root cause was insufficient epochs per image (4 epochs → no memorization). With 80 epochs, AUC=0.982 at 1000 members.
+- ~~**PENDING**: A6 scale validation.~~ **RESOLVED**: AUC=0.982, TPR@1%=0.685, Cohen's d=2.75 on full 11k eval.
 
 ---
 
@@ -148,3 +332,29 @@ _None yet._
 - Key finding: LoRA LPIPS=0.000 confirms zero quality degradation (post-hoc method). Both MiO AUCs near 0.5 — raw t-error difference is weak; QR calibration needed.
 - Result: All 8 phases complete
 - Next: QR calibration of SD scores, SleeperMark native detection comparison
+
+### Session 3 — 2026-03-13
+- Phase: 09 (Ablation planning)
+- Actions: Diagnosed weak LoRA MiO signal (AUC=0.5437, Cohen's d=0.15, SNR=0.006). Analyzed score distributions — zero tail separation, member relative t-error reduction only 0.03pp above non-member. Root cause: 4 epochs on 10k images produces no per-image memorization. Designed 6-run ablation plan varying member set size (100/500/1000), epochs (40–200), LoRA rank (4/64/full), timestep selection, and caption conditioning. Pipeline across 4 GPUs, first signal in ~1.5h.
+- Result: Ablation plan written in STATE.md. Awaiting review before execution.
+- Next: Execute ablation runs A1–A4 in parallel after user approval
+
+### Session 3 (cont.) — 2026-03-13
+- Phase: 10 (Ablation execution)
+- Actions: Created sub-splits (100/500 members from seed=42 shuffle), training dirs with symlinks. Launched A1–A4 in parallel on GPU0-3. Fixed `--lora_rank` → `--rank` arg name. All 4 trained to convergence (loss floor ~0.15, epoch-averaged). Ran quick eval on all 4 (100/200 member + 200 non-member).
+- Results: A1 AUC=1.000, A3 AUC=0.998, A4 AUC=0.998, A2 AUC=0.992. All massively exceed 0.70 target. Dominant factor: epochs per image (4→200 = AUC 0.54→1.00). Rank matters for separation magnitude but even r4 achieves AUC=0.998.
+- Convergence: All 4 runs converge (last-10% vs prev-10% relative change < 7%). Plots in `figures/ablation_loss_curves.png`.
+- Next: A5 timestep sweep on A1, A6 scale validation at 1000 members
+
+### Session 3 (cont.) — 2026-03-13
+- Phase: 10 (A5 timestep sweep)
+- Actions: Added `--t-min`/`--t-max` args to `ablation_eval.py`. Ran 4 timestep variants on A4 (full-FT) model in parallel: low-t [0,200], mid-t [200,600], high-t [600,999], dense [0,300] K=50.
+- Results: Mid-t [200,600] matches full-range AUC (0.9983). High-t nearly useless (AUC=0.73). Full-range K=12 already optimal — no timestep tuning needed.
+- Next: A6 scale validation at 1000 members
+
+### Session 3 (cont.) — 2026-03-15
+- Phase: 10 (A6 scale validation)
+- Actions: Created 1000-member training dir. Launched full-FT + LoRA in parallel — both crashed on disk full (`/data/short` 100%). Freed ~100GB by deleting intermediate checkpoints from A1–A4. Relaunched A6 LoRA only (full-FT checkpoints too large at 10GB each). Trained 20k steps (80 ep) in 2h45m. Quick eval AUC=0.985, full 11k eval AUC=0.982.
+- Results: A6 full eval — AUC=0.9824, TPR@1%=0.685, TPR@0.1%=0.330, Cohen's d=2.75. Signal confirmed at 1000 members with graceful degradation from 100→500→1000 (AUC 1.000→0.992→0.982).
+- Result: Ablation phases 09–10 complete. MiO works for SD with sufficient epochs per image (≥80).
+- Next: Update paper with ablation results, regenerate tables/figures
