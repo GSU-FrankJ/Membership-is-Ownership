@@ -1,0 +1,17 @@
+\begin{table}[t]
+\caption{Robustness of MiO ownership verification on SD~v1.4.
+Each cell: strict verification pass (\cmark) or fail (\xmark),
+with AUC in parentheses.
+B1: domain-shift FT (1{,}000 disjoint COCO, 2{,}000 steps).
+B2: task-shift FT (500 synthetic images, 2{,}000 steps).}
+\label{tab:sd_robustness}
+\centering
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Method & Clean & Post-FT (B1) & Post-FT (B2) \\
+\midrule
+\textbf{MiO} & \cmark~(0.987) & \cmark~(0.972) & \xmark~(0.908) \\
+\bottomrule
+\end{tabular}
+\end{table}

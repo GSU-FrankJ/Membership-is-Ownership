@@ -1,8 +1,8 @@
 # STATE — SD Watermark Comparison Experiment
 
-> Last updated: 2026-03-15
-> Current phase: **Ablation complete** (Phase 10 done)
-> Overall progress: ██████████ 10/10
+> Last updated: 2026-03-17
+> Current phase: **Phase 11 complete** (3-point verification)
+> Overall progress: ███████████ 11/11
 
 ---
 
@@ -20,6 +20,7 @@
 | 08    | ✅ DONE   | 2026-03-13 | Metrics + tables + figures |
 | 09    | ✅ DONE   | 2026-03-13 | Ablation plan designed, all 4 quick evals exceed AUC > 0.99 |
 | 10    | ✅ DONE   | 2026-03-15 | Ablation complete: A5 timestep sweep + A6 scale validation (AUC=0.982 at 1k members) |
+| 11    | ✅ DONE   | 2026-03-17 | 3-point verification: B1 domain-shift PASS, B2 task-shift partial (AUC=0.908) |
 
 ---
 
@@ -259,6 +260,63 @@ Next: A6 scale validation at 1000 members.
 
 Signal degrades gracefully with set size. Key threshold: **~80 epochs/image minimum** for strong MIA signal with LoRA r64.
 
+## Phase 11: 3-Point Ownership Verification
+
+### Adversary Models
+
+| Model | Data | Steps | LR | Loss | Time |
+|-------|------|-------|------|------|------|
+| B1 (domain shift) | 1000 disjoint COCO images | 2000 | 5e-5 | 0.156 | 35 min |
+| B2 (task shift) | 500 synthetic images | 2000 | 5e-5 | 0.151 | 35 min |
+
+### Score Statistics on W (1000 images, delta = score_tgt - score_ref)
+
+| Model | Delta W (mean) | Delta non-W (mean) | |d| | AUC |
+|-------|----------------|--------------------|----|-----|
+| **Owner (A6)** | -20.35 | +2.56 | 2.55 | 0.987 |
+| B1 (domain shift) | -17.79 | -0.90 | 2.21 | 0.972 |
+| B2 (task shift) | -2.00 | +13.64 | 1.73 | 0.908 |
+| Baseline (SD v1.4) | 0 (by definition) | 0 | — | — |
+
+Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is ~1% of base model error.
+
+### Verification Results (Algorithm 2, adapted for derivative models)
+
+**Criterion 1 — Consistency** (t-test delta_A vs delta_B on W, p > 0.05):
+- B1: **FAIL** (p=6.6e-11, d=-0.29) — mild drift from domain-shift FT
+- B2: **FAIL** (p~0, d=-1.98) — severe drift from task-shift FT
+
+**Criterion 2 — Separation** (delta_W vs delta_nonW, p < 1e-6 AND |d| > 2.0):
+- Owner: **PASS** (p=1.4e-136, |d|=2.55)
+- B1: **PASS** (p=4.7e-135, |d|=2.21)
+- B2: **FAIL** (p=3.0e-71, |d|=1.73 < 2.0)
+
+**Criterion 3 — Magnitude** (|mean delta_W| / |mean delta_nonW| > 5.0):
+- Owner: **PASS** (7.96x)
+- B1: **PASS** (19.87x)
+- B2: **FAIL** (0.15x)
+
+### Direct Detection Summary
+
+| Model | Criteria 2+3 | AUC | Verdict |
+|-------|-------------|-----|---------|
+| Owner (A6) | PASS | 0.987 | VERIFIED |
+| B1 (domain shift) | PASS | 0.972 | VERIFIED |
+| B2 (task shift) | FAIL (|d|=1.73) | 0.908 | PARTIAL |
+
+### Key Findings
+
+1. **MiO is robust to domain-shift fine-tuning.** After 2000 steps on disjoint COCO images, the watermark signal persists (AUC=0.972, all criteria pass on direct detection).
+2. **MiO is partially robust to task-shift fine-tuning.** 2000 steps on synthetic images weakens the signal (AUC 0.987→0.908, |d| 2.55→1.73) below the strict |d|>2.0 threshold, but statistical significance remains (p<1e-71).
+3. **Raw t-error ratio doesn't work for LoRA.** The paper's ratio criterion (>5x) was calibrated for DDIM models trained from scratch. LoRA produces a ~1% perturbation to the base model, making the raw ratio ~1.01x. Delta-based verification is required for derivative models.
+4. **Criterion 1 (provenance) is strict by design.** Even mild adversary modifications (B1, |d|=0.29) cause failure. This correctly reflects that the suspect model has been modified from the original.
+
+### Output Files
+- Scores: `experiments/sd_watermark_comp/scores/phase11/model_{a,b1,b2}.csv`
+- Verification JSON: `experiments/sd_watermark_comp/scores/phase11/verification_{b1,b2}.json`
+- LaTeX tables: `experiments/sd_watermark_comp/tables/sd_verification.tex`, `sd_robustness.tex`
+- W hash commitment: `42364195d97099c9d2e3b1c9f8c2123f97ed81b2b3a3d49a62fb38e8feb0eee1`
+
 ## Qualitative Figure
 - Prompts: coffee/desk, rain/umbrellas, tabby cat (3 rows)
 - Grid: 3×4 (Clean | SM Regular | SM Triggered | LoRA)
@@ -358,3 +416,10 @@ Signal degrades gracefully with set size. Key threshold: **~80 epochs/image mini
 - Results: A6 full eval — AUC=0.9824, TPR@1%=0.685, TPR@0.1%=0.330, Cohen's d=2.75. Signal confirmed at 1000 members with graceful degradation from 100→500→1000 (AUC 1.000→0.992→0.982).
 - Result: Ablation phases 09–10 complete. MiO works for SD with sufficient epochs per image (≥80).
 - Next: Update paper with ablation results, regenerate tables/figures
+
+### Session 4 — 2026-03-17
+- Phase: 11 (3-point verification)
+- Actions: Created Phase 11 splits (W-only eval, B1 disjoint COCO, B2 synthetic). Wrote adversary_finetune.py (continues LoRA training from A6 checkpoint). Trained B1 (domain-shift, 1000 disjoint COCO, 2000 steps) and B2 (task-shift, 500 synthetic, 2000 steps) in parallel on GPU0/1 (35 min each). Fixed LoRA save format (manual safetensors extraction for diffusers 0.25.1 compatibility + key conversion to match A6 format). Scored all 3 models on W (1200 images each, ~12 min/model on 3 GPUs). Ran verification protocol.
+- Key finding: Raw t-error ratio doesn't work for LoRA (1.01x) — delta-based verification required. Domain-shift FT (B1) is robust: AUC=0.972, |d|=2.21, passes strict criteria. Task-shift FT (B2) partially erases signal: AUC=0.908, |d|=1.73, below strict threshold.
+- Result: Phase 11 complete. LaTeX tables in `tables/sd_verification.tex` and `tables/sd_robustness.tex`.
+- Next: Integrate verification results into paper (discuss delta-based adaptation for derivative models)

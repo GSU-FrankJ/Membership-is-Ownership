@@ -1,0 +1,18 @@
+\begin{table}[t]
+\caption{Ownership verification on SD~v1.4 (1{,}000 private COCO images).
+\emph{Delta} = reconstruction gap between fine-tuned and base model on $\mathcal{W}$.
+Direct detection runs the MIA on the suspect model itself.
+B1: 2{,}000-step domain-shift FT. B2: 2{,}000-step task-shift FT.}
+\label{tab:sd_verification}
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Model & $\bar\Delta_{\mathcal{W}}$ & $\bar\Delta_{\text{non-}\mathcal{W}}$ & $|d|$ & AUC \\
+\midrule
+\textbf{Owner (A6)} & $-20.3$ & $2.6$ & $2.55$ & $0.987$ \\
+Model B1 (domain shift) & $-17.8$ & $-0.9$ & $2.21$ & $0.972$ \\
+Model B2 (task shift) & $-2.0$ & $13.6$ & $1.73$ & $0.908$ \\
+\bottomrule
+\end{tabular}
+\end{table}
