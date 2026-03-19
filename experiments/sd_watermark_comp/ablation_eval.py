@@ -78,6 +78,10 @@ def main():
     parser.add_argument("--t-min", type=int, default=0, help="Minimum timestep (inclusive)")
     parser.add_argument("--t-max", type=int, default=999, help="Maximum timestep (inclusive)")
     parser.add_argument("--agg", type=str, default="q25")
+    parser.add_argument("--error-space", choices=["latent", "pixel"], default="pixel",
+                        help="Compute error in latent (4x64x64) or pixel (3x512x512) space")
+    parser.add_argument("--use-caption", action=argparse.BooleanOptionalAction, default=True,
+                        help="Use per-image COCO captions instead of empty prompt")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out-csv", required=True)
     args = parser.parse_args()
