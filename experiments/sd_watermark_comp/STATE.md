@@ -327,6 +327,34 @@ Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is 
 
 ---
 
+## Fix Investigation: Pixel-Space + Caption Conditioning (branch: fix/pixel-space-caption)
+
+**Issue A**: Code computes t-error as ||z - ẑ||² in latent space (4×64×64), paper Eq. 6 defines ||x - x̂||²/(H×W×C) in pixel space (3×512×512).
+**Issue B**: Inference uses empty prompt ("") for all images, but LoRA training used per-image COCO captions.
+
+### 4-Variant Quick Eval (A6 model, 100 members + 100 non-members)
+
+| Variant | Error Space | Caption | AUC | TPR@1% | Cohen's d | Mem mean±std | Nonmem mean±std | Time |
+|---------|------------|---------|-----|--------|-----------|-------------|----------------|------|
+| V1 (baseline) | latent | empty | 0.9811 | 0.4900 | 2.80 | -21.01±9.80 | +3.39±7.47 | 122s |
+| V2 | latent | per-image | **0.9988** | **0.9100** | **3.21** | -30.17±13.15 | +4.93±8.15 | 124s |
+| V3 | pixel | empty | 0.9163 | 0.2700 | 1.71 | -0.0002±0.0002 | +0.0001±0.0002 | 485s |
+| V4 | pixel | per-image | 0.9696 | 0.5900 | 2.04 | -0.0003±0.0003 | +0.0002±0.0002 | 493s |
+
+### Findings
+
+1. **Caption conditioning is the bigger win.** V2 vs V1: AUC 0.981→0.999, TPR@1% 0.49→0.91, Cohen's d 2.80→3.21. The model learned image-caption associations; conditioning on the training caption amplifies the member reconstruction advantage.
+2. **Pixel-space hurts performance.** V3 vs V1: AUC 0.981→0.916, Cohen's d 2.80→1.71. VAE decode introduces lossy reconstruction noise that masks the membership signal. Scores are also ~5 orders of magnitude smaller (mean-per-element vs sum).
+3. **Caption partially recovers pixel-space.** V4 vs V3: AUC 0.916→0.970, Cohen's d 1.71→2.04.
+4. **Best config: latent + caption (V2).** Matches paper's measurement space is secondary; what matters is conditioning on the correct text.
+5. **Pixel-space is 4x slower** (485s vs 122s) due to per-timestep VAE decode.
+
+### Score files
+- `experiments/sd_watermark_comp/scores/pixel_caption_ablation/v{1,2,3,4}_*.csv`
+- Log: `experiments/sd_watermark_comp/logs/pixel_caption_ablation.log`
+
+---
+
 ## Blockers & Issues
 - ~~**BLOCKER**: LoRA MiO signal too weak (AUC=0.54, Cohen's d=0.15) with original config.~~ **RESOLVED**: Root cause was insufficient epochs per image (4 epochs → no memorization). With 80 epochs, AUC=0.982 at 1000 members.
 - ~~**PENDING**: A6 scale validation.~~ **RESOLVED**: AUC=0.982, TPR@1%=0.685, Cohen's d=2.75 on full 11k eval.
