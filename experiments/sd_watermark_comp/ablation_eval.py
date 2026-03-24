@@ -33,12 +33,25 @@ def uniform_timesteps(T, k):
     return sorted(set(int(round(i)) for i in np.linspace(0, T - 1, k)))
 
 
-def compute_t_error_sd(latent, timesteps, unet, alphas_bar, uncond_emb, agg="q25",
-                       precomputed_noise=None):
+def compute_t_error_sd(latent, timesteps, unet, alphas_bar, text_emb, agg="q25",
+                       precomputed_noise=None, error_space="latent",
+                       vae=None, images=None, scaling_factor=None):
+    """Compute t-error for a conditional UNet.
+
+    Args:
+        error_space: "latent" = ||z - z_hat||^2 (original behavior),
+                     "pixel"  = ||x - D(z_hat)||^2 / (H*W*C) matching paper Eq. 6.
+        vae, images, scaling_factor: required when error_space="pixel".
+        text_emb: [1, seq, dim] or [B, seq, dim] text conditioning.
+    """
     device = latent.device
     batch_size = latent.size(0)
     all_errors = []
-    emb = uncond_emb.expand(batch_size, -1, -1)
+
+    if text_emb.size(0) == 1:
+        emb = text_emb.expand(batch_size, -1, -1)
+    else:
+        emb = text_emb
 
     for idx, t in enumerate(timesteps):
         t_tensor = torch.full((batch_size,), t, device=device, dtype=torch.long)
@@ -53,7 +66,15 @@ def compute_t_error_sd(latent, timesteps, unet, alphas_bar, uncond_emb, agg="q25
             eps_pred = unet(latent_t, t_tensor, encoder_hidden_states=emb, return_dict=True).sample
 
         latent_hat = (latent_t - sqrt_1_ab * eps_pred) / sqrt_ab.clamp(min=1e-6)
-        error = (latent_hat - latent).pow(2).view(batch_size, -1).sum(dim=1)
+
+        if error_space == "pixel":
+            with torch.no_grad():
+                x_hat = vae.decode(latent_hat / scaling_factor).sample  # [B, 3, 512, 512]
+            # ||x - x_hat||^2 / (H * W * C)  — paper Eq. 6
+            error = (x_hat - images).pow(2).mean(dim=[1, 2, 3])
+        else:
+            error = (latent_hat - latent).pow(2).view(batch_size, -1).sum(dim=1)
+
         all_errors.append(error)
 
     errors = torch.stack(all_errors, dim=1).float()
@@ -78,6 +99,10 @@ def main():
     parser.add_argument("--t-min", type=int, default=0, help="Minimum timestep (inclusive)")
     parser.add_argument("--t-max", type=int, default=999, help="Maximum timestep (inclusive)")
     parser.add_argument("--agg", type=str, default="q25")
+    parser.add_argument("--error-space", choices=["latent", "pixel"], default="pixel",
+                        help="Compute error in latent (4x64x64) or pixel (3x512x512) space")
+    parser.add_argument("--use-caption", action=argparse.BooleanOptionalAction, default=True,
+                        help="Use per-image COCO captions instead of empty prompt")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out-csv", required=True)
     args = parser.parse_args()
@@ -124,7 +149,7 @@ def main():
     alphas_bar = scheduler.alphas_cumprod.to(device=device, dtype=torch.float16)
     T = len(alphas_bar)
 
-    # Unconditional text embedding
+    # Text embedding setup
     tokenizer = ref_pipe.tokenizer
     text_encoder = ref_pipe.text_encoder
     with torch.no_grad():
@@ -132,12 +157,18 @@ def main():
             [""], padding="max_length", max_length=tokenizer.model_max_length,
             return_tensors="pt"
         ).to(device)
-        uncond_emb = text_encoder(uncond_input.input_ids)[0]
-    del text_encoder
-    if args.lora_path:
-        del tgt_pipe.text_encoder
-    del ref_pipe.text_encoder
-    torch.cuda.empty_cache()
+        uncond_emb = text_encoder(uncond_input.input_ids)[0]  # [1, 77, 768]
+
+    if not args.use_caption:
+        # Free text encoder — only uncond_emb needed
+        del text_encoder
+        text_encoder = None
+        if args.lora_path:
+            del tgt_pipe.text_encoder
+        del ref_pipe.text_encoder
+        torch.cuda.empty_cache()
+    else:
+        print("Keeping text encoder for per-image caption conditioning")
 
     timesteps = uniform_timesteps(args.t_max - args.t_min + 1, args.K)
     timesteps = [t + args.t_min for t in timesteps]
@@ -160,12 +191,14 @@ def main():
             "image_id": entry["image_id"],
             "label": "member",
             "file_path": os.path.join(PROJECT_ROOT, "data/coco2014/train2014", entry["file_name"]),
+            "caption": entry.get("caption", ""),
         })
     for entry in split["nonmembers"]:
         work.append({
             "image_id": entry["image_id"],
             "label": "nonmember",
             "file_path": os.path.join(PROJECT_ROOT, "data/coco2014/val2014", entry["file_name"]),
+            "caption": entry.get("caption", ""),
         })
 
     print(f"Eval set: {sum(1 for w in work if w['label']=='member')} members + "
@@ -189,12 +222,31 @@ def main():
             posterior = vae.encode(images_t)
             latent = posterior.latent_dist.mean * scaling_factor
 
+        # Text embedding: per-image caption or shared empty prompt
+        if args.use_caption and text_encoder is not None:
+            captions = [item["caption"] for item in batch_items]
+            with torch.no_grad():
+                tok = tokenizer(
+                    captions, padding="max_length", max_length=tokenizer.model_max_length,
+                    truncation=True, return_tensors="pt"
+                ).to(device)
+                text_emb = text_encoder(tok.input_ids)[0]  # [B, 77, 768]
+        else:
+            text_emb = uncond_emb  # [1, 77, 768] — will be expanded in compute_t_error_sd
+
         precomputed_noise = [torch.randn_like(latent) for _ in timesteps]
 
-        score_ref = compute_t_error_sd(latent, timesteps, ref_unet, alphas_bar, uncond_emb, args.agg,
-                                       precomputed_noise=precomputed_noise)
-        score_tgt = compute_t_error_sd(latent, timesteps, tgt_unet, alphas_bar, uncond_emb, args.agg,
-                                       precomputed_noise=precomputed_noise)
+        # Pixel-space kwargs (no-op when error_space="latent")
+        pixel_kw = {}
+        if args.error_space == "pixel":
+            pixel_kw = dict(vae=vae, images=images_t, scaling_factor=scaling_factor)
+
+        score_ref = compute_t_error_sd(latent, timesteps, ref_unet, alphas_bar, text_emb, args.agg,
+                                       precomputed_noise=precomputed_noise,
+                                       error_space=args.error_space, **pixel_kw)
+        score_tgt = compute_t_error_sd(latent, timesteps, tgt_unet, alphas_bar, text_emb, args.agg,
+                                       precomputed_noise=precomputed_noise,
+                                       error_space=args.error_space, **pixel_kw)
         score = score_tgt - score_ref
 
         for j, item in enumerate(batch_items):

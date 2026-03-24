@@ -19,7 +19,7 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # 设置 PYTHONPATH，确保 Python 能找到项目根目录的模块 (如 mia_logging)
-export PYTHONPATH="${PROJECT_ROOT}:${PYTHONPATH:-}"
+export PYTHONPATH="${PROJECT_ROOT}:${PROJECT_ROOT}/src:${PYTHONPATH:-}"
 
 # 数据集列表 
 DATASETS=("cifar10" "cifar100" "stl10" "celeba")

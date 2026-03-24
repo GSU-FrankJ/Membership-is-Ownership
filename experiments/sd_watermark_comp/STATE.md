@@ -1,8 +1,8 @@
 # STATE — SD Watermark Comparison Experiment
 
-> Last updated: 2026-03-17
-> Current phase: **Phase 11 complete** (3-point verification)
-> Overall progress: ███████████ 11/11
+> Last updated: 2026-03-22
+> Current phase: **Phase 12 complete** (latent vs pixel space comparison)
+> Overall progress: ████████████ 12/12
 
 ---
 
@@ -21,6 +21,7 @@
 | 09    | ✅ DONE   | 2026-03-13 | Ablation plan designed, all 4 quick evals exceed AUC > 0.99 |
 | 10    | ✅ DONE   | 2026-03-15 | Ablation complete: A5 timestep sweep + A6 scale validation (AUC=0.982 at 1k members) |
 | 11    | ✅ DONE   | 2026-03-17 | 3-point verification: B1 domain-shift PASS, B2 task-shift partial (AUC=0.908) |
+| 12    | ✅ DONE   | 2026-03-22 | Latent vs pixel: latent+caption best (AUC=0.996), pixel fails verification |
 
 ---
 
@@ -327,6 +328,34 @@ Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is 
 
 ---
 
+## Fix Investigation: Pixel-Space + Caption Conditioning (branch: fix/pixel-space-caption)
+
+**Issue A**: Code computes t-error as ||z - ẑ||² in latent space (4×64×64), paper Eq. 6 defines ||x - x̂||²/(H×W×C) in pixel space (3×512×512).
+**Issue B**: Inference uses empty prompt ("") for all images, but LoRA training used per-image COCO captions.
+
+### 4-Variant Quick Eval (A6 model, 100 members + 100 non-members)
+
+| Variant | Error Space | Caption | AUC | TPR@1% | Cohen's d | Mem mean±std | Nonmem mean±std | Time |
+|---------|------------|---------|-----|--------|-----------|-------------|----------------|------|
+| V1 (baseline) | latent | empty | 0.9811 | 0.4900 | 2.80 | -21.01±9.80 | +3.39±7.47 | 122s |
+| V2 | latent | per-image | **0.9988** | **0.9100** | **3.21** | -30.17±13.15 | +4.93±8.15 | 124s |
+| V3 | pixel | empty | 0.9163 | 0.2700 | 1.71 | -0.0002±0.0002 | +0.0001±0.0002 | 485s |
+| V4 | pixel | per-image | 0.9696 | 0.5900 | 2.04 | -0.0003±0.0003 | +0.0002±0.0002 | 493s |
+
+### Findings
+
+1. **Caption conditioning is the bigger win.** V2 vs V1: AUC 0.981→0.999, TPR@1% 0.49→0.91, Cohen's d 2.80→3.21. The model learned image-caption associations; conditioning on the training caption amplifies the member reconstruction advantage.
+2. **Pixel-space hurts performance.** V3 vs V1: AUC 0.981→0.916, Cohen's d 2.80→1.71. VAE decode introduces lossy reconstruction noise that masks the membership signal. Scores are also ~5 orders of magnitude smaller (mean-per-element vs sum).
+3. **Caption partially recovers pixel-space.** V4 vs V3: AUC 0.916→0.970, Cohen's d 1.71→2.04.
+4. **Best config: latent + caption (V2).** Matches paper's measurement space is secondary; what matters is conditioning on the correct text.
+5. **Pixel-space is 4x slower** (485s vs 122s) due to per-timestep VAE decode.
+
+### Score files
+- `experiments/sd_watermark_comp/scores/pixel_caption_ablation/v{1,2,3,4}_*.csv`
+- Log: `experiments/sd_watermark_comp/logs/pixel_caption_ablation.log`
+
+---
+
 ## Blockers & Issues
 - ~~**BLOCKER**: LoRA MiO signal too weak (AUC=0.54, Cohen's d=0.15) with original config.~~ **RESOLVED**: Root cause was insufficient epochs per image (4 epochs → no memorization). With 80 epochs, AUC=0.982 at 1000 members.
 - ~~**PENDING**: A6 scale validation.~~ **RESOLVED**: AUC=0.982, TPR@1%=0.685, Cohen's d=2.75 on full 11k eval.
@@ -423,3 +452,69 @@ Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is 
 - Key finding: Raw t-error ratio doesn't work for LoRA (1.01x) — delta-based verification required. Domain-shift FT (B1) is robust: AUC=0.972, |d|=2.21, passes strict criteria. Task-shift FT (B2) partially erases signal: AUC=0.908, |d|=1.73, below strict threshold.
 - Result: Phase 11 complete. LaTeX tables in `tables/sd_verification.tex` and `tables/sd_robustness.tex`.
 - Next: Integrate verification results into paper (discuss delta-based adaptation for derivative models)
+
+### Session 5 — 2026-03-22
+- Phase: 12 (latent vs pixel space comparison)
+- Actions: Created phase_12.md, updated STATE.md. Running 6 scoring runs (3 models x 2 variants) serial on single GPU, then verification + markdown table.
+- Results: Latent+caption (V1) is best: AUC=0.996, d=3.24, passes C2+C3. Pixel+caption (V2) fails all verification criteria (|d|=1.86, ratio=2.14x). Caption conditioning improves robustness (B2 degradation -0.018 vs -0.079).
+- Result: Phase 12 complete.
+
+## Phase 12: Latent vs Pixel Space Comparison
+
+### Goal
+Compare t-error measurement in latent space vs pixel space under the Phase 11 verification setup, both with per-image COCO caption conditioning. Determine whether measurement space affects verification outcomes.
+
+### Experiment Matrix
+
+| Variant | Error Space | Caption | Source |
+|---------|------------|---------|--------|
+| V0 (baseline) | latent | empty | Reuse Phase 11 CSVs |
+| V1 | latent | per-image | New |
+| V2 | pixel | per-image | New |
+
+Models: A6 (owner), B1 (domain-shift), B2 (task-shift)
+Eval set: 1200 images (1000 members + 200 non-members)
+
+### Execution Plan
+- 6 scoring runs (serial, single GPU): V1 × {A6, B1, B2} then V2 × {A6, B1, B2}
+- 4 verification runs: V1 × {B1, B2}, V2 × {B1, B2} (V0 reuses existing)
+- Generate markdown comparison table
+- Estimated total: ~3h
+
+### Scoring Results
+
+| Variant | Model | AUC | TPR@1% | Cohen's d | Mem mean | Nonmem mean |
+|---------|-------|-----|--------|-----------|----------|-------------|
+| V0 (latent+empty) | A6 | 0.9871 | 0.7760 | 2.80 | -20.35 | +2.56 |
+| V0 (latent+empty) | B1 | 0.9722 | 0.4920 | 2.49 | -17.79 | -0.90 |
+| V0 (latent+empty) | B2 | 0.9078 | 0.3730 | 1.79 | -2.00 | +13.64 |
+| **V1 (latent+cap)** | **A6** | **0.9956** | **0.8090** | **3.24** | -29.19 | +3.77 |
+| V1 (latent+cap) | B1 | 0.9882 | 0.6140 | 2.85 | -23.75 | -0.93 |
+| V1 (latent+cap) | B2 | 0.9780 | 0.7560 | 2.62 | -13.82 | +10.68 |
+| V2 (pixel+cap) | A6 | 0.9590 | 0.3920 | 2.00 | -0.0003 | +0.0001 |
+| V2 (pixel+cap) | B1 | 0.9306 | 0.1900 | 1.72 | -0.0002 | +0.0001 |
+| V2 (pixel+cap) | B2 | 0.8717 | 0.2240 | 1.44 | -0.0002 | +0.0002 |
+
+### Verification Results
+
+| Variant | Adversary | C1 | C2 (|d|) | C3 (ratio) | Verdict |
+|---------|-----------|----|---------|-----------|----|
+| V0 (latent+empty) | B1 | FAIL | PASS (2.55) | PASS (7.96x) | C2+C3 pass |
+| V0 (latent+empty) | B2 | FAIL | PASS (2.55) | PASS (7.96x) | C2+C3 pass |
+| V1 (latent+cap) | B1 | FAIL | PASS (2.88) | PASS (7.74x) | C2+C3 pass |
+| V1 (latent+cap) | B2 | FAIL | PASS (2.88) | PASS (7.74x) | C2+C3 pass |
+| V2 (pixel+cap) | B1 | FAIL | FAIL (1.86) | FAIL (2.14x) | All fail |
+| V2 (pixel+cap) | B2 | FAIL | FAIL (1.86) | FAIL (2.14x) | All fail |
+
+### Key Findings
+
+1. **Latent >> pixel**: V1 (latent+cap) AUC=0.996, Cohen's d=3.24 vs V2 (pixel+cap) AUC=0.959, d=2.00. Pixel-space fails verification Criteria 2+3.
+2. **Caption helps both spaces**: V1 vs V0: AUC +0.009, d +0.44. Caption conditioning amplifies membership signal.
+3. **Caption improves robustness**: B2 degradation V0=-0.079, V1=-0.018, V2=-0.087. Caption conditioning makes signal more resilient to task-shift adversary.
+4. **Pixel 4x slower, weaker signal**: VAE decode introduces lossy noise that masks the membership signal.
+5. **Best config: latent + caption (V1)**.
+
+### Output Files
+- Scores: `scores/phase11/v1_latcap_{a,b1,b2}.csv`, `v2_pixcap_{a,b1,b2}.csv`
+- Verification: `scores/phase11/verification_v{1,2}_{b1,b2}.json`
+- Comparison table: `tables/latent_vs_pixel_comparison.md`
