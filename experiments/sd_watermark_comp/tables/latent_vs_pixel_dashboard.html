@@ -234,11 +234,39 @@
 
     <!-- Verification Tab — CORRECTED per Algorithm 2 -->
     <div id="tab-verification" class="tab-panel">
-      <p style="font-style:italic;color:var(--ink-light);margin-bottom:24px;font-size:14px">
-        Following paper Algorithm 2 exactly: C1 = t-test(S_A, S_B) on W;
-        C2 = t-test(S_A, S_ref) on W; C3 = mean(S_ref)/mean(S_A) &gt; 5.0.
-        All use <strong>raw t-error scores</strong>, not delta.
-      </p>
+      <div style="background:var(--cream);border:1px solid var(--border);border-radius:2px;padding:24px 28px;margin-bottom:28px;box-shadow:0 2px 8px var(--shadow)">
+        <h3 style="font-size:17px;font-weight:700;margin-bottom:16px">Algorithm 2 &mdash; Verification Criteria</h3>
+        <p style="font-style:italic;color:var(--ink-light);font-size:13px;margin-bottom:16px">All criteria use <strong>raw t-error scores</strong> on watermark set W. Ownership verified only when all three pass jointly.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <div style="padding:16px;background:var(--parchment);border-radius:2px;border-left:3px solid var(--olive)">
+            <div style="font-family:'Caveat',cursive;font-size:17px;color:var(--olive);margin-bottom:4px">C1: Consistency</div>
+            <p style="font-size:12px;color:var(--ink-light);line-height:1.6;margin-bottom:8px">If M<sub>B</sub> is derived from M<sub>A</sub>, their t-error distributions on W should be statistically indistinguishable.</p>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-faded);padding:6px 10px;background:var(--cream);border-radius:2px">
+              t-test(S<sub>A</sub>, S<sub>B</sub>) on W<br>
+              Pass: <strong>p &gt; 0.05</strong>
+            </div>
+          </div>
+
+          <div style="padding:16px;background:var(--parchment);border-radius:2px;border-left:3px solid var(--ochre)">
+            <div style="font-family:'Caveat',cursive;font-size:17px;color:var(--ochre);margin-bottom:4px">C2: Separation</div>
+            <p style="font-size:12px;color:var(--ink-light);line-height:1.6;margin-bottom:8px">Owner model must reconstruct W significantly better than the public baseline.</p>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-faded);padding:6px 10px;background:var(--cream);border-radius:2px">
+              t-test(S<sub>A</sub>, S<sub>ref</sub>) on W<br>
+              Pass: <strong>p &lt; 10<sup>-6</sup></strong> AND <strong>|d| &gt; 2.0</strong>
+            </div>
+          </div>
+
+          <div style="padding:16px;background:var(--parchment);border-radius:2px;border-left:3px solid var(--rust)">
+            <div style="font-family:'Caveat',cursive;font-size:17px;color:var(--rust);margin-bottom:4px">C3: Ratio</div>
+            <p style="font-size:12px;color:var(--ink-light);line-height:1.6;margin-bottom:8px">Baseline mean score must be &gt;5&times; the owner's &mdash; a human-readable sanity check.</p>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-faded);padding:6px 10px;background:var(--cream);border-radius:2px">
+              mean(S<sub>ref</sub>) / mean(S<sub>A</sub>)<br>
+              Pass: <strong>ratio &gt; 5.0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="verif-row">
         <!-- V0 -->
         <div class="verif-card all-fail">
