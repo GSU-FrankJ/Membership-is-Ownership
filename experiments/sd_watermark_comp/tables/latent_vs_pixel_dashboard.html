@@ -16,110 +16,44 @@
     --ink-faded: #8a7d6b;
     --ink-ghost: #b5aa96;
     --olive: #5e7a52;
-    --olive-light: #7a9e6a;
     --olive-bg: rgba(94,122,82,0.08);
     --rust: #b05a3a;
-    --rust-light: #d4785a;
     --rust-bg: rgba(176,90,58,0.08);
     --ochre: #c49332;
-    --ochre-bg: rgba(196,147,50,0.08);
     --shadow: rgba(44,36,22,0.06);
     --shadow-md: rgba(44,36,22,0.1);
     --border: #d5cbb8;
     --border-light: #e2dace;
     --paper-texture: url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--parchment);
-    background-image: var(--paper-texture);
-    color: var(--ink);
-    font-family: 'Lora', Georgia, serif;
-    font-size: 15px;
-    line-height: 1.75;
-  }
-
+  body { background: var(--parchment); background-image: var(--paper-texture); color: var(--ink); font-family: 'Lora', Georgia, serif; font-size: 15px; line-height: 1.75; }
   .container { max-width: 1100px; margin: 0 auto; padding: 60px 48px; }
 
-  .notebook-header {
-    text-align: center;
-    margin-bottom: 64px;
-    padding-bottom: 40px;
-    border-bottom: 2px solid var(--ink);
-    position: relative;
-  }
-  .notebook-header::after {
-    content: '';
-    position: absolute;
-    bottom: -5px; left: 0; right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .header-tag {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; letter-spacing: 3px;
-    text-transform: uppercase; color: var(--ink-faded); margin-bottom: 20px;
-  }
-
-  h1 {
-    font-size: 42px; font-weight: 700; letter-spacing: -0.5px;
-    line-height: 1.2; margin-bottom: 12px;
-  }
+  .notebook-header { text-align: center; margin-bottom: 64px; padding-bottom: 40px; border-bottom: 2px solid var(--ink); position: relative; }
+  .notebook-header::after { content: ''; position: absolute; bottom: -5px; left: 0; right: 0; border-bottom: 1px solid var(--border); }
+  .header-tag { font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--ink-faded); margin-bottom: 20px; }
+  h1 { font-size: 42px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.2; margin-bottom: 12px; }
   h1 .lat { color: var(--olive); }
   h1 .pix { color: var(--rust); }
-
-  .subtitle {
-    font-style: italic; color: var(--ink-light); font-size: 16px;
-    max-width: 600px; margin: 0 auto; line-height: 1.7;
-  }
-
-  .header-meta {
-    margin-top: 24px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px; color: var(--ink-ghost);
-    display: flex; justify-content: center; gap: 32px; flex-wrap: wrap;
-  }
+  .subtitle { font-style: italic; color: var(--ink-light); font-size: 16px; max-width: 600px; margin: 0 auto; line-height: 1.7; }
+  .header-meta { margin-top: 24px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-ghost); display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; }
 
   section { margin-bottom: 72px; }
-
-  .section-rule {
-    display: flex; align-items: center; gap: 16px; margin-bottom: 12px;
-  }
-  .section-rule::before, .section-rule::after {
-    content: ''; flex: 1; height: 1px; background: var(--border);
-  }
-  .section-num {
-    font-family: 'Caveat', cursive; font-size: 20px;
-    color: var(--ink-faded); white-space: nowrap;
-  }
-
+  .section-rule { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+  .section-rule::before, .section-rule::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .section-num { font-family: 'Caveat', cursive; font-size: 20px; color: var(--ink-faded); white-space: nowrap; }
   h2 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
-
-  .section-desc {
-    font-style: italic; color: var(--ink-light); font-size: 14px;
-    margin-bottom: 32px; max-width: 700px;
-  }
-
-  .annotation {
-    font-family: 'Caveat', cursive; color: var(--rust); font-size: 18px;
-  }
-  .margin-note {
-    font-family: 'Caveat', cursive; color: var(--olive); font-size: 16px;
-    display: inline-block; transform: rotate(-1deg); margin-left: 8px;
-  }
+  .section-desc { font-style: italic; color: var(--ink-light); font-size: 14px; margin-bottom: 32px; max-width: 700px; }
+  .annotation { font-family: 'Caveat', cursive; color: var(--rust); font-size: 18px; }
+  .margin-note { font-family: 'Caveat', cursive; color: var(--olive); font-size: 16px; display: inline-block; transform: rotate(-1deg); margin-left: 8px; }
 
   /* 2x2 Grid */
-  .grid-2x2 {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
-    border: 2px solid var(--ink); border-radius: 2px; overflow: hidden; background: var(--ink);
-  }
+  .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 2px solid var(--ink); border-radius: 2px; overflow: hidden; background: var(--ink); }
   .grid-cell { background: var(--cream); padding: 28px 32px; position: relative; }
   .grid-cell:nth-child(1) { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
   .grid-cell:nth-child(2) { border-bottom: 1px solid var(--border); }
   .grid-cell:nth-child(3) { border-right: 1px solid var(--border); }
-
   .cell-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
   .cell-tag { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-ghost); }
   .cell-name { font-size: 18px; font-weight: 700; }
@@ -128,7 +62,6 @@
   .cell-badge { font-family: 'Caveat', cursive; font-size: 15px; padding: 2px 10px; border-radius: 2px; transform: rotate(-2deg); display: inline-block; }
   .cell-badge.best { background: var(--olive-bg); color: var(--olive); border: 1px solid var(--olive); }
   .cell-badge.worst { background: var(--rust-bg); color: var(--rust); border: 1px solid var(--rust); }
-
   .metric-line { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted var(--border-light); font-size: 13px; }
   .metric-line:last-child { border-bottom: none; }
   .mk { color: var(--ink-faded); font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
@@ -143,7 +76,6 @@
   tbody tr:hover td { background: var(--parchment-dark); }
   tbody tr.best-row td { background: var(--olive-bg); }
   tbody tr.best-row:hover td { background: rgba(94,122,82,0.14); }
-
   .pill { display: inline-block; padding: 2px 10px; border-radius: 2px; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; }
   .pill.latent { background: var(--olive-bg); color: var(--olive); border: 1px solid rgba(94,122,82,0.3); }
   .pill.pixel { background: var(--rust-bg); color: var(--rust); border: 1px solid rgba(176,90,58,0.3); }
@@ -160,10 +92,9 @@
   .verif-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
   .verif-card { background: var(--cream); border: 1px solid var(--border); border-radius: 2px; padding: 24px; box-shadow: 0 2px 8px var(--shadow); transition: box-shadow 0.3s; }
   .verif-card:hover { box-shadow: 0 4px 20px var(--shadow-md); }
-  .verif-card.recommended { border-left: 4px solid var(--olive); }
-  .verif-card.failing { border-left: 4px solid var(--rust); }
-  .verif-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-  .verif-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-ghost); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 16px; }
+  .verif-card.all-fail { border-left: 4px solid var(--rust); }
+  .verif-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .verif-sub { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--ink-ghost); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
   .crit-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted var(--border-light); font-size: 12px; }
   .crit-row:last-child { border-bottom: none; }
   .crit-label { color: var(--ink-light); }
@@ -173,7 +104,10 @@
   /* Findings */
   .finding-card { background: var(--cream); border: 1px solid var(--border); border-left: 3px solid var(--ochre); border-radius: 0 2px 2px 0; padding: 20px 28px; margin-bottom: 16px; box-shadow: 0 1px 6px var(--shadow); transition: border-left-color 0.3s, transform 0.2s; }
   .finding-card:hover { border-left-color: var(--olive); transform: translateX(3px); }
+  .finding-card.critical { border-left-color: var(--rust); }
+  .finding-card.critical:hover { border-left-color: var(--ink); }
   .finding-num { font-family: 'Caveat', cursive; font-size: 18px; color: var(--ochre); margin-bottom: 2px; }
+  .finding-card.critical .finding-num { color: var(--rust); }
   .finding-card h4 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
   .finding-card p { font-size: 14px; color: var(--ink-light); line-height: 1.7; }
   .evidence-box { margin-top: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--ink-faded); padding: 8px 14px; background: var(--parchment); border-left: 2px solid var(--border); border-radius: 0 2px 2px 0; }
@@ -206,10 +140,10 @@
     <h1><span class="lat">Latent</span> vs <span class="pix">Pixel</span> Space</h1>
     <p class="subtitle">Comparing t-error measurement spaces and caption conditioning for membership inference-based ownership verification.</p>
     <div class="header-meta">
-      <span>Phase 12 Complete</span>
+      <span>Phase 12 &mdash; Verification Fixed</span>
       <span>A6 Owner + B1/B2 Adversaries</span>
       <span>COCO2014 &middot; 1000 Members</span>
-      <span>2026-03-22</span>
+      <span>2026-03-24</span>
     </div>
   </header>
 
@@ -218,7 +152,6 @@
     <div class="section-rule"><span class="section-num">I. Quick Evaluation</span></div>
     <h2>2 &times; 2 Ablation Grid</h2>
     <p class="section-desc">A6 model, 100 members + 100 non-members. Isolating error space and text conditioning.</p>
-
     <div class="grid-2x2">
       <div class="grid-cell">
         <div class="cell-header"><div><div class="cell-tag">Latent &middot; Empty Prompt</div><div class="cell-name lat">V1 &mdash; Latent + Empty</div></div></div>
@@ -277,7 +210,7 @@
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('scoring',this)">Scoring Metrics</button>
-      <button class="tab-btn" onclick="switchTab('verification',this)">3-Point Verification</button>
+      <button class="tab-btn" onclick="switchTab('verification',this)">3-Point Verification (Algorithm 2)</button>
     </div>
 
     <div id="tab-scoring" class="tab-panel active">
@@ -299,45 +232,55 @@
       </div>
     </div>
 
+    <!-- Verification Tab — CORRECTED per Algorithm 2 -->
     <div id="tab-verification" class="tab-panel">
+      <p style="font-style:italic;color:var(--ink-light);margin-bottom:24px;font-size:14px">
+        Following paper Algorithm 2 exactly: C1 = t-test(S_A, S_B) on W;
+        C2 = t-test(S_A, S_ref) on W; C3 = mean(S_ref)/mean(S_A) &gt; 5.0.
+        All use <strong>raw t-error scores</strong>, not delta.
+      </p>
       <div class="verif-row">
-        <div class="verif-card">
+        <!-- V0 -->
+        <div class="verif-card all-fail">
           <div class="verif-title"><span style="color:var(--olive)">V0</span> Latent + Empty</div>
           <div class="verif-sub">vs B1 (domain shift)</div>
-          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill fail">FAIL</span></span></div>
-          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill pass">PASS</span> 2.55</span></div>
-          <div class="crit-row"><span class="crit-label">C3 Magnitude</span><span class="crit-val"><span class="pill pass">PASS</span> 7.96x</span></div>
+          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill pass">PASS</span> p=0.874</span></div>
+          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill fail">FAIL</span> 0.057</span></div>
+          <div class="crit-row"><span class="crit-label">C3 Ratio</span><span class="crit-val"><span class="pill fail">FAIL</span> 1.011x</span></div>
           <hr class="divider">
           <div class="verif-sub">vs B2 (task shift)</div>
-          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill fail">FAIL</span></span></div>
-          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill pass">PASS</span> 2.55</span></div>
-          <div class="crit-row"><span class="crit-label">C3 Magnitude</span><span class="crit-val"><span class="pill pass">PASS</span> 7.96x</span></div>
+          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill pass">PASS</span> p=0.254</span></div>
+          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill fail">FAIL</span> 0.057</span></div>
+          <div class="crit-row"><span class="crit-label">C3 Ratio</span><span class="crit-val"><span class="pill fail">FAIL</span> 1.011x</span></div>
         </div>
-        <div class="verif-card recommended">
-          <div class="verif-title"><span style="color:var(--olive)">V1</span> Latent + Caption <span class="margin-note">Recommended</span></div>
+        <!-- V1 -->
+        <div class="verif-card all-fail">
+          <div class="verif-title"><span style="color:var(--olive)">V1</span> Latent + Caption</div>
           <div class="verif-sub">vs B1 (domain shift)</div>
-          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill fail">FAIL</span></span></div>
-          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill pass">PASS</span> 2.88</span></div>
-          <div class="crit-row"><span class="crit-label">C3 Magnitude</span><span class="crit-val"><span class="pill pass">PASS</span> 7.74x</span></div>
+          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill pass">PASS</span> p=0.734</span></div>
+          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill fail">FAIL</span> 0.082</span></div>
+          <div class="crit-row"><span class="crit-label">C3 Ratio</span><span class="crit-val"><span class="pill fail">FAIL</span> 1.016x</span></div>
           <hr class="divider">
           <div class="verif-sub">vs B2 (task shift)</div>
-          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill fail">FAIL</span></span></div>
-          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill pass">PASS</span> 2.88</span></div>
-          <div class="crit-row"><span class="crit-label">C3 Magnitude</span><span class="crit-val"><span class="pill pass">PASS</span> 7.74x</span></div>
+          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill pass">PASS</span> p=0.337</span></div>
+          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill fail">FAIL</span> 0.082</span></div>
+          <div class="crit-row"><span class="crit-label">C3 Ratio</span><span class="crit-val"><span class="pill fail">FAIL</span> 1.016x</span></div>
         </div>
-        <div class="verif-card failing">
-          <div class="verif-title"><span style="color:var(--rust)">V2</span> Pixel + Caption <span class="margin-note" style="color:var(--rust)">All fail</span></div>
+        <!-- V2 -->
+        <div class="verif-card all-fail">
+          <div class="verif-title"><span style="color:var(--rust)">V2</span> Pixel + Caption</div>
           <div class="verif-sub">vs B1 (domain shift)</div>
-          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill fail">FAIL</span></span></div>
-          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill fail">FAIL</span> 1.86</span></div>
-          <div class="crit-row"><span class="crit-label">C3 Magnitude</span><span class="crit-val"><span class="pill fail">FAIL</span> 2.14x</span></div>
+          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill pass">PASS</span> p=0.926</span></div>
+          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill fail">FAIL</span> 0.018</span></div>
+          <div class="crit-row"><span class="crit-label">C3 Ratio</span><span class="crit-val"><span class="pill fail">FAIL</span> 1.012x</span></div>
           <hr class="divider">
           <div class="verif-sub">vs B2 (task shift)</div>
-          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill fail">FAIL</span></span></div>
-          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill fail">FAIL</span> 1.86</span></div>
-          <div class="crit-row"><span class="crit-label">C3 Magnitude</span><span class="crit-val"><span class="pill fail">FAIL</span> 2.14x</span></div>
+          <div class="crit-row"><span class="crit-label">C1 Consistency</span><span class="crit-val"><span class="pill pass">PASS</span> p=0.853</span></div>
+          <div class="crit-row"><span class="crit-label">C2 Separation |d|</span><span class="crit-val"><span class="pill fail">FAIL</span> 0.018</span></div>
+          <div class="crit-row"><span class="crit-label">C3 Ratio</span><span class="crit-val"><span class="pill fail">FAIL</span> 1.012x</span></div>
         </div>
       </div>
+      <p style="margin-top:16px"><span class="annotation">Algorithm 2 was designed for from-scratch DDIM (ratio &gt; 19x). LoRA perturbation is ~1% of base error &mdash; raw scores can't separate owner from baseline.</span></p>
     </div>
   </section>
 
@@ -357,40 +300,45 @@
   <!-- V. Findings -->
   <section>
     <div class="section-rule"><span class="section-num">V. Key Findings</span></div>
+
+    <div class="finding-card critical">
+      <div class="finding-num">Finding 0 &mdash; Critical Bug Fix</div>
+      <h4>Algorithm 2 does not work for LoRA derivative models</h4>
+      <p>The paper's verification protocol compares raw t-error scores S_A vs S_ref. For DDIM models trained from scratch, the ratio exceeds 19x. But LoRA fine-tuning only perturbs ~1% of the base model's reconstruction error, making the raw ratio ~1.01x and Cohen's d ~0.06. C2 and C3 fail for <strong>all</strong> variants. The previous implementation incorrectly used delta scores (score_tgt - score_ref) and compared W vs non-W, which is not Algorithm 2.</p>
+      <div class="evidence-box">V1 Latent+Caption: raw ratio = 1.016x (need &gt;5.0), |d| = 0.082 (need &gt;2.0). C1 now PASS (raw scores too similar to distinguish A from B).</div>
+    </div>
+
     <div class="finding-card">
       <div class="finding-num">Finding 1</div>
-      <h4>Latent space dominates pixel space across all models</h4>
-      <p>Latent-space t-error provides a substantially stronger membership signal. VAE decode introduces lossy reconstruction noise that dilutes the signal.</p>
+      <h4>Latent space dominates pixel space for membership detection</h4>
+      <p>Latent-space t-error (delta scores) provides a substantially stronger membership signal. VAE decode introduces lossy noise that dilutes the signal.</p>
       <div class="evidence-box">V1 (latent+cap) A6: AUC=0.9956, d=3.24 vs V2 (pixel+cap) A6: AUC=0.9590, d=2.00 | Delta: AUC +0.037, TPR@1% +0.417, d +1.24</div>
     </div>
+
     <div class="finding-card">
       <div class="finding-num">Finding 2</div>
-      <h4>Pixel space fails all verification criteria</h4>
-      <p>V2 (pixel+caption) fails Criterion 2 (|d|=1.86 &lt; 2.0) and Criterion 3 (ratio=2.14x &lt; 5.0x). Both latent variants (V0, V1) pass Criteria 2+3.</p>
-      <div class="evidence-box">V1 Latent: C2 |d|=2.88 PASS, C3 7.74x PASS | V2 Pixel: C2 |d|=1.86 FAIL, C3 2.14x FAIL</div>
-    </div>
-    <div class="finding-card">
-      <div class="finding-num">Finding 3</div>
       <h4>Caption conditioning amplifies signal in both spaces</h4>
       <p>Per-image COCO captions consistently improve metrics. The LoRA model learned image-caption associations; the caption anchors reconstruction to training memories.</p>
       <div class="evidence-box">Latent: V0 (empty) AUC=0.9871 -> V1 (caption) AUC=0.9956 (+0.009) | Quick eval: 0.9811 -> 0.9988 (+0.018)</div>
     </div>
+
     <div class="finding-card">
-      <div class="finding-num">Finding 4</div>
+      <div class="finding-num">Finding 3</div>
       <h4>Caption conditioning improves adversary robustness</h4>
       <p>B2 (task-shift adversary) AUC degradation is smallest with caption conditioning. The signal is more resilient to post-theft fine-tuning.</p>
       <div class="evidence-box">B2 degradation: V0 (empty)=-0.079, V1 (caption)=-0.018, V2 (pixel+cap)=-0.087</div>
     </div>
-    <div class="finding-card">
-      <div class="finding-num">Finding 5</div>
-      <h4>Recommended: Latent + Caption (V1)</h4>
-      <p>Best AUC (0.9956), best Cohen's d (3.24), passes verification, most robust to adversary fine-tuning, and 4x faster than pixel-space.</p>
-      <div class="evidence-box">Latent: ~12 min / 1200 images | Pixel: ~50 min / 1200 images (4.2x slower)</div>
+
+    <div class="finding-card critical">
+      <div class="finding-num">Finding 4 &mdash; Open Question</div>
+      <h4>Algorithm 2 needs adaptation for derivative models</h4>
+      <p>The verification protocol must be redesigned for LoRA/adapter-based models where the ownership signal lives in the delta (score_tgt - score_ref), not in the raw scores. Possible directions: delta-based criteria with recalibrated thresholds, or a normalized ratio that accounts for the base model contribution.</p>
+      <div class="evidence-box">Delta signal: d=3.24 (strong). Raw signal: d=0.08 (invisible). The signal exists but Algorithm 2 can't see it.</div>
     </div>
   </section>
 
   <footer class="footer">
-    <p>MiO: Membership-is-Ownership &middot; SD v1.4 LoRA &middot; Phase 12 &middot; 2026-03-22</p>
+    <p>MiO: Membership-is-Ownership &middot; SD v1.4 LoRA &middot; Phase 12 &middot; 2026-03-24 &middot; Verification corrected to match Algorithm 2</p>
     <div class="sig">~ research notebook ~</div>
   </footer>
 </div>
@@ -407,7 +355,6 @@ const stone='#8a7d6b', stoneA='rgba(138,125,107,0.55)';
 const barOpts={borderWidth:1,borderRadius:3};
 
 new Chart(document.getElementById('cQuickAUC'),{type:'bar',data:{labels:['V1\nLat+Empty','V2\nLat+Cap','V3\nPix+Empty','V4\nPix+Cap'],datasets:[{data:[0.9811,0.9988,0.9163,0.9696],backgroundColor:[oliveA,olive,rustA,rust],borderColor:[olive,olive,rust,rust],...barOpts}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0.85,max:1.0,grid:{color:'rgba(213,203,184,0.3)'}},x:{grid:{display:false}}}}});
-
 new Chart(document.getElementById('cQuickTPR'),{type:'bar',data:{labels:['V1\nLat+Empty','V2\nLat+Cap','V3\nPix+Empty','V4\nPix+Cap'],datasets:[{data:[0.49,0.91,0.27,0.59],backgroundColor:[oliveA,olive,rustA,rust],borderColor:[olive,olive,rust,rust],...barOpts}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:1.0,grid:{color:'rgba(213,203,184,0.3)'}},x:{grid:{display:false}}}}});
 
 const models=['A6 (owner)','B1 (domain)','B2 (task)'];
@@ -417,11 +364,8 @@ const dsV2={label:'V2 Pix+Caption',backgroundColor:rustA,borderColor:rust,...bar
 const legOpts={position:'top',labels:{boxWidth:12,padding:16}};
 
 new Chart(document.getElementById('cAUC'),{type:'bar',data:{labels:models,datasets:[{...dsV0,data:[0.9871,0.9722,0.9078]},{...dsV1,data:[0.9956,0.9882,0.9780]},{...dsV2,data:[0.9590,0.9306,0.8717]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legOpts},scales:{y:{min:0.85,max:1.0,grid:{color:'rgba(213,203,184,0.3)'}},x:{grid:{display:false}}}}});
-
 new Chart(document.getElementById('cD'),{type:'bar',data:{labels:models,datasets:[{...dsV0,data:[2.80,2.49,1.79]},{...dsV1,data:[3.24,2.85,2.62]},{...dsV2,data:[2.00,1.72,1.44]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legOpts},scales:{y:{min:0,max:4.0,grid:{color:'rgba(213,203,184,0.3)'}},x:{grid:{display:false}}}}});
-
 new Chart(document.getElementById('cTPR'),{type:'bar',data:{labels:models,datasets:[{...dsV0,data:[0.776,0.492,0.373]},{...dsV1,data:[0.809,0.614,0.756]},{...dsV2,data:[0.392,0.190,0.224]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:legOpts},scales:{y:{min:0,max:1.0,grid:{color:'rgba(213,203,184,0.3)'}},x:{grid:{display:false}}}}});
-
 new Chart(document.getElementById('cRobust'),{type:'bar',data:{labels:['V0 Lat+Empty','V1 Lat+Caption','V2 Pix+Caption'],datasets:[{label:'AUC drop (A6->B2)',data:[-0.079,-0.018,-0.087],backgroundColor:['rgba(176,90,58,0.4)','rgba(94,122,82,0.5)','rgba(176,90,58,0.5)'],borderColor:[rust,olive,rust],...barOpts}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:-0.1,max:0,grid:{color:'rgba(213,203,184,0.3)'},title:{display:true,text:'AUC drop',font:{size:10}}},y:{grid:{display:false}}}}});
 
 function switchTab(name,btn){document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+name).classList.add('active');btn.classList.add('active');}
