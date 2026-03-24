@@ -330,10 +330,10 @@
     <div class="section-rule"><span class="section-num">V. Key Findings</span></div>
 
     <div class="finding-card critical">
-      <div class="finding-num">Finding 0 &mdash; Critical Bug Fix</div>
+      <div class="finding-num">Finding 0 &mdash; Key Observation</div>
       <h4>Algorithm 2 does not work for LoRA derivative models</h4>
-      <p>The paper's verification protocol compares raw t-error scores S_A vs S_ref. For DDIM models trained from scratch, the ratio exceeds 19x. But LoRA fine-tuning only perturbs ~1% of the base model's reconstruction error, making the raw ratio ~1.01x and Cohen's d ~0.06. C2 and C3 fail for <strong>all</strong> variants. The previous implementation incorrectly used delta scores (score_tgt - score_ref) and compared W vs non-W, which is not Algorithm 2.</p>
-      <div class="evidence-box">V1 Latent+Caption: raw ratio = 1.016x (need &gt;5.0), |d| = 0.082 (need &gt;2.0). C1 now PASS (raw scores too similar to distinguish A from B).</div>
+      <p>The paper's verification protocol (Algorithm 2) compares raw t-error scores S_A vs S_ref. For DDIM models trained from scratch, the ratio exceeds 19x. However, LoRA fine-tuning only perturbs ~1% of the base model's reconstruction error, making the raw ratio ~1.01x and Cohen's d ~0.06. C2 and C3 fail for <strong>all</strong> variants. An adapted protocol using delta scores is needed for derivative models.</p>
+      <div class="evidence-box">V1 Latent+Caption: raw ratio = 1.016x (need &gt;5.0), |d| = 0.082 (need &gt;2.0). C1 PASS (raw scores too similar to distinguish A from B).</div>
     </div>
 
     <div class="finding-card">
