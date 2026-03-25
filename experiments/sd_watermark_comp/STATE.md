@@ -1,8 +1,8 @@
 # STATE — SD Watermark Comparison Experiment
 
-> Last updated: 2026-03-17
-> Current phase: **Phase 11 complete** (3-point verification)
-> Overall progress: ███████████ 11/11
+> Last updated: 2026-03-25
+> Current phase: **Phase 13 complete** (extended experiments + verification)
+> Overall progress: █████████████ 13/13
 
 ---
 
@@ -21,6 +21,8 @@
 | 09    | ✅ DONE   | 2026-03-13 | Ablation plan designed, all 4 quick evals exceed AUC > 0.99 |
 | 10    | ✅ DONE   | 2026-03-15 | Ablation complete: A5 timestep sweep + A6 scale validation (AUC=0.982 at 1k members) |
 | 11    | ✅ DONE   | 2026-03-17 | 3-point verification: B1 domain-shift PASS, B2 task-shift partial (AUC=0.908) |
+| 12    | ✅ DONE   | 2026-03-22 | Latent vs pixel: latent+caption best (AUC=0.996), pixel fails verification |
+| 13    | ✅ DONE   | 2026-03-25 | Extended: full-FT A7 + LoRA r256 A8 + 1000 non-members. Algorithm 2 FAIL for all SD models |
 
 ---
 
@@ -423,3 +425,56 @@ Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is 
 - Key finding: Raw t-error ratio doesn't work for LoRA (1.01x) — delta-based verification required. Domain-shift FT (B1) is robust: AUC=0.972, |d|=2.21, passes strict criteria. Task-shift FT (B2) partially erases signal: AUC=0.908, |d|=1.73, below strict threshold.
 - Result: Phase 11 complete. LaTeX tables in `tables/sd_verification.tex` and `tables/sd_robustness.tex`.
 - Next: Integrate verification results into paper (discuss delta-based adaptation for derivative models)
+
+### Session 5 — 2026-03-25
+- Phase: 12+13 (latent vs pixel + extended experiments)
+- Actions:
+  - Phase 12: Ran latent+caption/pixel+caption scoring on Phase 11 models (A6/B1/B2), 1200 images. Fixed verify_ownership.py to match paper Algorithm 2 exactly. All C2/C3 FAIL for LoRA (raw ratio ~1.01x).
+  - Phase 13: Expanded non-members 200→1000. Trained A7 (full FT, 1000 members, 40ep, 10k steps, 1h51m) and A8 (LoRA r256, 1000 members, 80ep, 20k steps, 2h49m). Fixed latent normalization to mean/(HWC). Scored all 5 models with latent+caption on 2000-image split. Ran 6 verifications.
+- Key findings:
+  - Full FT (A7) has highest AUC (0.999) and separation but raw ratio still only 1.028x
+  - LoRA r256 (A8) has highest Cohen's d (3.93) for membership detection
+  - Algorithm 2 fails for ALL SD models (LoRA and full FT alike)
+  - A7 vs B2 C1 FAIL (p=0.02): full FT distinguishable from task-shift adversary
+- Result: Phase 13 complete.
+
+## Phase 13: Extended Experiments
+
+### New Models
+
+| Model | Type | Members | Steps | Epochs | Params | Loss | Time |
+|-------|------|---------|-------|--------|--------|------|------|
+| A7 | Full FT | 1000 | 10,000 | 40 | 860M (100%) | 0.217 | 1h51m |
+| A8 | LoRA r256 | 1000 | 20,000 | 80 | 134M (15.6%) | 0.106 | 2h49m |
+
+### Scoring (latent + caption + mean normalization, 1000 mem + 1000 non-mem)
+
+| Model | AUC | TPR@1% | Cohen's d | Mem mean | Non-mem mean |
+|-------|-----|--------|-----------|----------|-------------|
+| A6 (LoRA r64, 3.9%) | 0.9949 | 0.8280 | 3.26 | -0.001782 | +0.000239 |
+| **A7 (Full FT, 100%)** | **0.9986** | **0.9640** | **3.41** | -0.003110 | +0.000307 |
+| **A8 (LoRA r256, 15.6%)** | **0.9994** | **0.9850** | **3.93** | -0.002831 | +0.000782 |
+| B1 (adversary, domain) | 0.9858 | 0.6600 | 2.83 | -0.001450 | -0.000045 |
+| B2 (adversary, task) | 0.9799 | 0.7130 | 2.70 | -0.000843 | +0.000689 |
+
+### Verification (Algorithm 2, raw scores)
+
+| Owner | Adversary | C1 (p>0.05) | C2 (\|d\|>2.0) | C3 (ratio>5.0) | Verdict |
+|-------|-----------|-------------|----------------|----------------|---------|
+| A6 r64 | B1 | PASS (p=0.73) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
+| A6 r64 | B2 | PASS (p=0.34) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
+| A7 full | B1 | PASS (p=0.09) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
+| A7 full | B2 | FAIL (p=0.02) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
+| A8 r256 | B1 | PASS (p=0.16) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
+| A8 r256 | B2 | FAIL (p=0.04) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
+
+### Key Findings
+
+1. **A8 (LoRA r256) achieves the best membership detection**: AUC=0.9994, TPR@1%=0.985, d=3.93 — higher rank increases separation magnitude.
+2. **A7 (full FT) has the highest raw ratio** (1.028x vs 1.016x for r64), but still far from 5.0x threshold.
+3. **Algorithm 2 fails for ALL SD models** — even full fine-tune with 860M params. The base model's reconstruction variance (std~0.022) is ~10x the membership signal (~0.003).
+4. **A7/A8 vs B2 start to FAIL C1** (p<0.05): larger parameter modifications make the model distinguishable from task-shift adversaries, which is actually useful for provenance detection.
+
+### Output Files
+- Scores: `scores/phase13/{a6,a7,a8,b1,b2}_latcap.csv`
+- Verification: `scores/phase13/verification_{a6,a7,a8}_{b1,b2}.json`

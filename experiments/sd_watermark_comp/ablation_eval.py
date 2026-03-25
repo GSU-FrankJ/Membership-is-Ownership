@@ -53,7 +53,8 @@ def compute_t_error_sd(latent, timesteps, unet, alphas_bar, uncond_emb, agg="q25
             eps_pred = unet(latent_t, t_tensor, encoder_hidden_states=emb, return_dict=True).sample
 
         latent_hat = (latent_t - sqrt_1_ab * eps_pred) / sqrt_ab.clamp(min=1e-6)
-        error = (latent_hat - latent).pow(2).view(batch_size, -1).sum(dim=1)
+        # ||z - z_hat||^2 / (H * W * C)  — paper Eq. 6, normalized
+        error = (latent_hat - latent).pow(2).mean(dim=[1, 2, 3])
         all_errors.append(error)
 
     errors = torch.stack(all_errors, dim=1).float()
@@ -67,6 +68,36 @@ def compute_t_error_sd(latent, timesteps, unet, alphas_bar, uncond_emb, agg="q25
         raise ValueError(f"Unknown aggregation: {agg}")
 
 
+def _pixel_rescore(latent, timesteps, unet, alphas_bar, emb, precomputed_noise,
+                    vae, scaling_factor, images_t, agg):
+    """Recompute t-error in pixel space: decode latent_hat → pixel, MSE vs original."""
+    device = latent.device
+    batch_size = latent.size(0)
+    emb_expanded = emb.expand(batch_size, -1, -1) if emb.size(0) == 1 else emb
+    all_errors = []
+    for idx, t in enumerate(timesteps):
+        t_tensor = torch.full((batch_size,), t, device=device, dtype=torch.long)
+        ab = alphas_bar[t]
+        sqrt_ab = ab.sqrt()
+        sqrt_1_ab = (1 - ab).sqrt()
+        noise = precomputed_noise[idx]
+        latent_t = sqrt_ab * latent + sqrt_1_ab * noise
+        with torch.no_grad():
+            eps_pred = unet(latent_t, t_tensor, encoder_hidden_states=emb_expanded, return_dict=True).sample
+        latent_hat = (latent_t - sqrt_1_ab * eps_pred) / sqrt_ab.clamp(min=1e-6)
+        with torch.no_grad():
+            x_hat = vae.decode(latent_hat / scaling_factor).sample
+        error = (x_hat - images_t).pow(2).mean(dim=[1, 2, 3])
+        all_errors.append(error)
+    errors = torch.stack(all_errors, dim=1).float()
+    if agg == "mean":
+        return errors.mean(dim=1)
+    elif agg.startswith("q"):
+        q_val = int(agg[1:]) / 100.0
+        return torch.quantile(errors, q_val, dim=1)
+    return errors.mean(dim=1)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--split-file", required=True, help="Path to eval split JSON")
@@ -78,6 +109,10 @@ def main():
     parser.add_argument("--t-min", type=int, default=0, help="Minimum timestep (inclusive)")
     parser.add_argument("--t-max", type=int, default=999, help="Maximum timestep (inclusive)")
     parser.add_argument("--agg", type=str, default="q25")
+    parser.add_argument("--error-space", choices=["latent", "pixel"], default="latent",
+                        help="Compute t-error in latent (4x64x64) or pixel (3x512x512) space")
+    parser.add_argument("--use-caption", action="store_true",
+                        help="Use per-image COCO caption instead of empty prompt")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out-csv", required=True)
     args = parser.parse_args()
@@ -133,11 +168,12 @@ def main():
             return_tensors="pt"
         ).to(device)
         uncond_emb = text_encoder(uncond_input.input_ids)[0]
-    del text_encoder
-    if args.lora_path:
-        del tgt_pipe.text_encoder
-    del ref_pipe.text_encoder
-    torch.cuda.empty_cache()
+    if not args.use_caption:
+        del text_encoder
+        if args.lora_path:
+            del tgt_pipe.text_encoder
+        del ref_pipe.text_encoder
+        torch.cuda.empty_cache()
 
     timesteps = uniform_timesteps(args.t_max - args.t_min + 1, args.K)
     timesteps = [t + args.t_min for t in timesteps]
@@ -154,18 +190,25 @@ def main():
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5]),
     ])
 
+    if args.use_caption:
+        print("Keeping text encoder for per-image caption conditioning")
+    else:
+        print("Using empty prompt (unconditional)")
+
     work = []
     for entry in split["members"]:
         work.append({
             "image_id": entry["image_id"],
             "label": "member",
             "file_path": os.path.join(PROJECT_ROOT, "data/coco2014/train2014", entry["file_name"]),
+            "caption": entry.get("caption", ""),
         })
     for entry in split["nonmembers"]:
         work.append({
             "image_id": entry["image_id"],
             "label": "nonmember",
             "file_path": os.path.join(PROJECT_ROOT, "data/coco2014/val2014", entry["file_name"]),
+            "caption": entry.get("caption", ""),
         })
 
     print(f"Eval set: {sum(1 for w in work if w['label']=='member')} members + "
@@ -189,12 +232,32 @@ def main():
             posterior = vae.encode(images_t)
             latent = posterior.latent_dist.mean * scaling_factor
 
+        # Per-image caption or unconditional embedding
+        if args.use_caption:
+            captions = [item["caption"] for item in batch_items]
+            with torch.no_grad():
+                cap_input = tokenizer(
+                    captions, padding="max_length", max_length=tokenizer.model_max_length,
+                    truncation=True, return_tensors="pt"
+                ).to(device)
+                batch_emb = text_encoder(cap_input.input_ids)[0]
+        else:
+            batch_emb = uncond_emb
+
         precomputed_noise = [torch.randn_like(latent) for _ in timesteps]
 
-        score_ref = compute_t_error_sd(latent, timesteps, ref_unet, alphas_bar, uncond_emb, args.agg,
+        score_ref = compute_t_error_sd(latent, timesteps, ref_unet, alphas_bar, batch_emb, args.agg,
                                        precomputed_noise=precomputed_noise)
-        score_tgt = compute_t_error_sd(latent, timesteps, tgt_unet, alphas_bar, uncond_emb, args.agg,
+        score_tgt = compute_t_error_sd(latent, timesteps, tgt_unet, alphas_bar, batch_emb, args.agg,
                                        precomputed_noise=precomputed_noise)
+
+        # Pixel-space error: decode latent_hat → pixel, compute MSE
+        if args.error_space == "pixel":
+            score_ref = _pixel_rescore(latent, timesteps, ref_unet, alphas_bar, batch_emb,
+                                       precomputed_noise, vae, scaling_factor, images_t, args.agg)
+            score_tgt = _pixel_rescore(latent, timesteps, tgt_unet, alphas_bar, batch_emb,
+                                       precomputed_noise, vae, scaling_factor, images_t, args.agg)
+
         score = score_tgt - score_ref
 
         for j, item in enumerate(batch_items):

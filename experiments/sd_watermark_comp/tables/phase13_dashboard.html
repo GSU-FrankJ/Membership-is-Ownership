@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiO SD Experiments — Phase 13 Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@300;400;500&family=Caveat:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--parchment:#f4efe6;--parchment-dark:#ebe4d6;--cream:#faf7f0;--ink:#2c2416;--ink-light:#5c4f3a;--ink-faded:#8a7d6b;--ink-ghost:#b5aa96;--olive:#5e7a52;--olive-bg:rgba(94,122,82,.08);--rust:#b05a3a;--rust-bg:rgba(176,90,58,.08);--ochre:#c49332;--indigo:#4a5a8a;--shadow:rgba(44,36,22,.06);--border:#d5cbb8;--border-light:#e2dace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--parchment);color:var(--ink);font-family:'Lora',Georgia,serif;font-size:15px;line-height:1.75}
+.container{max-width:1100px;margin:0 auto;padding:60px 48px}
+.header{text-align:center;margin-bottom:56px;padding-bottom:36px;border-bottom:2px solid var(--ink);position:relative}
+.header::after{content:'';position:absolute;bottom:-5px;left:0;right:0;border-bottom:1px solid var(--border)}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--ink-faded);margin-bottom:16px}
+h1{font-size:40px;font-weight:700;line-height:1.2;margin-bottom:10px}
+.sub{font-style:italic;color:var(--ink-light);font-size:15px;max-width:650px;margin:0 auto}
+.meta{margin-top:20px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-ghost);display:flex;justify-content:center;gap:28px;flex-wrap:wrap}
+section{margin-bottom:64px}
+.rule{display:flex;align-items:center;gap:16px;margin-bottom:10px}
+.rule::before,.rule::after{content:'';flex:1;height:1px;background:var(--border)}
+.rule span{font-family:'Caveat',cursive;font-size:20px;color:var(--ink-faded);white-space:nowrap}
+h2{font-size:24px;font-weight:700;margin-bottom:6px}
+.desc{font-style:italic;color:var(--ink-light);font-size:13px;margin-bottom:28px}
+.ann{font-family:'Caveat',cursive;font-size:17px}
+.ann.olive{color:var(--olive)}.ann.rust{color:var(--rust)}.ann.ochre{color:var(--ochre)}
+/* table */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:2px;box-shadow:0 2px 10px var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--parchment-dark);padding:11px 14px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-faded);font-weight:500;border-bottom:2px solid var(--ink);white-space:nowrap}
+tbody td{padding:9px 14px;border-bottom:1px solid var(--border-light);font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--cream);white-space:nowrap}
+tbody tr:hover td{background:var(--parchment-dark)}
+tr.hl td{background:var(--olive-bg)}tr.hl:hover td{background:rgba(94,122,82,.14)}
+.pill{display:inline-block;padding:2px 8px;border-radius:2px;font-size:10px;font-weight:500;letter-spacing:.5px}
+.pill.pass{background:var(--olive-bg);color:var(--olive);border:1px solid var(--olive)}
+.pill.fail{background:var(--rust-bg);color:var(--rust);border:1px solid var(--rust)}
+/* charts */
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cc{background:var(--cream);border:1px solid var(--border);border-radius:2px;padding:20px;box-shadow:0 2px 8px var(--shadow)}
+.cc h3{font-size:14px;font-weight:600;margin-bottom:14px}
+.ca{position:relative;height:240px}
+/* criteria cards */
+.criteria{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.ccard{padding:16px;background:var(--parchment);border-radius:2px;border-left:3px solid var(--olive)}
+.ccard.c2{border-left-color:var(--ochre)}.ccard.c3{border-left-color:var(--rust)}
+.ccard .cl{font-family:'Caveat',cursive;font-size:16px;margin-bottom:4px}
+.ccard .cl.c1c{color:var(--olive)}.ccard .cl.c2c{color:var(--ochre)}.ccard .cl.c3c{color:var(--rust)}
+.ccard p{font-size:11px;color:var(--ink-light);line-height:1.5;margin-bottom:6px}
+.ccard .formula{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ink-faded);padding:5px 8px;background:var(--cream);border-radius:2px}
+/* findings */
+.fc{background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--ochre);border-radius:0 2px 2px 0;padding:18px 24px;margin-bottom:14px;box-shadow:0 1px 6px var(--shadow)}
+.fc:hover{border-left-color:var(--olive);transform:translateX(3px);transition:.2s}
+.fc.crit{border-left-color:var(--rust)}.fc.crit:hover{border-left-color:var(--ink)}
+.fc .fn{font-family:'Caveat',cursive;font-size:17px;color:var(--ochre)}.fc.crit .fn{color:var(--rust)}
+.fc h4{font-size:16px;font-weight:700;margin-bottom:5px}
+.fc p{font-size:13px;color:var(--ink-light);line-height:1.6}
+.eb{margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-faded);padding:6px 12px;background:var(--parchment);border-left:2px solid var(--border);border-radius:0 2px 2px 0}
+.footer{text-align:center;padding-top:36px;border-top:2px solid var(--ink);position:relative}
+.footer::before{content:'';position:absolute;top:-4px;left:0;right:0;border-top:1px solid var(--border)}
+.footer p{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-ghost)}
+.footer .sig{font-family:'Caveat',cursive;font-size:20px;color:var(--ink-faded);margin-top:6px}
+/* tabs */
+.tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--ink)}
+.tb{background:none;border:none;font-family:'Lora',serif;font-size:13px;color:var(--ink-faded);padding:8px 20px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.2s}
+.tb:hover{color:var(--ink)}.tb.a{color:var(--ink);font-weight:600;border-bottom-color:var(--ink);background:var(--cream)}
+.tp{display:none}.tp.a{display:block}
+@media(max-width:800px){.container{padding:28px 16px}.cg,.criteria{grid-template-columns:1fr}h1{font-size:28px}}
+</style>
+</head>
+<body>
+<div class="container">
+<header class="header">
+<div class="tag">Membership-is-Ownership &middot; SD v1.4</div>
+<h1>Phase 13: Extended Experiments</h1>
+<p class="sub">Full fine-tune (A7) + high-rank LoRA r256 (A8) + 1000 non-members. Latent space, caption conditioning, mean/(HWC) normalization.</p>
+<div class="meta"><span>2026-03-25</span><span>1000 Members + 1000 Non-members</span><span>V100 32GB</span></div>
+</header>
+
+<!-- I. Scoring -->
+<section>
+<div class="rule"><span>I. Membership Detection</span></div>
+<h2>Scoring Results (latent + caption + normalized)</h2>
+<div class="tw" style="margin-bottom:20px">
+<table>
+<thead><tr><th>Model</th><th>Type</th><th>Params Modified</th><th>AUC</th><th>TPR@1%</th><th>Cohen's d</th><th>Mem Mean</th><th>Non-Mem Mean</th></tr></thead>
+<tbody>
+<tr><td>A6</td><td>LoRA r64</td><td>3.9%</td><td style="color:var(--olive)">0.9949</td><td>0.8280</td><td>3.26</td><td>-0.001782</td><td>+0.000239</td></tr>
+<tr class="hl"><td><strong>A7</strong></td><td><strong>Full FT</strong></td><td><strong>100%</strong></td><td style="color:var(--olive);font-weight:700">0.9986</td><td style="color:var(--olive);font-weight:700">0.9640</td><td>3.41</td><td>-0.003110</td><td>+0.000307</td></tr>
+<tr class="hl"><td><strong>A8</strong></td><td><strong>LoRA r256</strong></td><td><strong>15.6%</strong></td><td style="color:var(--olive);font-weight:700">0.9994</td><td style="color:var(--olive);font-weight:700">0.9850</td><td style="color:var(--olive);font-weight:700">3.93</td><td>-0.002831</td><td>+0.000782</td></tr>
+<tr><td>B1</td><td>Adversary (domain)</td><td>—</td><td>0.9858</td><td>0.6600</td><td>2.83</td><td>-0.001450</td><td>-0.000045</td></tr>
+<tr><td>B2</td><td>Adversary (task)</td><td>—</td><td>0.9799</td><td>0.7130</td><td>2.70</td><td>-0.000843</td><td>+0.000689</td></tr>
+</tbody>
+</table>
+</div>
+<p class="ann olive">A8 (LoRA r256) achieves the highest separation: d=3.93, AUC=0.9994, TPR@1%=98.5%</p>
+</section>
+
+<!-- II. Charts -->
+<section>
+<div class="rule"><span>II. Visualizations</span></div>
+<div class="cg" style="margin-bottom:20px">
+<div class="cc"><h3>AUC by Model</h3><div class="ca"><canvas id="cAUC"></canvas></div></div>
+<div class="cc"><h3>Cohen's d by Model</h3><div class="ca"><canvas id="cD"></canvas></div></div>
+</div>
+<div class="cg">
+<div class="cc"><h3>TPR@1%FPR by Model</h3><div class="ca"><canvas id="cTPR"></canvas></div></div>
+<div class="cc"><h3>Raw Score Ratio (S_ref / S_A on W)</h3><div class="ca"><canvas id="cRatio"></canvas></div></div>
+</div>
+</section>
+
+<!-- III. Verification -->
+<section>
+<div class="rule"><span>III. Algorithm 2 Verification</span></div>
+<h2>3-Point Ownership Protocol</h2>
+<div class="desc">All criteria use raw t-error scores on watermark set W. Ownership verified only when all three pass.</div>
+
+<div class="criteria">
+<div class="ccard"><div class="cl c1c">C1: Consistency</div><p>M_B derived from M_A &rArr; indistinguishable t-error on W</p><div class="formula">t-test(S<sub>A</sub>, S<sub>B</sub>) on W<br>Pass: p &gt; 0.05</div></div>
+<div class="ccard c2"><div class="cl c2c">C2: Separation</div><p>Owner must reconstruct W better than baseline</p><div class="formula">t-test(S<sub>A</sub>, S<sub>ref</sub>) on W<br>Pass: p &lt; 10<sup>-6</sup> AND |d| &gt; 2.0</div></div>
+<div class="ccard c3"><div class="cl c3c">C3: Ratio</div><p>Baseline mean must exceed owner by 5x</p><div class="formula">mean(S<sub>ref</sub>) / mean(S<sub>A</sub>)<br>Pass: ratio &gt; 5.0</div></div>
+</div>
+
+<div class="tw">
+<table>
+<thead><tr><th>Owner</th><th>Adversary</th><th>C1 (p&gt;0.05)</th><th>C2 (|d|&gt;2.0)</th><th>C3 (ratio&gt;5.0)</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>A6 (r64)</td><td>B1</td><td><span class="pill pass">PASS</span> p=0.734</td><td><span class="pill fail">FAIL</span> 0.082</td><td><span class="pill fail">FAIL</span> 1.016x</td><td>REJECTED</td></tr>
+<tr><td>A6 (r64)</td><td>B2</td><td><span class="pill pass">PASS</span> p=0.337</td><td><span class="pill fail">FAIL</span> 0.082</td><td><span class="pill fail">FAIL</span> 1.016x</td><td>REJECTED</td></tr>
+<tr><td>A7 (full)</td><td>B1</td><td><span class="pill pass">PASS</span> p=0.090</td><td><span class="pill fail">FAIL</span> 0.142</td><td><span class="pill fail">FAIL</span> 1.028x</td><td>REJECTED</td></tr>
+<tr><td>A7 (full)</td><td>B2</td><td><span class="pill fail">FAIL</span> p=0.021</td><td><span class="pill fail">FAIL</span> 0.142</td><td><span class="pill fail">FAIL</span> 1.028x</td><td>REJECTED</td></tr>
+<tr><td>A8 (r256)</td><td>B1</td><td><span class="pill pass">PASS</span> p=0.158</td><td><span class="pill fail">FAIL</span> 0.130</td><td><span class="pill fail">FAIL</span> 1.025x</td><td>REJECTED</td></tr>
+<tr><td>A8 (r256)</td><td>B2</td><td><span class="pill fail">FAIL</span> p=0.042</td><td><span class="pill fail">FAIL</span> 0.130</td><td><span class="pill fail">FAIL</span> 1.025x</td><td>REJECTED</td></tr>
+</tbody>
+</table>
+</div>
+<p style="margin-top:14px" class="ann rust">Algorithm 2 fails for ALL SD models. Even full fine-tune (860M params) ratio is only 1.028x.</p>
+</section>
+
+<!-- IV. Findings -->
+<section>
+<div class="rule"><span>IV. Key Findings</span></div>
+<div class="fc crit">
+<div class="fn">Finding 1</div>
+<h4>Algorithm 2 does not work for any SD fine-tuning</h4>
+<p>Raw score ratio is ~1.01&ndash;1.03x across all configurations (LoRA r64, r256, full FT). The base model's per-image reconstruction variance (~0.022) is 7x the membership signal (~0.003). Algorithm 2's thresholds were calibrated for from-scratch DDIM where ratio exceeds 19x.</p>
+<div class="eb">A7 full FT: ratio=1.028x, |d|=0.14 (need &gt;5.0x and &gt;2.0)</div>
+</div>
+<div class="fc">
+<div class="fn">Finding 2</div>
+<h4>LoRA r256 achieves the strongest membership detection</h4>
+<p>Higher rank increases separation magnitude. A8 (r256, 15.6% params) outperforms both A6 (r64, 3.9%) and A7 (full FT, 100%) on Cohen's d.</p>
+<div class="eb">A6 d=3.26 &rarr; A8 d=3.93 &rarr; A7 d=3.41 | A8 AUC=0.9994, TPR@1%=0.985</div>
+</div>
+<div class="fc">
+<div class="fn">Finding 3</div>
+<h4>Full FT and high-rank LoRA enable provenance detection</h4>
+<p>A7 and A8 vs B2 (task-shift adversary): C1 FAIL (p&lt;0.05), meaning the adversary's modification is detectable. This is useful for proving that a suspect model was tampered with after theft.</p>
+<div class="eb">A7 vs B2: p=0.021 | A8 vs B2: p=0.042 | A6 vs B2: p=0.337 (not detectable)</div>
+</div>
+<div class="fc">
+<div class="fn">Finding 4</div>
+<h4>Delta-based protocol is needed for SD models</h4>
+<p>The membership signal lives in delta = score_tgt &minus; score_ref, not in raw scores. Delta Cohen's d = 3.93 (strong) vs raw d = 0.13 (invisible). An adapted verification protocol with recalibrated thresholds is required.</p>
+<div class="eb">Delta signal: d=3.93, AUC=0.9994 | Raw signal: d=0.13, ratio=1.025x</div>
+</div>
+</section>
+
+<footer class="footer">
+<p>MiO &middot; SD v1.4 &middot; Phase 13 &middot; 2026-03-25</p>
+<div class="sig">~ research notebook ~</div>
+</footer>
+</div>
+
+<script>
+Chart.defaults.color='#8a7d6b';Chart.defaults.borderColor='rgba(213,203,184,.6)';Chart.defaults.font.family="'IBM Plex Mono',monospace";Chart.defaults.font.size=11;
+const O='#5e7a52',OA='rgba(94,122,82,.65)',R='#b05a3a',RA='rgba(176,90,58,.65)',S='#8a7d6b',SA='rgba(138,125,107,.55)',I='#4a5a8a',IA='rgba(74,90,138,.65)';
+const B={borderWidth:1,borderRadius:3};
+const L=['A6 (r64)','A7 (full)','A8 (r256)','B1','B2'];
+const gc='rgba(213,203,184,.3)';
+
+new Chart(document.getElementById('cAUC'),{type:'bar',data:{labels:L,datasets:[{data:[.9949,.9986,.9994,.9858,.9799],backgroundColor:[OA,IA,O,SA,SA],borderColor:[O,I,O,S,S],...B}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:.97,max:1,grid:{color:gc}},x:{grid:{display:false}}}}});
+
+new Chart(document.getElementById('cD'),{type:'bar',data:{labels:L,datasets:[{data:[3.26,3.41,3.93,2.83,2.70],backgroundColor:[OA,IA,O,SA,SA],borderColor:[O,I,O,S,S],...B}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:4.5,grid:{color:gc}},x:{grid:{display:false}}}}});
+
+new Chart(document.getElementById('cTPR'),{type:'bar',data:{labels:L,datasets:[{data:[.828,.964,.985,.660,.713],backgroundColor:[OA,IA,O,SA,SA],borderColor:[O,I,O,S,S],...B}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:1,grid:{color:gc}},x:{grid:{display:false}}}}});
+
+new Chart(document.getElementById('cRatio'),{type:'bar',data:{labels:['A6 (r64)','A7 (full)','A8 (r256)'],datasets:[{label:'Raw ratio',data:[1.016,1.028,1.025],backgroundColor:[OA,IA,O],borderColor:[O,I,O],...B},{label:'Threshold (5.0)',data:[5,5,5],type:'line',borderColor:R,borderDash:[6,4],pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:12,padding:14}}},scales:{y:{min:0,max:6,grid:{color:gc}},x:{grid:{display:false}}}}});
+</script>
+</body>
+</html>
