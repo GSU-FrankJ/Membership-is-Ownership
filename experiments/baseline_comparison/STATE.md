@@ -2,8 +2,8 @@
 
 > **Claude Code**: Read this FIRST every session. Update after every completed step.
 
-## Next Phase: DONE — All phases complete
-## Status: PHASE 08 COMPLETE — All tables, narrative, and summary generated
+## Next Phase: Phase 09 — Multi-Baseline Expansion
+## Status: PHASE 09 IN PROGRESS — Expanding to 3+ baselines per dataset
 
 ---
 
@@ -313,3 +313,28 @@ python detect_watermark_cifar10.py
   - All pruned FIDs > clean FIDs (sanity check passed)
   - MiO FID (56.03) higher than WDM (13.42) and Zhao (9.28) due to different architectures/samplers, not watermarking overhead
   - MMD-FT only evaluated for MiO (WDM/Zhao architectures incompatible with DDIM-based FT loop)
+
+## Phase 09: Multi-Baseline Expansion (GPU)
+### Step 9.1: Registry & Config
+- [ ] `ddpm-church` added to `BASELINE_MODELS` in `huggingface_loader.py`
+- [ ] Fallback defaults updated in `list_baselines_for_dataset()`
+- [ ] `baselines_by_dataset.yaml` expanded to 3+ baselines per dataset with role annotations
+
+### Step 9.2: Eval Pipeline
+- [ ] Random baseline dispatch added to `eval_ownership.py` loader loop
+- [ ] Baseline name matching regex updated to include `random`
+- [ ] Conservative criteria: ALL baselines must pass d > 2.0 and ratio > 5.0
+- [ ] Per-baseline JSON reporting added
+
+### Step 9.3: Run Evals
+- [ ] CIFAR-10: 3 baselines evaluated
+- [ ] CIFAR-100: 3 baselines evaluated
+- [ ] STL-10: 3 baselines evaluated (ddpm-cifar10 as domain-matched fix)
+- [ ] CelebA: 4 baselines evaluated
+
+### Step 9.4: Paper Updates
+- [ ] Main table updated with conservative (min |d|) reporting
+- [ ] Appendix table with per-baseline breakdown
+- [ ] Experimental setup text updated
+- [ ] Domain-gap discussion paragraph added
+- [ ] Abstract/conclusion numbers verified
