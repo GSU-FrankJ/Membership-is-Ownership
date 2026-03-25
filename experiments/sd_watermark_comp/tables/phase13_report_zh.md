@@ -72,7 +72,7 @@ S_A  (A7 full FT) mean = 0.1125, std = 0.0218
 
 Base model 的 per-image reconstruction variance (~0.022) 是 membership signal (~0.003) 的 7 倍。Algorithm 2 的阈值是为 from-scratch DDIM 设计的（那种场景 ratio > 19x），不适用于任何基于 SD 的 fine-tuning。
 
-**C1 的有趣变化**：A7 和 A8 vs B2 开始 FAIL (p<0.05)。这说明参数修改越大，adversary 的 task-shift fine-tuning 产生的偏移越容易被检测到 — 这对 provenance detection 有用。
+**C1 正确区分了模型谱系**：B1/B2 是从 A6 (LoRA r64) 派生的，不是从 A7 或 A8。C1 结果正确反映了这一点 — 只有 A6 vs B1/B2 通过 consistency check (p>0.05)，A7 和 A8 因为是完全不同的模型（不同的 fine-tuning 方式和参数量），raw t-error 特征不同，所以 FAIL。这不是"检测到 adversary 修改"，而是 C1 正确识别了不同的模型谱系。
 
 ---
 

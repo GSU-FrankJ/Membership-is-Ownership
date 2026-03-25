@@ -435,7 +435,7 @@ Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is 
   - Full FT (A7) has highest AUC (0.999) and separation but raw ratio still only 1.028x
   - LoRA r256 (A8) has highest Cohen's d (3.93) for membership detection
   - Algorithm 2 fails for ALL SD models (LoRA and full FT alike)
-  - A7 vs B2 C1 FAIL (p=0.02): full FT distinguishable from task-shift adversary
+  - C1 correctly identifies lineage: only A6 passes consistency with B1/B2 (B was derived from A6, not A7/A8)
 - Result: Phase 13 complete.
 
 ## Phase 13: Extended Experiments
@@ -473,7 +473,7 @@ Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is 
 1. **A8 (LoRA r256) achieves the best membership detection**: AUC=0.9994, TPR@1%=0.985, d=3.93 — higher rank increases separation magnitude.
 2. **A7 (full FT) has the highest raw ratio** (1.028x vs 1.016x for r64), but still far from 5.0x threshold.
 3. **Algorithm 2 fails for ALL SD models** — even full fine-tune with 860M params. The base model's reconstruction variance (std~0.022) is ~10x the membership signal (~0.003).
-4. **A7/A8 vs B2 start to FAIL C1** (p<0.05): larger parameter modifications make the model distinguishable from task-shift adversaries, which is actually useful for provenance detection.
+4. **C1 correctly identifies model lineage**: B1/B2 were derived from A6, so only A6 passes C1 consistency with B1/B2. A7/A8 fail C1 because they are different models (different FT method), not because adversary modification was detected.
 
 ### Output Files
 - Scores: `scores/phase13/{a6,a7,a8,b1,b2}_latcap.csv`

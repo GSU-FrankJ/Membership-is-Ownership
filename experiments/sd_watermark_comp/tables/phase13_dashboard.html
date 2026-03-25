@@ -154,9 +154,9 @@ tr.hl td{background:var(--olive-bg)}tr.hl:hover td{background:rgba(94,122,82,.14
 </div>
 <div class="fc">
 <div class="fn">Finding 3</div>
-<h4>Full FT and high-rank LoRA enable provenance detection</h4>
-<p>A7 and A8 vs B2 (task-shift adversary): C1 FAIL (p&lt;0.05), meaning the adversary's modification is detectable. This is useful for proving that a suspect model was tampered with after theft.</p>
-<div class="eb">A7 vs B2: p=0.021 | A8 vs B2: p=0.042 | A6 vs B2: p=0.337 (not detectable)</div>
+<h4>C1 correctly distinguishes model lineage</h4>
+<p>B1/B2 were derived from A6 (LoRA r64), not from A7 or A8. C1 correctly reflects this: only A6 passes consistency with B1/B2. A7 and A8 fail because they are different models with different raw t-error characteristics, not because adversary modification is detected.</p>
+<div class="eb">A6 vs B2: p=0.337 PASS (correct &mdash; same lineage) | A7 vs B2: p=0.021 FAIL (correct &mdash; different lineage) | A8 vs B2: p=0.042 FAIL (correct &mdash; different lineage)</div>
 </div>
 <div class="fc">
 <div class="fn">Finding 4</div>
