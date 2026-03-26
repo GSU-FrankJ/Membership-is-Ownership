@@ -127,12 +127,14 @@ tr.hl td{background:var(--olive-bg)}tr.hl:hover td{background:rgba(94,122,82,.14
 <tbody>
 <tr><td>A6 (r64)</td><td>B1_a6 (domain)</td><td><span class="pill pass">PASS</span> p=0.734</td><td><span class="pill fail">FAIL</span> 0.082</td><td><span class="pill fail">FAIL</span> 1.016x</td><td>REJECTED</td></tr>
 <tr><td>A6 (r64)</td><td>B2_a6 (task)</td><td><span class="pill pass">PASS</span> p=0.337</td><td><span class="pill fail">FAIL</span> 0.082</td><td><span class="pill fail">FAIL</span> 1.016x</td><td>REJECTED</td></tr>
-<tr style="background:var(--parchment-dark);font-style:italic;color:var(--ink-ghost)"><td>A7 (full)</td><td colspan="5">Adversary training in progress &mdash; B1_a7 / B2_a7 (LoRA r64, 2000 steps from A7)</td></tr>
-<tr style="background:var(--parchment-dark);font-style:italic;color:var(--ink-ghost)"><td>A8 (r256)</td><td colspan="5">Adversary training in progress &mdash; B1_a8 / B2_a8 (LoRA r64, 2000 steps from A8)</td></tr>
+<tr><td>A7 (full)</td><td>B1_a7 (domain)</td><td><span class="pill pass">PASS</span> p=0.708</td><td><span class="pill fail">FAIL</span> 0.142</td><td><span class="pill fail">FAIL</span> 1.028x</td><td>REJECTED</td></tr>
+<tr><td>A7 (full)</td><td>B2_a7 (task)</td><td><span class="pill pass">PASS</span> p=0.183</td><td><span class="pill fail">FAIL</span> 0.142</td><td><span class="pill fail">FAIL</span> 1.028x</td><td>REJECTED</td></tr>
+<tr><td>A8 (r256)</td><td>B1_a8 (domain)</td><td><span class="pill pass">PASS</span> p=0.543</td><td><span class="pill fail">FAIL</span> 0.130</td><td><span class="pill fail">FAIL</span> 1.025x</td><td>REJECTED</td></tr>
+<tr><td>A8 (r256)</td><td>B2_a8 (task)</td><td><span class="pill pass">PASS</span> p=0.219</td><td><span class="pill fail">FAIL</span> 0.130</td><td><span class="pill fail">FAIL</span> 1.025x</td><td>REJECTED</td></tr>
 </tbody>
 </table>
 </div>
-<p style="margin-top:14px" class="ann rust">Algorithm 2 fails for ALL SD models. Even full fine-tune (860M params) ratio is only 1.028x.</p>
+<p style="margin-top:14px" class="ann rust">C1 PASS for all 6 pairs (correct lineage). C2/C3 FAIL for all &mdash; ratio max 1.028x, need &gt;5.0x.</p>
 </section>
 
 <!-- IV. Findings -->
@@ -152,9 +154,9 @@ tr.hl td{background:var(--olive-bg)}tr.hl:hover td{background:rgba(94,122,82,.14
 </div>
 <div class="fc">
 <div class="fn">Finding 3</div>
-<h4>Verification requires matching adversary lineage</h4>
-<p>Each owner model needs its own adversary models derived from it. B1/B2 (derived from A6) can only be compared with A6. A7 and A8 require separate adversary training &mdash; currently in progress using the same protocol (LoRA r64, 2000 steps, lr=5e-5).</p>
-<div class="eb">Valid: A6 vs B1_a6/B2_a6 | Pending: A7 vs B1_a7/B2_a7, A8 vs B1_a8/B2_a8</div>
+<h4>C1 works correctly &mdash; all adversaries consistent with their parent</h4>
+<p>Each owner model was tested against adversaries derived from itself (LoRA r64, 2000 steps). C1 passes for all 6 pairs (p=0.18&ndash;0.73), confirming adversary fine-tuning preserves the parent model's reconstruction characteristics on W.</p>
+<div class="eb">A6 vs B2_a6: p=0.34 | A7 vs B2_a7: p=0.18 | A8 vs B2_a8: p=0.22 &mdash; all PASS</div>
 </div>
 <div class="fc">
 <div class="fn">Finding 4</div>
@@ -183,7 +185,7 @@ new Chart(document.getElementById('cD'),{type:'bar',data:{labels:L,datasets:[{da
 
 new Chart(document.getElementById('cTPR'),{type:'bar',data:{labels:L,datasets:[{data:[.828,.964,.985,.660,.713],backgroundColor:[OA,IA,O,SA,SA],borderColor:[O,I,O,S,S],...B}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:1,grid:{color:gc}},x:{grid:{display:false}}}}});
 
-new Chart(document.getElementById('cRatio'),{type:'bar',data:{labels:['A6 (r64)\nraw ratio'],datasets:[{label:'Raw ratio (S_ref/S_A on W)',data:[1.016],backgroundColor:[OA],borderColor:[O],...B},{label:'Threshold (5.0)',data:[5],type:'line',borderColor:R,borderDash:[6,4],pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:12,padding:14}},title:{display:true,text:'A7/A8 pending proper adversary models',font:{size:11,style:'italic'},color:'#b5aa96'}},scales:{y:{min:0,max:6,grid:{color:gc}},x:{grid:{display:false}}}}});
+new Chart(document.getElementById('cRatio'),{type:'bar',data:{labels:['A6 (r64)','A7 (full)','A8 (r256)'],datasets:[{label:'Raw ratio (S_ref/S_A on W)',data:[1.016,1.028,1.025],backgroundColor:[OA,IA,O],borderColor:[O,I,O],...B},{label:'Threshold (5.0)',data:[5,5,5],type:'line',borderColor:R,borderDash:[6,4],pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:12,padding:14}}},scales:{y:{min:0,max:6,grid:{color:gc}},x:{grid:{display:false}}}}});
 </script>
 </body>
 </html>

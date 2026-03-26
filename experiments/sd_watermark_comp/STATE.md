@@ -457,24 +457,38 @@ Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is 
 | B1 (adversary, domain) | 0.9858 | 0.6600 | 2.83 | -0.001450 | -0.000045 |
 | B2 (adversary, task) | 0.9799 | 0.7130 | 2.70 | -0.000843 | +0.000689 |
 
-### Verification (Algorithm 2, raw scores)
+### Adversary Models (each derived from its own parent, LoRA r64, 2000 steps, lr=5e-5)
+
+| Adversary | Parent | Type | AUC | TPR@1% | Cohen's d |
+|-----------|--------|------|-----|--------|-----------|
+| B1_a6 | A6 (r64) | Domain shift | 0.9858 | 0.6600 | 2.83 |
+| B2_a6 | A6 (r64) | Task shift | 0.9799 | 0.7130 | 2.70 |
+| B1_a7 | A7 (full) | Domain shift | 0.9970 | 0.9320 | 3.22 |
+| B2_a7 | A7 (full) | Task shift | 0.9950 | 0.8820 | 3.13 |
+| B1_a8 | A8 (r256) | Domain shift | 0.9977 | 0.9210 | 3.51 |
+| B2_a8 | A8 (r256) | Task shift | 0.9972 | 0.9450 | 3.46 |
+
+### Verification (Algorithm 2, raw scores — each owner vs its own adversaries)
 
 | Owner | Adversary | C1 (p>0.05) | C2 (\|d\|>2.0) | C3 (ratio>5.0) | Verdict |
 |-------|-----------|-------------|----------------|----------------|---------|
-| A6 r64 | B1 | PASS (p=0.73) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
-| A6 r64 | B2 | PASS (p=0.34) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
-| A7 full | B1 | PASS (p=0.09) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
-| A7 full | B2 | FAIL (p=0.02) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
-| A8 r256 | B1 | PASS (p=0.16) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
-| A8 r256 | B2 | FAIL (p=0.04) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
+| A6 r64 | B1_a6 | PASS (p=0.73) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
+| A6 r64 | B2_a6 | PASS (p=0.34) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
+| A7 full | B1_a7 | PASS (p=0.71) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
+| A7 full | B2_a7 | PASS (p=0.18) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
+| A8 r256 | B1_a8 | PASS (p=0.54) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
+| A8 r256 | B2_a8 | PASS (p=0.22) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
 
 ### Key Findings
 
-1. **A8 (LoRA r256) achieves the best membership detection**: AUC=0.9994, TPR@1%=0.985, d=3.93 — higher rank increases separation magnitude.
+1. **A8 (LoRA r256) achieves the best membership detection**: AUC=0.9994, TPR@1%=0.985, d=3.93.
 2. **A7 (full FT) has the highest raw ratio** (1.028x vs 1.016x for r64), but still far from 5.0x threshold.
-3. **Algorithm 2 fails for ALL SD models** — even full fine-tune with 860M params. The base model's reconstruction variance (std~0.022) is ~10x the membership signal (~0.003).
-4. **C1 correctly identifies model lineage**: B1/B2 were derived from A6, so only A6 passes C1 consistency with B1/B2. A7/A8 fail C1 because they are different models (different FT method), not because adversary modification was detected.
+3. **Algorithm 2 fails for ALL SD models** — even full fine-tune with 860M params. Base model variance (std~0.022) is ~7x the membership signal (~0.003).
+4. **C1 works correctly**: all adversaries pass consistency with their parent model (p>0.05). Adversary LoRA r64 fine-tuning preserves the parent's reconstruction characteristics on W.
 
 ### Output Files
-- Scores: `scores/phase13/{a6,a7,a8,b1,b2}_latcap.csv`
+- Owner scores: `scores/phase13/{a6,a7,a8}_latcap.csv`
+- A6 adversary scores: `scores/phase13/{b1,b2}_latcap.csv`
+- A7 adversary scores: `scores/phase13/a7_{b1,b2}_latcap.csv`
+- A8 adversary scores: `scores/phase13/a8_{b1,b2}_latcap.csv`
 - Verification: `scores/phase13/verification_{a6,a7,a8}_{b1,b2}.json`

@@ -47,16 +47,18 @@
 | C2 分离度 | t-test(S_A, S_ref) on W + Cohen's d | p < 1e-6 AND \|d\| > 2.0 |
 | C3 倍率 | mean(S_ref) / mean(S_A) | ratio > 5.0 |
 
-### 结果
+### 结果（每个 owner 和自己派生的 adversary 比较）
+
+Adversary 统一配置：从 parent model merge 后加 LoRA r64, 2000 steps, lr=5e-5。
 
 | Owner | Adversary | C1 | C2 (\|d\|) | C3 (ratio) | Verdict |
 |-------|-----------|----|-----------|-----------|----|
-| A6 r64 | B1 | PASS (p=0.73) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
-| A6 r64 | B2 | PASS (p=0.34) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
-| A7 full | B1 | PASS (p=0.09) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
-| A7 full | B2 | **FAIL** (p=0.02) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
-| A8 r256 | B1 | PASS (p=0.16) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
-| A8 r256 | B2 | **FAIL** (p=0.04) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
+| A6 r64 | B1_a6 (domain) | PASS (p=0.73) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
+| A6 r64 | B2_a6 (task) | PASS (p=0.34) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
+| A7 full | B1_a7 (domain) | PASS (p=0.71) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
+| A7 full | B2_a7 (task) | PASS (p=0.18) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
+| A8 r256 | B1_a8 (domain) | PASS (p=0.54) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
+| A8 r256 | B2_a8 (task) | PASS (p=0.22) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
 
 ### 分析
 
@@ -72,7 +74,7 @@ S_A  (A7 full FT) mean = 0.1125, std = 0.0218
 
 Base model 的 per-image reconstruction variance (~0.022) 是 membership signal (~0.003) 的 7 倍。Algorithm 2 的阈值是为 from-scratch DDIM 设计的（那种场景 ratio > 19x），不适用于任何基于 SD 的 fine-tuning。
 
-**C1 正确区分了模型谱系**：B1/B2 是从 A6 (LoRA r64) 派生的，不是从 A7 或 A8。C1 结果正确反映了这一点 — 只有 A6 vs B1/B2 通过 consistency check (p>0.05)，A7 和 A8 因为是完全不同的模型（不同的 fine-tuning 方式和参数量），raw t-error 特征不同，所以 FAIL。这不是"检测到 adversary 修改"，而是 C1 正确识别了不同的模型谱系。
+**C1 全部 PASS**：每个 owner 和自己派生的 adversary 比较，C1 均通过 (p=0.18~0.73)。这说明 adversary 的 LoRA r64 fine-tuning 保留了 parent model 在 W 上的重建特性，C1 的 consistency check 正确工作。
 
 ---
 
