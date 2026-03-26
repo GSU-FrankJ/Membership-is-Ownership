@@ -125,12 +125,10 @@ tr.hl td{background:var(--olive-bg)}tr.hl:hover td{background:rgba(94,122,82,.14
 <table>
 <thead><tr><th>Owner</th><th>Adversary</th><th>C1 (p&gt;0.05)</th><th>C2 (|d|&gt;2.0)</th><th>C3 (ratio&gt;5.0)</th><th>Verdict</th></tr></thead>
 <tbody>
-<tr><td>A6 (r64)</td><td>B1</td><td><span class="pill pass">PASS</span> p=0.734</td><td><span class="pill fail">FAIL</span> 0.082</td><td><span class="pill fail">FAIL</span> 1.016x</td><td>REJECTED</td></tr>
-<tr><td>A6 (r64)</td><td>B2</td><td><span class="pill pass">PASS</span> p=0.337</td><td><span class="pill fail">FAIL</span> 0.082</td><td><span class="pill fail">FAIL</span> 1.016x</td><td>REJECTED</td></tr>
-<tr><td>A7 (full)</td><td>B1</td><td><span class="pill pass">PASS</span> p=0.090</td><td><span class="pill fail">FAIL</span> 0.142</td><td><span class="pill fail">FAIL</span> 1.028x</td><td>REJECTED</td></tr>
-<tr><td>A7 (full)</td><td>B2</td><td><span class="pill fail">FAIL</span> p=0.021</td><td><span class="pill fail">FAIL</span> 0.142</td><td><span class="pill fail">FAIL</span> 1.028x</td><td>REJECTED</td></tr>
-<tr><td>A8 (r256)</td><td>B1</td><td><span class="pill pass">PASS</span> p=0.158</td><td><span class="pill fail">FAIL</span> 0.130</td><td><span class="pill fail">FAIL</span> 1.025x</td><td>REJECTED</td></tr>
-<tr><td>A8 (r256)</td><td>B2</td><td><span class="pill fail">FAIL</span> p=0.042</td><td><span class="pill fail">FAIL</span> 0.130</td><td><span class="pill fail">FAIL</span> 1.025x</td><td>REJECTED</td></tr>
+<tr><td>A6 (r64)</td><td>B1_a6 (domain)</td><td><span class="pill pass">PASS</span> p=0.734</td><td><span class="pill fail">FAIL</span> 0.082</td><td><span class="pill fail">FAIL</span> 1.016x</td><td>REJECTED</td></tr>
+<tr><td>A6 (r64)</td><td>B2_a6 (task)</td><td><span class="pill pass">PASS</span> p=0.337</td><td><span class="pill fail">FAIL</span> 0.082</td><td><span class="pill fail">FAIL</span> 1.016x</td><td>REJECTED</td></tr>
+<tr style="background:var(--parchment-dark);font-style:italic;color:var(--ink-ghost)"><td>A7 (full)</td><td colspan="5">Adversary training in progress &mdash; B1_a7 / B2_a7 (LoRA r64, 2000 steps from A7)</td></tr>
+<tr style="background:var(--parchment-dark);font-style:italic;color:var(--ink-ghost)"><td>A8 (r256)</td><td colspan="5">Adversary training in progress &mdash; B1_a8 / B2_a8 (LoRA r64, 2000 steps from A8)</td></tr>
 </tbody>
 </table>
 </div>
@@ -154,9 +152,9 @@ tr.hl td{background:var(--olive-bg)}tr.hl:hover td{background:rgba(94,122,82,.14
 </div>
 <div class="fc">
 <div class="fn">Finding 3</div>
-<h4>C1 correctly distinguishes model lineage</h4>
-<p>B1/B2 were derived from A6 (LoRA r64), not from A7 or A8. C1 correctly reflects this: only A6 passes consistency with B1/B2. A7 and A8 fail because they are different models with different raw t-error characteristics, not because adversary modification is detected.</p>
-<div class="eb">A6 vs B2: p=0.337 PASS (correct &mdash; same lineage) | A7 vs B2: p=0.021 FAIL (correct &mdash; different lineage) | A8 vs B2: p=0.042 FAIL (correct &mdash; different lineage)</div>
+<h4>Verification requires matching adversary lineage</h4>
+<p>Each owner model needs its own adversary models derived from it. B1/B2 (derived from A6) can only be compared with A6. A7 and A8 require separate adversary training &mdash; currently in progress using the same protocol (LoRA r64, 2000 steps, lr=5e-5).</p>
+<div class="eb">Valid: A6 vs B1_a6/B2_a6 | Pending: A7 vs B1_a7/B2_a7, A8 vs B1_a8/B2_a8</div>
 </div>
 <div class="fc">
 <div class="fn">Finding 4</div>
@@ -185,7 +183,7 @@ new Chart(document.getElementById('cD'),{type:'bar',data:{labels:L,datasets:[{da
 
 new Chart(document.getElementById('cTPR'),{type:'bar',data:{labels:L,datasets:[{data:[.828,.964,.985,.660,.713],backgroundColor:[OA,IA,O,SA,SA],borderColor:[O,I,O,S,S],...B}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:1,grid:{color:gc}},x:{grid:{display:false}}}}});
 
-new Chart(document.getElementById('cRatio'),{type:'bar',data:{labels:['A6 (r64)','A7 (full)','A8 (r256)'],datasets:[{label:'Raw ratio',data:[1.016,1.028,1.025],backgroundColor:[OA,IA,O],borderColor:[O,I,O],...B},{label:'Threshold (5.0)',data:[5,5,5],type:'line',borderColor:R,borderDash:[6,4],pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:12,padding:14}}},scales:{y:{min:0,max:6,grid:{color:gc}},x:{grid:{display:false}}}}});
+new Chart(document.getElementById('cRatio'),{type:'bar',data:{labels:['A6 (r64)\nraw ratio'],datasets:[{label:'Raw ratio (S_ref/S_A on W)',data:[1.016],backgroundColor:[OA],borderColor:[O],...B},{label:'Threshold (5.0)',data:[5],type:'line',borderColor:R,borderDash:[6,4],pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:12,padding:14}},title:{display:true,text:'A7/A8 pending proper adversary models',font:{size:11,style:'italic'},color:'#b5aa96'}},scales:{y:{min:0,max:6,grid:{color:gc}},x:{grid:{display:false}}}}});
 </script>
 </body>
 </html>
