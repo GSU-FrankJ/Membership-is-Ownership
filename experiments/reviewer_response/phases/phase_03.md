@@ -52,7 +52,7 @@ Both MiO and DI/CDI recognize that **per-sample membership inference is insuffic
 | **Membership signal** | Feature-space distances: classifier's learned representations position training data differently from unseen data | Reconstruction error (t-error): single-step denoising fidelity on training vs unseen samples |
 | **Signal source** | Penultimate-layer features (requires meaningful representations) | Diffusion model's denoising function (exploits memorization gap) |
 | **Statistical test** | Meta-classifier on distance statistics (DI); centralized one-sided test (CDI) | Three-point conjunction: consistency (p>0.05), separation (p<10^-6, \|d\|>2.0), ratio (>5x) |
-| **Baseline/reference** | Shadow models on disjoint data (DI); centralized reference (CDI) | Public HuggingFace checkpoints + random baselines; no shadow training |
+| **Baseline/reference** | Shadow models on disjoint data (DI); centralized reference (CDI) | Public HuggingFace checkpoints + random reference models; no shadow training |
 | **FPR control** | Meta-classifier threshold (DI); centralized p-value (CDI) | Gaussian QR: closed-form quantile at arbitrary FPR |
 | **Proactive modification** | None (post-hoc) | None (post-hoc) |
 | **Verification output** | Binary (DI) or p-value (CDI) | Three interpretable criteria with human-readable thresholds |
@@ -83,7 +83,7 @@ However, the technical realization differs substantially across model domains:
 
 **(2) Statistical framework.** DI trains a binary meta-classifier on distance statistics and thresholds its output; CDI improves this with a centralized one-sided test that eliminates shadow models. MiO takes a different approach: Gaussian Quantile Regression provides closed-form quantile thresholds at arbitrary FPR without retraining, and the three-point verification protocol (consistency, separation, ratio) provides a conjunction of interpretable, independently auditable criteria rather than a single accept/reject decision.
 
-**(3) Reference model requirements.** DI originally requires training shadow models on disjoint data; CDI removes this. MiO uses publicly available pretrained checkpoints (e.g., HuggingFace DDPM models) as baselines, requiring no additional training.
+**(3) Reference model requirements.** DI originally requires training shadow models on disjoint data; CDI removes this. MiO uses publicly available pretrained checkpoints (e.g., HuggingFace DDPM models) as reference models, requiring no additional training.
 
 We will add a discussion of DI/CDI to the Related Work section to properly contextualize MiO within this lineage.
 

@@ -1,4 +1,4 @@
-# Phase 09: Multi-Baseline Expansion (GPU, ~4 hours total)
+# Phase 09: Multi-Reference-Model Expansion (GPU, ~4 hours total)
 
 ## Prerequisites
 - Phases 01-08 complete
@@ -6,14 +6,14 @@
 - `mio` conda environment active
 
 ## Goal
-Expand from 1 baseline per dataset to 3+ baselines (domain-matched, domain-mismatched, random untrained) and switch to conservative verification criteria requiring ALL baselines to pass.
+Expand from 1 reference model per dataset to 3+ reference models (domain-matched, domain-mismatched, random untrained) and switch to conservative verification criteria requiring ALL reference models to pass.
 
 ## Motivation
-STL-10 currently uses `google/ddpm-ema-bedroom-256` (LSUN Bedrooms) as its sole baseline. This is severely domain-mismatched against STL-10's natural objects, inflating Cohen's d to 33.4. Reviewers will flag this as a confound. Multiple independent baselines per dataset strengthen statistical robustness.
+STL-10 currently uses `google/ddpm-ema-bedroom-256` (LSUN Bedrooms) as its sole reference model. This is severely domain-mismatched against STL-10's natural objects, inflating Cohen's d to 33.4. Reviewers will flag this as a confound. Multiple independent reference models per dataset strengthen statistical robustness.
 
 ---
 
-## Baseline Matrix
+## Reference Model Matrix
 
 | Dataset | Matched | Mismatched | Random |
 |---------|---------|------------|--------|
@@ -26,7 +26,7 @@ STL-10 currently uses `google/ddpm-ema-bedroom-256` (LSUN Bedrooms) as its sole 
 
 ## Step 9.1: Registry & Config Changes
 
-### 9.1a: Add `ddpm-church` to BASELINE_MODELS
+### 9.1a: Add `ddpm-church` to BASELINE_MODELS (registry)
 **File:** `src/attacks/baselines/huggingface_loader.py`
 
 Add to `BASELINE_MODELS` dict:
@@ -41,35 +41,35 @@ Add to `BASELINE_MODELS` dict:
 ### 9.1b: Update fallback defaults
 **File:** `src/attacks/baselines/huggingface_loader.py`, `list_baselines_for_dataset()`
 
-Update the `defaults` dict to include all baselines per the matrix above.
+Update the `defaults` dict to include all reference models per the matrix above.
 
 ### 9.1c: Expand baselines_by_dataset.yaml
 **File:** `configs/baselines_by_dataset.yaml`
 
-Each dataset gets 3+ entries with `role` annotation. Random baselines use `type: random`.
+Each dataset gets 3+ entries with `role` annotation. Random reference models use `type: random`.
 
 ---
 
 ## Step 9.2: Eval Pipeline Changes
 
-### 9.2a: Random baseline dispatch
+### 9.2a: Random reference model dispatch
 **File:** `scripts/eval_ownership.py` (baseline loader loop)
 
 If `baseline.get("type") == "random"`, call `load_random_baseline()` with `torch.manual_seed(42)`.
 
-### 9.2b: Fix baseline name matching
+### 9.2b: Fix reference model name matching
 **File:** `scripts/eval_ownership.py` (`check_ownership_criteria`)
 
-Add `"random" in k.lower()` to the baseline detection pattern.
+Add `"random" in k.lower()` to the reference model detection pattern.
 
 ### 9.2c: Conservative criteria
 **File:** `scripts/eval_ownership.py` (`check_ownership_criteria`)
 
-- C2 Separation: `max(all_p) < 1e-6 and min(all_d) > 2.0` (ALL baselines must pass)
-- C3 Ratio: `min(ratios) > 5.0` (ALL baselines must pass)
+- C2 Separation: `max(all_p) < 1e-6 and min(all_d) > 2.0` (ALL reference models must pass)
+- C3 Ratio: `min(ratios) > 5.0` (ALL reference models must pass)
 - Track `separation_range` and `ratio_range` for reporting.
 
-### 9.2d: Per-baseline JSON reporting
+### 9.2d: Per-reference-model JSON reporting
 **File:** `scripts/eval_ownership.py`
 
 Add `report["per_baseline"]` dict: `{name: {role, mean_t_error, cohens_d, ratio}}`.
@@ -100,12 +100,12 @@ Repeat for cifar100, stl10, celeba with appropriate model paths.
 After eval numbers are available:
 
 1. **Main table**: Report conservative (min |d|) per dataset with footnote
-2. **New appendix table**: All baselines per dataset with role, t-error, |d|, ratio
-3. **Experimental setup** (~line 551): Describe multi-baseline protocol
+2. **New appendix table**: All reference models per dataset with role, t-error, |d|, ratio
+3. **Experimental setup** (~line 551): Describe multi-reference-model protocol
 4. **Discussion**: Add domain-gap quantification paragraph
 5. **Abstract/conclusion**: Update "d > 18" if min changes
 
 ---
 
 ## Update STATE.md
-Mark steps complete as they finish. Record per-baseline numbers.
+Mark steps complete as they finish. Record per-reference-model numbers.

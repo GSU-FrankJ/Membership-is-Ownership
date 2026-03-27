@@ -8,7 +8,7 @@ This document clarifies the score computation utilities in the codebase.
 
 ### 1.1 Ownership Evaluation (Recommended)
 
-For ownership verification with baseline comparison, use:
+For ownership verification with reference model comparison, use:
 
 ```bash
 python scripts/eval_ownership.py \
@@ -21,7 +21,7 @@ python scripts/eval_ownership.py \
 ```
 
 This script:
-- Loads Model A, Model B, and public baselines
+- Loads Model A, Model B, and public reference models
 - Computes t-error scores for all models
 - Performs statistical tests (t-test, Mann-Whitney, Cohen's d)
 - Generates comprehensive reports

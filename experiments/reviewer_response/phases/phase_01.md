@@ -37,8 +37,8 @@ The MiO signal relies on **per-example memorization** — a model trained on wat
 ### Why each verification criterion likely fails:
 
 1. **Criterion 1 (Consistency):** t-test(M_A, M_B) requires p > 0.05. The distilled student's t-error on W would differ significantly from M_A's because it never trained on W directly. **Likely fails.**
-2. **Criterion 2 (Separation):** This criterion compares owner models vs public baselines. The distilled student would show t-error on W similar to a public baseline (it never saw W). **Signal collapses.**
-3. **Criterion 3 (Ratio):** Requires baseline/owner > 5.0. If the student's t-error resembles baselines, the ratio approaches 1.0. **Fails.**
+2. **Criterion 2 (Separation):** This criterion compares owner models vs public reference models. The distilled student would show t-error on W similar to a public reference model (it never saw W). **Signal collapses.**
+3. **Criterion 3 (Ratio):** Requires reference/owner > 5.0. If the student's t-error resembles reference models, the ratio approaches 1.0. **Fails.**
 
 ### Supporting evidence from ablation (Phase 10-11, SD experiment):
 
@@ -54,7 +54,7 @@ We thank the reviewer for this important question. Our threat model (Section 4.1
 
 The MiO ownership signal relies on *per-example memorization*: a model trained on watermark images $\mathcal{W}$ exhibits systematically lower reconstruction error on those specific images. Fine-tuning and pruning preserve this signal because they modify Model A's weights *in place* — the memorization encoded during original training persists as an orthogonal property to the adaptation objective (as demonstrated in Section 5.2, where MMD fine-tuning optimizes generated sample distributions without affecting reconstruction fidelity on $\mathcal{W}$).
 
-Distillation differs fundamentally: the adversary uses Model A as a *teacher* to generate synthetic training data, then trains a *student* model from scratch. The student never observes $\mathcal{W}$ directly, so per-example memorization does not transfer. We acknowledge that the consistency criterion (Criterion 1) would likely fail in this setting, as the student's t-error profile on $\mathcal{W}$ would resemble that of a public baseline rather than the owner's model.
+Distillation differs fundamentally: the adversary uses Model A as a *teacher* to generate synthetic training data, then trains a *student* model from scratch. The student never observes $\mathcal{W}$ directly, so per-example memorization does not transfer. We acknowledge that the consistency criterion (Criterion 1) would likely fail in this setting, as the student's t-error profile on $\mathcal{W}$ would resemble that of a public reference model rather than the owner's model.
 
 However, we argue this represents a principled boundary rather than a limitation, for three reasons:
 
@@ -131,7 +131,7 @@ python scripts/eval_ownership.py \
 
 If distillation **does** partially preserve the MiO signal (unlikely but worth testing):
 
-- Student's t-error on W would be lower than public baselines
+- Student's t-error on W would be lower than public reference models
 - This could happen if the teacher's distribution implicitly encodes W-specific features
 - Would be a strong finding — MiO is more robust than expected
 

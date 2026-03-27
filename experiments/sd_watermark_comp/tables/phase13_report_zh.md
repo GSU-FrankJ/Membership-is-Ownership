@@ -65,7 +65,7 @@ Adversary 统一配置：从 parent model merge 后加 LoRA r64, 2000 steps, lr=
 **C2/C3 全部 FAIL**：即使 full fine-tune 修改了全部 860M 参数，raw score ratio 也只有 1.028x（需要 >5.0x）。根本原因：
 
 ```
-S_ref (baseline) mean = 0.1156, std = 0.0218
+S_ref (reference) mean = 0.1156, std = 0.0218
 S_A  (A7 full FT) mean = 0.1125, std = 0.0218
 
 差值 = 0.003，标准差 = 0.022

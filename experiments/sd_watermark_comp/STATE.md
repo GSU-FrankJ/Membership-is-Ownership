@@ -278,9 +278,9 @@ Signal degrades gracefully with set size. Key threshold: **~80 epochs/image mini
 | **Owner (A6)** | -20.35 | +2.56 | 2.55 | 0.987 |
 | B1 (domain shift) | -17.79 | -0.90 | 2.21 | 0.972 |
 | B2 (task shift) | -2.00 | +13.64 | 1.73 | 0.908 |
-| Baseline (SD v1.4) | 0 (by definition) | 0 | — | — |
+| Reference (SD v1.4) | 0 (by definition) | 0 | — | — |
 
-Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is ~1% of base model error.
+Raw t-error: owner=1877.6, reference=1898.0 (ratio=1.011x). LoRA perturbation is ~1% of base model error.
 
 ### Verification Results (Algorithm 2, adapted for derivative models)
 

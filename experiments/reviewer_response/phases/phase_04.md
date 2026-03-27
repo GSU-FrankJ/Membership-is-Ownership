@@ -1,10 +1,10 @@
-# Phase 04: Baseline Model Access Assumption — Realism at Scale
+# Phase 04: Reference Model Access Assumption — Realism at Scale
 
 ## Status: PENDING PROFESSOR DISCUSSION
 
 ## Goal
 
-Address the reviewer question about whether the baseline access assumption is realistic for large-scale diffusion models. Prepare a rebuttal draft and proposed paper changes.
+Address the reviewer question about whether the reference model access assumption is realistic for large-scale diffusion models. Prepare a rebuttal draft and proposed paper changes.
 
 ---
 
@@ -17,14 +17,14 @@ Address the reviewer question about whether the baseline access assumption is re
 - **Threat Model** (Section 3.2, line 370): "a set of public baseline models" — assumed available, no further justification.
 - **Discussion** (Section 6, line 882): One sentence only: "Results are strongest with domain-matched public baselines; for novel domains, general-purpose baselines provide conservative bounds."
 - **Experiments**: Uses HuggingFace DDPM checkpoints (`google/ddpm-cifar10-32`, `google/ddpm-celebahq-256`, etc.) — all research-scale models with known training data.
-- **No discussion** of how to obtain baselines for commercial-scale models (SD, DALL-E, Flux).
+- **No discussion** of how to obtain reference models for commercial-scale models (SD, DALL-E, Flux).
 
-**The paper undersells its strongest defense**: the CIFAR-10 baseline (`google/ddpm-cifar10-32`) was trained on the FULL CIFAR-10 — 100% overlap with W — yet Cohen's d > 18, ratio > 19x. This proves the signal doesn't require data-disjoint baselines.
+**The paper undersells its strongest defense**: the CIFAR-10 reference model (`google/ddpm-cifar10-32`) was trained on the FULL CIFAR-10 — 100% overlap with W — yet Cohen's d > 18, ratio > 19x. This proves the signal doesn't require data-disjoint reference models.
 
 ## 3. Analysis: Unpacking the Reviewer's Concern
 
 ### What the reviewer assumes is required
-The reviewer reads the verification protocol as needing baselines where **we know the training data** and can **guarantee no overlap** with the watermark set W. For large-scale models (SD trained on LAION-5B), this is clearly impossible — nobody fully knows what's in LAION.
+The reviewer reads the verification protocol as needing reference models where **we know the training data** and can **guarantee no overlap** with the watermark set W. For large-scale models (SD trained on LAION-5B), this is clearly impossible — nobody fully knows what's in LAION.
 
 ### The strongest practical argument: private data is inherently disjoint
 
@@ -36,26 +36,26 @@ Consider the motivating use cases:
 - **Financial**: Proprietary chart data, internal document scans, client-specific visual assets.
 - **Government/defense**: Classified imagery that is legally prohibited from public distribution.
 
-In all these cases, the watermark set W is **guaranteed disjoint** from any public model's training data — not by statistical argument, but by the data's inherent privacy. The baseline assumption is trivially satisfied: any public diffusion model (SD, Flux, etc.) has provably never seen the owner's private medical/industrial/financial data.
+In all these cases, the watermark set W is **guaranteed disjoint** from any public model's training data — not by statistical argument, but by the data's inherent privacy. The reference model assumption is trivially satisfied: any public diffusion model (SD, Flux, etc.) has provably never seen the owner's private medical/industrial/financial data.
 
-**This flips the reviewer's concern**: the more "large-scale" and "internet-scraped" the public baseline models are, the MORE certain we can be they never saw the private data (because the private data was never on the internet).
+**This flips the reviewer's concern**: the more "large-scale" and "internet-scraped" the public reference models are, the MORE certain we can be they never saw the private data (because the private data was never on the internet).
 
 ### Defense in depth: even when overlap exists, verification survives
 
 Even in the weaker case where W comes from public data, MiO still works. The memorization fingerprint is model-specific (architecture + initialization seed + optimizer trajectory + noise schedule), NOT data-specific. Two models trained on identical data produce different fingerprints. Therefore:
 
 1. **Data overlap does NOT invalidate verification** — proven by the 100% overlap CIFAR-10 experiment
-2. **We do NOT need to know the baseline's training set** — we only need the baseline to be independently trained (different initialization/trajectory)
+2. **We do NOT need to know the reference model's training set** — we only need the reference model to be independently trained (different initialization/trajectory)
 3. **Any publicly available pretrained diffusion model works** — the key property is independent training, not data exclusivity
 
 ### Two-layer defense summary
 
 | Layer | Argument | Strength |
 |-------|----------|----------|
-| **Layer 1: Data privacy** | In realistic deployments (medical, industrial, financial), W is inherently private and provably absent from public models | Strongest — trivially satisfies the assumption |
+| **Layer 1: Data privacy** | In realistic deployments (medical, industrial, financial), W is inherently private and provably absent from public reference models | Strongest — trivially satisfies the assumption |
 | **Layer 2: Fingerprint robustness** | Even with 100% data overlap, verification works because the signal is model-specific, not data-specific | Technical backup — removes the assumption entirely |
 
-### Three tiers of baseline availability (practical argument)
+### Three tiers of reference model availability (practical argument)
 
 | Tier | Availability | Examples | MiO Applicability |
 |------|-------------|----------|-------------------|
@@ -63,17 +63,17 @@ Even in the weaker case where W comes from public data, MiO still works. The mem
 | **Tier 2: Open-weight commercial models** | Growing rapidly | SD v1.4/1.5/2.1/XL, Flux, PixArt, playground | Full — architecturally compatible, independently trained |
 | **Tier 3: API-only models** | Limited | DALL-E 3, Midjourney | Partial — requires white-box access (already a stated scope condition) |
 
-For diffusion models specifically, the open-weight ecosystem is **unusually rich** compared to other model families:
+For diffusion models specifically, the open-weight ecosystem is **unusually rich** compared to other model families, making reference models readily available:
 - HuggingFace hosts 50,000+ diffusion model checkpoints (as of 2025)
 - SD ecosystem alone has thousands of community fine-tunes
 - Even "competing" companies release weights (Stability, Black Forest Labs, etc.)
 
 ### Comparison with other IP verification methods
 
-| Method | Baseline requirement | Stronger or weaker assumption? |
+| Method | Reference model requirement | Stronger or weaker assumption? |
 |--------|---------------------|-------------------------------|
 | **DI (Maini et al.)** | Shadow models trained on disjoint data | **Stronger** — must train shadow models from scratch |
-| **WDM/Zhao** | No baselines needed (decode watermark) | **Weaker** — but requires proactive modification |
+| **WDM/Zhao** | No reference models needed (decode watermark) | **Weaker** — but requires proactive modification |
 | **MiO (ours)** | Any independently trained public model | **Moderate** — no shadow training, no data disjointness needed |
 
 ---
@@ -82,7 +82,7 @@ For diffusion models specifically, the open-weight ecosystem is **unusually rich
 
 Phase 02 already designs controlled overlap experiments (E1–E4) that directly support this response. The key finding to surface in the rebuttal:
 
-> The google/ddpm-cifar10-32 baseline was trained on the full CIFAR-10 training set (50K images), which includes ALL 5,000 watermark samples — 100% overlap. Yet Cohen's d = 23.9 and ratio = 24.4x, far exceeding our thresholds (d > 2.0, ratio > 5.0). This demonstrates that verification depends on the model-specific memorization fingerprint, not on data exclusivity between owner and baseline.
+> The google/ddpm-cifar10-32 reference model was trained on the full CIFAR-10 training set (50K images), which includes ALL 5,000 watermark samples — 100% overlap. Yet Cohen's d = 23.9 and ratio = 24.4x, far exceeding our thresholds (d > 2.0, ratio > 5.0). This demonstrates that verification depends on the model-specific memorization fingerprint, not on data exclusivity between owner and reference model.
 
 If Phase 02 experiments are approved and run (controlled overlap degradation curve), those results would be the definitive evidence for this rebuttal.
 
@@ -92,15 +92,15 @@ If Phase 02 experiments are approved and run (controlled overlap degradation cur
 
 ---
 
-**Response to Reviewer — Baseline Model Access Assumption**
+**Response to Reviewer — Reference Model Access Assumption**
 
 We appreciate this practical concern and address it on two levels: the realistic deployment setting and the technical robustness of the protocol.
 
-**In realistic deployments, disjointness is guaranteed by data privacy.** The primary motivation for model ownership verification arises in domains where training data is inherently private: medical imaging (patient data under HIPAA/GDPR), industrial inspection (proprietary manufacturing imagery), financial analytics (confidential client data), and defense applications (classified imagery). In all these scenarios, the watermark set W consists of data that has never appeared on the public internet and is provably absent from the training sets of any public model — not by statistical argument, but by the data's inherent confidentiality. Any publicly available diffusion model (Stable Diffusion, Flux, etc.) can serve as a valid baseline because it has demonstrably never been trained on the owner's private data. In fact, the more "large-scale" and "internet-scraped" the public baseline is, the stronger the guarantee of disjointness from private domain data.
+**In realistic deployments, disjointness is guaranteed by data privacy.** The primary motivation for model ownership verification arises in domains where training data is inherently private: medical imaging (patient data under HIPAA/GDPR), industrial inspection (proprietary manufacturing imagery), financial analytics (confidential client data), and defense applications (classified imagery). In all these scenarios, the watermark set W consists of data that has never appeared on the public internet and is provably absent from the training sets of any public model — not by statistical argument, but by the data's inherent confidentiality. Any publicly available diffusion model (Stable Diffusion, Flux, etc.) can serve as a valid reference model because it has demonstrably never been trained on the owner's private data. In fact, the more "large-scale" and "internet-scraped" the public reference model is, the stronger the guarantee of disjointness from private domain data.
 
-**Even when disjointness cannot be guaranteed, verification remains robust.** For completeness, we note that MiO does not actually require data-disjoint baselines. The memorization fingerprint that MiO detects is model-specific (determined by architecture, initialization seed, optimizer trajectory, and noise schedule), not data-specific. The public DDPM baseline we use for CIFAR-10 (`google/ddpm-cifar10-32`) was trained on the full CIFAR-10 training set, which includes all 5,000 watermark samples — 100% data overlap with W. Yet Cohen's d = 23.9 and ratio = 24.4x, far exceeding our thresholds (d > 2.0, ratio > 5.0). This demonstrates that independent training, not data exclusivity, is what the protocol requires.
+**Even when disjointness cannot be guaranteed, verification remains robust.** For completeness, we note that MiO does not actually require data-disjoint reference models. The memorization fingerprint that MiO detects is model-specific (determined by architecture, initialization seed, optimizer trajectory, and noise schedule), not data-specific. The public DDPM reference model we use for CIFAR-10 (`google/ddpm-cifar10-32`) was trained on the full CIFAR-10 training set, which includes all 5,000 watermark samples — 100% data overlap with W. Yet Cohen's d = 23.9 and ratio = 24.4x, far exceeding our thresholds (d > 2.0, ratio > 5.0). This demonstrates that independent training, not data exclusivity, is what the protocol requires.
 
-**Practical availability.** The open-weight diffusion model ecosystem provides ample baselines. HuggingFace alone hosts over 50,000 diffusion model checkpoints spanning diverse architectures (DDPM, LDM, DiT), domains, and scales. For any ownership dispute involving an open-weight model, finding independently trained baselines is straightforward. API-only models (DALL-E 3, Midjourney) fall outside our white-box scope, as noted in Section 6.
+**Practical availability.** The open-weight diffusion model ecosystem provides ample reference models. HuggingFace alone hosts over 50,000 diffusion model checkpoints spanning diverse architectures (DDPM, LDM, DiT), domains, and scales. For any ownership dispute involving an open-weight model, finding independently trained reference models is straightforward. API-only models (DALL-E 3, Midjourney) fall outside our white-box scope, as noted in Section 6.
 
 We will expand the Discussion section to clarify these points.
 
@@ -124,7 +124,7 @@ should exhibit substantially higher reconstruction error on that set.
 
 **Verified disjointness status (2026-03-25, via HuggingFace model cards):**
 
-| Dataset | Baseline | Baseline training data | Overlap with W |
+| Dataset | Reference model | Reference model training data | Overlap with W |
 |---------|----------|----------------------|----------------|
 | CIFAR-10 | `google/ddpm-cifar10-32` | CIFAR-10 train (50k) | **100%** — W is a subset |
 | CIFAR-100 | `google/ddpm-cifar10-32` | CIFAR-10 train (50k) | **0%** — different dataset |
@@ -150,7 +150,7 @@ set, even when their training corpora overlap
 
 ---
 
-### Change 1: Expand Discussion paragraph on Baseline Availability (line 882)
+### Change 1: Expand Discussion paragraph on Reference Model Availability (line 882)
 
 Current (1 sentence):
 ```
@@ -188,7 +188,7 @@ with $\mathcal{W}$ does not invalidate verification
 
 ### Change 3 (optional, if Phase 02 experiments run): New appendix section
 
-"Appendix X: Baseline Overlap Sensitivity" — the controlled degradation curve from Phase 02 E2.
+"Appendix X: Reference Model Overlap Sensitivity" — the controlled degradation curve from Phase 02 E2.
 
 ---
 
@@ -197,7 +197,7 @@ with $\mathcal{W}$ does not invalidate verification
 - [ ] **D0 (CRITICAL)**: Fix line 551 "disjoint data" claim (Change 0)? → **MUST FIX** — factually wrong for CIFAR-10 (100% overlap verified). If we use the overlap argument in rebuttal without fixing this, reviewer will catch the contradiction.
 - [ ] **D1**: Expand Discussion paragraph (Change 1)? → Recommend: YES (directly addresses reviewer)
 - [ ] **D2**: Add footnote in Threat Model (Change 2)? → Recommend: YES (clarifies assumption upfront)
-- [ ] **D3**: Depend on Phase 02 experiments for definitive support? → If Phase 02 runs, reference those results; if not, the 100% overlap observation alone is strong
+- [ ] **D3**: Depend on Phase 02 experiments for definitive support? → If Phase 02 runs, cite those results; if not, the 100% overlap observation alone is strong
 - [ ] **D4**: Tone — how much to push back? The reviewer's premise ("known training/test sets") is a misreading of what MiO requires. We can correct gently while acknowledging the practical concern.
 - [ ] **D5**: Should we explicitly state the "50,000+ checkpoints on HuggingFace" claim? → Easy to verify, strengthens the practical argument
 - [ ] **D6**: Verify CelebA-HQ overlap with CelebA watermark set — compare CelebA-HQ image list against W indices
@@ -206,7 +206,7 @@ with $\mathcal{W}$ does not invalidate verification
 
 | Phase | Connection |
 |-------|-----------|
-| Phase 02 (baseline overlap) | Direct support — E2 overlap degradation curve is the definitive experiment for this response |
+| Phase 02 (reference model overlap) | Direct support — E2 overlap degradation curve is the definitive experiment for this response |
 | Phase 03 (dataset inference) | DI requires shadow models (stronger assumption than MiO) — useful contrast |
 | Phase 01 (distillation) | Independent — no overlap |
 
@@ -217,4 +217,4 @@ with $\mathcal{W}$ does not invalidate verification
 - [x] Confirm 100% overlap → **Confirmed**
 - [ ] Verify google/ddpm-celebahq-256 training data → CelebA-HQ (30k subset of CelebA)
 - [ ] Check CelebA-HQ indices against MiO CelebA watermark set W → Determine actual overlap percentage
-- Phase 02's controlled experiments would further strengthen the argument but are planned independently.
+- Phase 02's controlled experiments would further strengthen the argument but are planned independently

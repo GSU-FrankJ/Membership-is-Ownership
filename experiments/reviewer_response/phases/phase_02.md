@@ -1,10 +1,11 @@
-# Phase 12 — Baseline Overlap Sensitivity & Practical Selection Guidance
+# Phase 12 — Reference Model Overlap Sensitivity & Practical Selection Guidance
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Address reviewer concern: "As training datasets grow increasingly large, it becomes harder to guarantee that any public baseline has never been exposed to the private watermark samples. Could the authors elaborate on a practical methodology for selecting valid baselines, and discuss how verification confidence might degrade when such guarantees cannot be made?"
+*(Note: "baseline" in the reviewer quote above is kept verbatim.)*
 
-**Architecture:** Four sub-experiments (E1–E4). E1 and E3 are paper-writing tasks (no compute). E2 trains DDIM baselines from scratch on CIFAR-10 with controlled watermark overlap (0%–100%) and measures Cohen's d / ratio degradation. E4 repeats the overlap study on SD v1.4 with LoRA and optionally checks COCO/LAION overlap via CLIP search. DDIM experiments run first; SD depends on time.
+**Architecture:** Four sub-experiments (E1–E4). E1 and E3 are paper-writing tasks (no compute). E2 trains DDIM reference models from scratch on CIFAR-10 with controlled watermark overlap (0%–100%) and measures Cohen's d / ratio degradation. E4 repeats the overlap study on SD v1.4 with LoRA and optionally checks COCO/LAION overlap via CLIP search. DDIM experiments run first; SD depends on time.
 
 **Tech Stack:** PyTorch, DDIM UNet (128ch, [1,2,2,2]), diffusers/peft (SD v1.4 LoRA), scipy (stats), matplotlib (figures), CLIP ViT-B/32 (optional LAION search)
 
@@ -14,11 +15,13 @@
 
 ### The Hidden Observation the Paper Already Has
 
-The existing CIFAR-10 public baseline (`google/ddpm-cifar10-32`) was trained on the **full CIFAR-10 training set** (50k images), which **already includes all 5,000 watermark images**. This is 100% overlap with W — yet Cohen's d is still >18 and ratio >19x.
+The existing CIFAR-10 public reference model (`google/ddpm-cifar10-32`) was trained on the **full CIFAR-10 training set** (50k images), which **already includes all 5,000 watermark images**. This is 100% overlap with W — yet Cohen's d is still >18 and ratio >19x.
 
-Why this works: what matters is not whether a baseline has "seen" the data, but whether it has the **same memorization fingerprint** — the unique combination of architecture, initialization seed, optimizer trajectory, and noise schedule that determines per-sample reconstruction error. Two models trained on identical data produce different fingerprints.
+Why this works: what matters is not whether a reference model has "seen" the data, but whether it has the **same memorization fingerprint** — the unique combination of architecture, initialization seed, optimizer trajectory, and noise schedule that determines per-sample reconstruction error. Two models trained on identical data produce different fingerprints.
 
 **This observation is the strongest possible defense against the reviewer's concern, but the paper never states it.** E1 fixes this. E2 provides the controlled degradation curve to make the argument rigorous.
+
+*(Note: throughout this file, "baseline" in code blocks, variable/function names, CLI arguments, file paths, and directory names is preserved as-is. Only prose/headings are updated to "reference model.")*
 
 ### Existing Infrastructure
 
@@ -46,7 +49,7 @@ Why this works: what matters is not whether a baseline has "seen" the data, but 
 | Option | Time (6 models, 4 GPUs) | Quality | Risk |
 |--------|------------------------|---------|------|
 | **400k iterations** (full) | ~24–30h wall | Fully converged, matches Model A | None — gold standard |
-| **100k iterations** (fastdev) | ~6–12h wall | Partially converged | Reviewer may question whether unconverged baselines inflate d |
+| **100k iterations** (fastdev) | ~6–12h wall | Partially converged | Reviewer may question whether unconverged reference models inflate d |
 | **200k iterations** (compromise) | ~12–18h wall | Mostly converged | Reasonable middle ground |
 
 **Recommendation**: Start with 100k (fastdev) as a pilot on 3 overlap levels (0%, 50%, 100%). If the degradation curve is clear and d stays >2.0 even at 100%, we may not need 400k. If the results are ambiguous, re-run at 400k.
@@ -66,7 +69,7 @@ Why this works: what matters is not whether a baseline has "seen" the data, but 
 | Option | What | Time | Value |
 |--------|------|------|-------|
 | **E4a only**: CLIP overlap check | Check if COCO W images appear in LAION | ~1h (if LAION search API works) | Quantifies actual overlap |
-| **E4b only**: Contaminated LoRA baselines | Train LoRA on partial-W datasets | ~3h | Direct degradation curve for SD |
+| **E4b only**: Contaminated LoRA reference models | Train LoRA on partial-W datasets | ~3h | Direct degradation curve for SD |
 | **E4a + E4b** | Both | ~4h | Complete story |
 
 **Recommendation**: E4b is more valuable (directly answers the reviewer). E4a is nice-to-have but LAION search infrastructure may not be accessible.
@@ -74,9 +77,9 @@ Why this works: what matters is not whether a baseline has "seen" the data, but 
 ### D4: Paper Placement
 
 Options for the overlap sensitivity results:
-1. **New appendix section** (e.g., "Appendix F: Baseline Overlap Sensitivity") — most space, least disruptive
+1. **New appendix section** (e.g., "Appendix F: Reference Model Overlap Sensitivity") — most space, least disruptive
 2. **Expand Discussion paragraph** (line 882) — visible but tight on space
-3. **New subsection in Experiments** (e.g., 5.4 "Baseline Selection Sensitivity") — strongest position
+3. **New subsection in Experiments** (e.g., 5.4 "Reference Model Selection Sensitivity") — strongest position
 4. **Split**: degradation curve in appendix, one-paragraph summary + figure in main text
 
 **To discuss with professor.** The plan produces all materials; placement is independent of experiment design.
@@ -95,8 +98,8 @@ Options for the overlap sensitivity results:
 1. `google/ddpm-cifar10-32` was trained on the full CIFAR-10 training set, which contains all 5,000 watermark images (100% overlap).
 2. Despite this, Cohen's d > 18 and ratio > 19x — the verification protocol passes with massive margin.
 3. Similarly, `google/ddpm-celebahq-256` was trained on CelebA-HQ, which substantially overlaps with our CelebA watermark set.
-4. This demonstrates that the verification signal depends on the **model-specific memorization fingerprint** (architecture + seed + optimizer trajectory), not on whether the baseline has "seen" the data.
-5. The null hypothesis is not "baseline has never seen W" but rather "baseline does not share the same training provenance as the owner model."
+4. This demonstrates that the verification signal depends on the **model-specific memorization fingerprint** (architecture + seed + optimizer trajectory), not on whether the reference model has "seen" the data.
+5. The null hypothesis is not "reference model has never seen W" but rather "reference model does not share the same training provenance as the owner model."
 
 **Draft text (to be refined after E2 results):**
 
@@ -151,7 +154,7 @@ For each overlap fraction f:
 | 75% | 3,750 | 48,750 | W[0:3750] |
 | 100% | 5,000 | 50,000 | all of W (= T) |
 
-**Important:** Model A was trained on T (50k) with seed=20251030 (from config). The 100% overlap baseline is trained on the same data but with a **different seed** (seed=42). This isolates the fingerprint effect.
+**Important:** Model A was trained on T (50k) with seed=20251030 (from config). The 100% overlap reference model is trained on the same data but with a **different seed** (seed=42). This isolates the fingerprint effect.
 
 **Training config:** Identical to Model A except for training data and seed.
 - Architecture: UNet 128ch, [1,2,2,2], attn@16, cosine schedule
@@ -160,8 +163,8 @@ For each overlap fraction f:
 - Seed: 42 (different from Model A's 20251030)
 
 **Evaluation:**
-- Compute t-error on W (5,000 images) for each baseline using `eval_ownership.py`
-- Measure: mean t-error, Cohen's d vs Model A, error ratio (baseline/Model A), 3-point criteria pass/fail
+- Compute t-error on W (5,000 images) for each reference model using `eval_ownership.py`
+- Measure: mean t-error, Cohen's d vs Model A, error ratio (reference model/Model A), 3-point criteria pass/fail
 - Also compute on eval_nonmember (5,000 images) as sanity check
 
 ### Task 2: Create Overlap Split Generator Script
@@ -292,7 +295,7 @@ git commit -m "feat: overlap split generator for baseline sensitivity study"
 **Files:**
 - Create: `configs/overlap_study/train_overlap.yaml`
 
-A parameterized config template for training overlap baselines. The training script accepts `--config` and we override the data indices path.
+A parameterized config template for training overlap reference models. The training script accepts `--config` and we override the data indices path.
 
 - [ ] **Step 1**: Write config file
 
@@ -401,12 +404,12 @@ git add src/ddpm_ddim/train_ddim.py configs/overlap_study/train_overlap.yaml
 git commit -m "feat: support custom train indices for overlap study"
 ```
 
-### Task 5: Train Overlap Baselines (GPU, Long-Running)
+### Task 5: Train Overlap Reference Models (GPU, Long-Running)
 
 **Files:**
 - Output: `/data/short/fjiang4/mia_ddpm_qr/runs/overlap_study/{overlap_000,overlap_010,...}/`
 
-Train 6 (or 3 for pilot) DDIM models with different overlap levels.
+Train 6 (or 3 for pilot) DDIM reference models with different overlap levels.
 
 - [ ] **Step 1**: Decide iteration count based on D1 discussion
 
@@ -477,7 +480,7 @@ for TAG in overlap_000 overlap_010 overlap_025 overlap_050 overlap_075 overlap_1
 done
 ```
 
-### Task 6: Evaluate Overlap Baselines
+### Task 6: Evaluate Overlap Reference Models
 
 **Files:**
 - Create: `scripts/eval_overlap_study.py`
@@ -829,20 +832,20 @@ git commit -m "feat: overlap sensitivity degradation curve plot"
 
 | Overlap | Expected d | Expected ratio | Passes? | Reasoning |
 |---------|-----------|----------------|---------|-----------|
-| 0% | >>2.0 (likely ~15-25) | >>5.0 | Yes | Baseline never saw W → maximum separation |
+| 0% | >>2.0 (likely ~15-25) | >>5.0 | Yes | Reference model never saw W → maximum separation |
 | 10% | >2.0 (likely ~14-22) | >5.0 | Yes | 90% of W unseen → still very high |
 | 25% | >2.0 (likely ~12-20) | >5.0 | Yes | 75% unseen |
 | 50% | >2.0 (likely ~10-18) | >5.0 | Likely | 50% unseen; per-image exposure same for seen images |
 | 75% | >2.0 (likely ~8-15) | >5.0 | Likely | Only 25% unseen |
 | 100% | >2.0 (likely ~5-12) | >5.0 | **Key question** | Same data, different seed → fingerprint difference |
 
-**Critical prediction:** Even at 100% overlap, d should remain well above 2.0, because the separation comes from model fingerprint, not data exclusivity. The existing `google/ddpm-cifar10-32` result (d >18 at 100% overlap) supports this prediction, though that baseline uses a different architecture (DDPM vs DDIM).
+**Critical prediction:** Even at 100% overlap, d should remain well above 2.0, because the separation comes from model fingerprint, not data exclusivity. The existing `google/ddpm-cifar10-32` result (d >18 at 100% overlap) supports this prediction, though that reference model uses a different architecture (DDPM vs DDIM).
 
-**If d at 100% drops below 2.0:** This would mean architecture mismatch was driving the existing separation, not data. This would be an important finding that strengthens the case for using architecture-matched baselines — still a publishable result, just with a different narrative.
+**If d at 100% drops below 2.0:** This would mean architecture mismatch was driving the existing separation, not data. This would be an important finding that strengthens the case for using architecture-matched reference models — still a publishable result, just with a different narrative.
 
 ---
 
-## E3: Practical Baseline Selection Checklist (Paper Writing)
+## E3: Practical Reference Model Selection Checklist (Paper Writing)
 
 ### Task 8: Draft Practical Guidance
 
@@ -1066,7 +1069,7 @@ git add scripts/sd_overlap_splits.py
 git commit -m "feat: SD overlap study split generator"
 ```
 
-### Task 10: Train SD Overlap Baselines
+### Task 10: Train SD Overlap Reference Models
 
 **Files:**
 - Output: `models/sd-v1-4-lora-{sd_overlap_000,sd_overlap_025,sd_overlap_050}/`
@@ -1121,13 +1124,13 @@ for TAG in sd_overlap_000 sd_overlap_025 sd_overlap_050; do
 done
 ```
 
-### Task 11: Evaluate SD Overlap Baselines
+### Task 11: Evaluate SD Overlap Reference Models
 
 **Files:**
 - Reuse: `experiments/sd_watermark_comp/ablation_eval.py` (with minor modification)
 - Output: `experiments/sd_watermark_comp/scores/overlap_study/`
 
-- [ ] **Step 1**: Score each overlap baseline on W (1000 members + 10k nonmembers)
+- [ ] **Step 1**: Score each overlap reference model on W (1000 members + 10k nonmembers)
 
 ```bash
 TAGS=("sd_overlap_000" "sd_overlap_025" "sd_overlap_050")
