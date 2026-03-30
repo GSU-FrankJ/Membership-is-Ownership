@@ -492,3 +492,18 @@ Raw t-error: owner=1877.6, reference=1898.0 (ratio=1.011x). LoRA perturbation is
 - A7 adversary scores: `scores/phase13/a7_{b1,b2}_latcap.csv`
 - A8 adversary scores: `scores/phase13/a8_{b1,b2}_latcap.csv`
 - Verification: `scores/phase13/verification_{a6,a7,a8}_{b1,b2}.json`
+
+### Adapted Verification: Paired t-test (A1)
+
+Algorithm 2 的 C2/C3 用 raw score 比较 owner vs baseline，因 per-image variance (~0.022) 远大于 membership signal (~0.003) 导致全部 FAIL。Adapted protocol 改用 paired difference δ(x) = S_tgt(x) - S_ref(x)，对同一张图配对消除 per-image variance。
+
+**C2 adapted**: paired t-test on δ(W), H0: mean(δ_W)=0. Pass: p < 1e-6 AND |d| > 2.0.
+**C3 adapted**: |mean(δ_W)| / |mean(δ_nonW)| > 5.0.
+
+| Owner | C2 p-value | C2 effect \|d\| | C2 | C3 ratio | C3 |
+|-------|-----------|----------------|-----|---------|-----|
+| A6 (LoRA r64) | ~0 | 2.43 | PASS | 7.46x | PASS |
+| A7 (Full FT) | ~0 | 2.38 | PASS | 10.12x | PASS |
+| A8 (LoRA r256) | ~0 | 2.55 | PASS | 3.62x | FAIL |
+
+A6 和 A7 全部通过。A8 的 C3 fail（3.62x < 5.0），因 r256 高容量对 non-member 也产生了较大的 delta 偏移（0.000782 vs A6 的 0.000239），拉低了 ratio。
