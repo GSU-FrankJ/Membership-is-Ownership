@@ -157,7 +157,7 @@ After MMD fine-tuning:
 
 1. **Model B generation quality**: Comparable to Model A
 2. **T-error on watermark data**: Model B ≈ Model A (low)
-3. **T-error on public baselines**: Much higher than Model A/B
+3. **T-error on public reference models**: Much higher than Model A/B
 4. **Ownership verification**: Both criteria satisfied
 
 This demonstrates that MMD fine-tuning, while modifying model weights, preserves the memorization signal that enables ownership verification.

@@ -83,7 +83,7 @@ $$s(x) = Q_{0.25}\left(\{e_{t_k}(x)\}_{k=1}^K\right)$$
 - Potentially derived from Model A
 - Origin unknown to verifier
 
-**Public Baselines**:
+**Public Reference Models**:
 - Pretrained models from public repositories
 - Never trained on $\mathcal{W}_D$
 
@@ -92,7 +92,7 @@ $$s(x) = Q_{0.25}\left(\{e_{t_k}(x)\}_{k=1}^K\right)$$
 1. **Compute t-error scores** on $\mathcal{W}_D$:
    - $\{s_A(x_i)\}$ for Model A
    - $\{s_B(x_i)\}$ for Model B
-   - $\{s_{public}(x_i)\}$ for public baselines
+   - $\{s_{public}(x_i)\}$ for public reference models
 
 2. **Statistical comparison**:
    - Model A vs Model B (consistency check)
@@ -113,7 +113,7 @@ $$H_0: \mu_A = \mu_B \quad \text{vs} \quad H_1: \mu_A \neq \mu_B$$
 
 #### Criterion 2: Separation
 
-Owner models should have significantly lower t-error than public baselines.
+Owner models should have significantly lower t-error than public reference models.
 
 **Test**: One-sided t-test
 $$H_0: \mu_{owner} \geq \mu_{public} \quad \text{vs} \quad H_1: \mu_{owner} < \mu_{public}$$
@@ -170,9 +170,9 @@ Bootstrap 95% CI for mean t-error:
 
 ## 5. Multi-Dataset Considerations
 
-### 5.1 Dataset-Specific Baselines
+### 5.1 Dataset-Specific Reference Models
 
-| Dataset | Resolution | Baseline | Reason |
+| Dataset | Resolution | Reference Model | Reason |
 |---------|------------|----------|--------|
 | CIFAR-10 | 32×32 | `ddpm-cifar10-32` | Native resolution |
 | CIFAR-100 | 32×32 | `ddpm-cifar10-32` | Same resolution |

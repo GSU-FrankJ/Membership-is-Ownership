@@ -2,7 +2,7 @@
 
 **Goal:** Run the paper's complete ownership verification protocol (Algorithm 2) on the SD v1.4 experiment, including adversary simulation via post-theft fine-tuning.
 
-**Architecture:** Model A (owner) = A6 LoRA checkpoint (1000 members, 80 epochs). Two adversary variants: B1 (domain-shift fine-tuning on disjoint COCO) and B2 (task-shift fine-tuning on synthetic images). Baseline = unmodified SD v1.4. Compute raw t-error on watermark set W, then evaluate all 3 verification criteria.
+**Architecture:** Model A (owner) = A6 LoRA checkpoint (1000 members, 80 epochs). Two adversary variants: B1 (domain-shift fine-tuning on disjoint COCO) and B2 (task-shift fine-tuning on synthetic images). Reference model = unmodified SD v1.4. Compute raw t-error on watermark set W, then evaluate all 3 verification criteria.
 
 ## Models
 
@@ -10,7 +10,7 @@
 Model A (owner):    SD v1.4 + A6 LoRA (trained on W = 1000 private COCO images)
 Model B1 (thief):   Model A + 2000-step LoRA fine-tune on 1000 disjoint COCO images
 Model B2 (thief):   Model A + 2000-step LoRA fine-tune on 500 synthetic images
-Baseline:           SD v1.4 base (no fine-tuning)
+Reference:          SD v1.4 base (no fine-tuning)
 W (watermark set):  1000 private COCO2014 images from sub_split_1000.json
 ```
 

@@ -1,5 +1,10 @@
 # Baseline model registry by dataset
 # Maps each dataset to its relevant public baseline models for ownership comparison
+# Each baseline has a 'role' annotation:
+#   matched      — trained on the same or very similar domain
+#   near_matched — same resolution, overlapping classes
+#   mismatched   — trained on an unrelated domain
+#   lower_bound  — untrained random model (maximum expected t-error)
 
 # CIFAR-10 (32x32) - Reference dataset
 cifar10:
@@ -7,23 +12,65 @@ cifar10:
     model_id: google/ddpm-cifar10-32
     resolution: 32
     type: ddpm
+    role: matched
     description: "DDPM trained on CIFAR-10 (native resolution match)"
+  - name: ddpm-bedroom
+    model_id: google/ddpm-ema-bedroom-256
+    resolution: 256
+    type: ddpm
+    role: mismatched
+    description: "DDPM trained on LSUN Bedrooms (domain-mismatched, 256->32 resize)"
+  - name: random-32
+    resolution: 32
+    type: random
+    role: lower_bound
+    description: "Randomly initialized UNet (untrained lower bound)"
 
-# CIFAR-100 (32x32) - Same resolution as CIFAR-10, use CIFAR-10 baseline
+# CIFAR-100 (32x32) - Same resolution as CIFAR-10, overlapping classes
 cifar100:
   - name: ddpm-cifar10
     model_id: google/ddpm-cifar10-32
     resolution: 32
     type: ddpm
-    description: "DDPM trained on CIFAR-10 (same resolution, different classes)"
-
-# STL-10 (96x96) - Use bedroom model with resizing
-stl10:
+    role: near_matched
+    description: "DDPM trained on CIFAR-10 (same resolution, 10/100 class overlap)"
   - name: ddpm-bedroom
     model_id: google/ddpm-ema-bedroom-256
     resolution: 256
     type: ddpm
-    description: "DDPM trained on LSUN Bedrooms (requires 96->256 resize)"
+    role: mismatched
+    description: "DDPM trained on LSUN Bedrooms (domain-mismatched, 256->32 resize)"
+  - name: random-32
+    resolution: 32
+    type: random
+    role: lower_bound
+    description: "Randomly initialized UNet (untrained lower bound)"
+
+# STL-10 (96x96) - Natural objects, same 10 classes as CIFAR-10
+stl10:
+  - name: ddpm-cifar10
+    model_id: google/ddpm-cifar10-32
+    resolution: 32
+    type: ddpm
+    role: matched
+    description: "DDPM trained on CIFAR-10 (same 10 classes, 32->96 resize)"
+  - name: ddpm-church
+    model_id: google/ddpm-ema-church-256
+    resolution: 256
+    type: ddpm
+    role: mismatched
+    description: "DDPM trained on LSUN Churches (domain-mismatched, 256->96 resize)"
+  - name: ddpm-bedroom
+    model_id: google/ddpm-ema-bedroom-256
+    resolution: 256
+    type: ddpm
+    role: mismatched
+    description: "DDPM trained on LSUN Bedrooms (domain-mismatched, 256->96 resize)"
+  - name: random-96
+    resolution: 96
+    type: random
+    role: lower_bound
+    description: "Randomly initialized UNet (untrained lower bound)"
 
 # CelebA (64x64) - Face-specific baselines
 celeba:
@@ -31,12 +78,25 @@ celeba:
     model_id: google/ddpm-celebahq-256
     resolution: 256
     type: ddpm
-    description: "DDPM trained on CelebA-HQ faces (requires 64->256 resize)"
+    role: matched
+    description: "DDPM trained on CelebA-HQ faces (domain-matched, 256->64 resize)"
   - name: ldm-celebahq
     model_id: CompVis/ldm-celebahq-256
     resolution: 256
     type: ldm
-    description: "Latent Diffusion on CelebA-HQ (VAE encoder required)"
+    role: matched
+    description: "Latent Diffusion on CelebA-HQ (domain-matched, different architecture)"
+  - name: ddpm-bedroom
+    model_id: google/ddpm-ema-bedroom-256
+    resolution: 256
+    type: ddpm
+    role: mismatched
+    description: "DDPM trained on LSUN Bedrooms (domain-mismatched, 256->64 resize)"
+  - name: random-64
+    resolution: 64
+    type: random
+    role: lower_bound
+    description: "Randomly initialized UNet (untrained lower bound)"
 
 # Default normalization parameters per model type
 model_defaults:

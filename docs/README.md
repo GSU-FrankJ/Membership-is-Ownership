@@ -8,7 +8,7 @@ Technical documentation for the Membership Inference Attack (MIA) system for dif
 
 This project implements a **t-error based ownership verification** system for diffusion models, supporting multiple datasets (CIFAR-10, CIFAR-100, STL-10, CelebA) with a unified pipeline.
 
-**Key Approach**: Models trained on specific data exhibit lower reconstruction errors (t-error) on that data. By comparing t-error scores between owner models and public baselines, we can verify model ownership with statistical significance.
+**Key Approach**: Models trained on specific data exhibit lower reconstruction errors (t-error) on that data. By comparing t-error scores between owner models and public reference models, we can verify model ownership with statistical significance.
 
 ---
 
@@ -136,15 +136,15 @@ $$s(x) = \text{q25}\left(\left\{\frac{\|x_0 - \hat{x}_0(x_t, t)\|_2^2}{HWC}\righ
 
 Compare t-error scores between:
 - **Owner models** (Model A, Model B): Low t-error on watermark data
-- **Public baselines**: High t-error on watermark data
+- **Public reference models**: High t-error on watermark data
 
 ### Verification Criteria
 
 | Criterion | Condition | Interpretation |
 |-----------|-----------|----------------|
 | Consistency | Model A ≈ Model B | Same origin |
-| Separation | Owner ≪ Baseline | Ownership proved |
-| Ratio | Baseline/Owner > 5× | Strong discrimination |
+| Separation | Owner ≪ Reference | Ownership proved |
+| Ratio | Reference/Owner > 5× | Strong discrimination |
 
 ### Gaussian QR-MIA
 
@@ -158,7 +158,7 @@ $$m(x) = \hat{q}_\tau^{\text{ens}}(x) - \log(1 + s(x))$$
 
 ## Supported Datasets
 
-| Dataset | Resolution | Watermark Size | Baseline |
+| Dataset | Resolution | Watermark Size | Reference Model |
 |---------|------------|----------------|----------|
 | CIFAR-10 | 32×32 | 5,000 | `google/ddpm-cifar10-32` |
 | CIFAR-100 | 32×32 | 5,000 | `google/ddpm-cifar10-32` |

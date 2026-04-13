@@ -105,14 +105,14 @@ This ensures consistent interpretation across:
 - Tighter distribution (lower variance)
 - Clear separation from non-members
 
-**Public Baselines** (never saw data):
+**Public Reference Models** (never saw data):
 - Higher t-error scores
 - Wider distribution (higher variance)
 - Similar scores for all samples (no memorization)
 
 ### 3.3 Typical Statistics
 
-| Dataset | Owner Mean | Owner Std | Baseline Mean | Baseline Std | Ratio |
+| Dataset | Owner Mean | Owner Std | Reference Mean | Reference Std | Ratio |
 |---------|------------|-----------|---------------|--------------|-------|
 | CIFAR-10 | ~0.006 | ~0.003 | ~0.032 | ~0.012 | 5.4× |
 | CIFAR-100 | ~0.007 | ~0.003 | ~0.030 | ~0.011 | 4.3× |
@@ -152,7 +152,7 @@ This ensures consistent interpretation across:
 
 ### 5.1 Using eval_ownership.py
 
-For ownership verification with baseline comparison:
+For ownership verification with reference model comparison:
 
 ```bash
 python scripts/eval_ownership.py \
@@ -237,8 +237,8 @@ u_stat, p_value = stats.mannwhitneyu(member_scores, nonmember_scores)
 | Criterion | Condition | Purpose |
 |-----------|-----------|---------|
 | **Consistency** | Model A ≈ Model B (p > 0.05) | Confirm same origin |
-| **Separation** | Owner ≪ Baseline (p < 1e-6, \|d\| > 2.0) | Prove ownership |
-| **Ratio** | Baseline/Owner > 5.0 | Strong discrimination |
+| **Separation** | Owner ≪ Reference (p < 1e-6, \|d\| > 2.0) | Prove ownership |
+| **Ratio** | Reference/Owner > 5.0 | Strong discrimination |
 
 ### 7.2 Implementation
 

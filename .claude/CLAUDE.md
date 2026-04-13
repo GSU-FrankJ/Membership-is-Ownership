@@ -12,8 +12,8 @@ Two paper submissions live in `ICML2026/` and `ACM/` directories (kept in sync).
 
 | Experiment | Directory | Status | Env | Description |
 |---|---|---|---|---|
-| Baseline comparison (DDIM) | `experiments/baseline_comparison/` | Paused | `mio` | Original DDIM pipeline on CIFAR/STL/CelebA |
-| **→ SD watermark comparison** | `experiments/sd_watermark_comp/` | **Active** | `mio-sd` | SD v1.4 LoRA + SleeperMark baseline |
+| Watermark baseline comparison (DDIM) | `experiments/baseline_comparison/` | Paused | `mio` | Original DDIM pipeline on CIFAR/STL/CelebA |
+| **→ SD watermark comparison** | `experiments/sd_watermark_comp/` | **Active** | `mio-sd` | SD v1.4 LoRA + SleeperMark watermark baseline |
 
 The **→** arrow marks the current focus. Default to this experiment unless the user says otherwise.
 
@@ -33,7 +33,7 @@ Each experiment has its own `CLAUDE.md` with experiment-specific rules. Read it 
 conda activate mio
 # or: pip install -r requirements.txt / conda env create -f environment.yml
 ```
-Use for: everything under `src/`, `scripts/`, baseline comparison experiment.
+Use for: everything under `src/`, `scripts/`, watermark baseline comparison experiment.
 
 ### `mio-sd` — Stable Diffusion experiments
 ```bash
@@ -58,7 +58,7 @@ python scripts/generate_splits.py --dataset all                    # Step 1: dat
 python src/ddpm_ddim/train_ddim.py --config configs/model_ddim_cifar10.yaml --mode main --select-best  # Step 2: train Model A
 python scripts/finetune_mmd_ddm.py --config configs/mmd_finetune_cifar10.yaml  # Step 3: Model B (MMD theft)
 python scripts/eval_ownership.py --dataset cifar10 --model-a <path> --model-b <path>  # Step 4: evaluate
-python scripts/eval_baselines.py --method wdm --checkpoint <path> --dataset cifar10   # Baseline comparison
+python scripts/eval_baselines.py --method wdm --checkpoint <path> --dataset cifar10   # Watermark baseline comparison
 
 # Tests
 pytest tests/                      # All tests
@@ -87,8 +87,8 @@ pdflatex main.tex && bibtex main && pdflatex main.tex && pdflatex main.tex
 - `src/ddpm_ddim/` — DDIM training (UNet, cosine schedule, EMA checkpointing)
 - `src/attack_qr/` — Quantile regression attack engine (QR-ResNet18, bagging ensemble, Gaussian QR, pinball loss)
 - `src/attacks/scores/` — T-error computation and aggregation (Q25, Q10, Q20, mean)
-- `src/attacks/baselines/` — HuggingFace and public baseline model loaders
-- `scripts/baselines/` — Baseline adapters for WDM, Zhao (StegaStamp), and MiO methods
+- `src/attacks/baselines/` — HuggingFace and public reference model loaders (code uses "baseline" naming but these are reference models)
+- `scripts/baselines/` — Watermark baseline adapters for WDM, Zhao (StegaStamp), and MiO methods
 
 ### Configuration
 
@@ -96,11 +96,18 @@ YAML configs in `configs/`:
 - `model_ddim_*.yaml` — UNet architecture (channels, multipliers, attention)
 - `data_*.yaml` — Dataset paths and preprocessing
 - `mmd_finetune_*.yaml` — MMD fine-tuning hyperparameters
-- `baselines_by_dataset.yaml` — Public baseline model registry
+- `baselines_by_dataset.yaml` — Public reference model registry (file uses "baseline" naming but these are reference models)
 
 ### Multi-Dataset Support
 
-CIFAR-10 (32x32), CIFAR-100 (32x32), STL-10 (96x96), CelebA (64x64). Each has its own config files and public baselines.
+CIFAR-10 (32x32), CIFAR-100 (32x32), STL-10 (96x96), CelebA (64x64). Each has its own config files and public reference models.
+
+## Terminology Convention
+
+- **Baseline** = watermark-based ownership methods only: WDM, Zhao (StegaStamp), SleeperMark. These are the methods our paper compares against.
+- **Reference model** = any non-watermark model used for statistical calibration: public DDIM/DDPM from HuggingFace, SD v1.4 base, randomly initialized models. They represent the null hypothesis in ownership verification.
+
+> Note: Some code still uses "baseline" for reference models (e.g., `load_hf_baseline()`, `baselines_by_dataset.yaml`). In documentation and new code, always use "reference model" for non-watermark models.
 
 ## Safety Rules
 

@@ -7,9 +7,9 @@ This directory contains all source code modules for the MIA DDPM QR project.
 ### `attacks/`
 Attack implementations for membership inference.
 
-- **`baselines/`** - Baseline model comparison
+- **`baselines/`** - Reference model comparison
   - `huggingface_loader.py` - Load HuggingFace DDPM models
-  - `t_error_hf.py` - T-error computation for baseline models
+  - `t_error_hf.py` - T-error computation for reference models
   
 - **`eval/`** - Evaluation metrics
   - `metrics.py` - Performance metrics for attacks

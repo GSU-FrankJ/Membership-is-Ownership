@@ -21,7 +21,7 @@ results = {
         "bit_acc": 0.0,                                 # ← SleeperMark native
         "proactive": True, "key": True, "decoder": True, "quality_loss": True
     },
-    # Add your existing DDIM baselines here...
+    # Add your existing DDIM reference models here...
 }
 ```
 

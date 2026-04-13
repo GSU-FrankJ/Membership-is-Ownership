@@ -4,14 +4,14 @@
 > The root `.claude/CLAUDE.md` contains global instructions; this file adds experiment-specific rules.
 
 ## Experiment Goal
-Add SD v1.4 baseline experiments to the MiO paper (Membership Inference for Ownership).
+Add SD v1.4 watermark baseline experiments to the MiO paper (Membership Inference for Ownership).
 Core thesis: private fine-tuning data IS the watermark — MIA detects it without proactive embedding.
 
 ## Model Architecture
 ```
-Reference:  SD v1.4               (CompVis/stable-diffusion-v1-4)
-Target:     SD v1.4 + LoRA        (fine-tuned on private COCO2014 subset)
-Baseline:   SleeperMark UNet      (CVPR 2025, released checkpoint)
+Reference:      SD v1.4               (CompVis/stable-diffusion-v1-4, reference model)
+Target:         SD v1.4 + LoRA        (fine-tuned on private COCO2014 subset)
+Baseline (WM):  SleeperMark UNet      (CVPR 2025, released checkpoint, watermark baseline)
 ```
 
 ## Hardware

@@ -11,13 +11,13 @@ This document provides a comprehensive overview of the Membership Inference Atta
 Given a diffusion model $M$, we aim to verify whether $M$ was trained on a specific private dataset $\mathcal{D}_{private}$. Our approach compares **t-error scores** (reconstruction errors) between:
 
 1. **Owner models** (Model A, Model B) - trained on $\mathcal{D}_{private}$
-2. **Public baselines** - models that never saw $\mathcal{D}_{private}$
+2. **Public reference models** - models that never saw $\mathcal{D}_{private}$
 
 **Key Insight**: Models trained on specific data exhibit lower reconstruction errors on that data due to memorization.
 
 ### 1.2 Supported Datasets
 
-| Dataset | Resolution | Train Size | Watermark Size | Baseline Model |
+| Dataset | Resolution | Train Size | Watermark Size | Reference Model |
 |---------|------------|------------|----------------|----------------|
 | **CIFAR-10** | 32×32 | 50,000 | 5,000 | `google/ddpm-cifar10-32` |
 | **CIFAR-100** | 32×32 | 50,000 | 5,000 | `google/ddpm-cifar10-32` |
@@ -193,7 +193,7 @@ python scripts/eval_ownership.py \
 **Evaluated Models**:
 1. **Model A**: Owner's original model
 2. **Model B**: Fine-tuned (stolen) model
-3. **Public Baselines**: HuggingFace pretrained models
+3. **Public Reference Models**: HuggingFace pretrained models
 
 **Outputs**:
 - `baseline_comparison_{dataset}_{split}.json`: Full statistical report
@@ -202,8 +202,8 @@ python scripts/eval_ownership.py \
 
 **Ownership Criteria**:
 - **Consistency**: Model A ≈ Model B on watermark data (p > 0.05)
-- **Separation**: Owner models vs baselines (p < 1e-6, |Cohen's d| > 2.0)
-- **Ratio**: Baseline t-error / Owner t-error > 5.0
+- **Separation**: Owner models vs reference models (p < 1e-6, |Cohen's d| > 2.0)
+- **Ratio**: Reference model t-error / Owner t-error > 5.0
 
 ### 3.5 Step 5: Cross-Dataset Summary
 
@@ -435,12 +435,12 @@ For successful ownership verification:
 | Criterion | Condition | Interpretation |
 |-----------|-----------|----------------|
 | **Consistency** | T-test p-value > 0.05 | Model A ≈ Model B |
-| **Separation** | T-test p-value < 1e-6, \|Cohen's d\| > 2.0 | Owner ≠ Baseline |
-| **Ratio** | Baseline / Owner > 5.0 | Strong discrimination |
+| **Separation** | T-test p-value < 1e-6, \|Cohen's d\| > 2.0 | Owner ≠ Reference |
+| **Ratio** | Reference / Owner > 5.0 | Strong discrimination |
 
 ### 8.2 Typical Results
 
-| Dataset | Owner t-error | Baseline t-error | Ratio | Cohen's d |
+| Dataset | Owner t-error | Reference t-error | Ratio | Cohen's d |
 |---------|---------------|------------------|-------|-----------|
 | CIFAR-10 | ~28.7 | ~697.2 | 24.3× | -23.95 |
 | CIFAR-100 | ~30.5 | ~685.4 | 22.5× | -22.10 |
