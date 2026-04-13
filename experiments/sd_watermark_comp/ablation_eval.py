@@ -33,12 +33,25 @@ def uniform_timesteps(T, k):
     return sorted(set(int(round(i)) for i in np.linspace(0, T - 1, k)))
 
 
-def compute_t_error_sd(latent, timesteps, unet, alphas_bar, uncond_emb, agg="q25",
-                       precomputed_noise=None):
+def compute_t_error_sd(latent, timesteps, unet, alphas_bar, text_emb, agg="q25",
+                       precomputed_noise=None, error_space="latent",
+                       vae=None, images=None, scaling_factor=None):
+    """Compute t-error for a conditional UNet.
+
+    Args:
+        error_space: "latent" = ||z - z_hat||^2 (original behavior),
+                     "pixel"  = ||x - D(z_hat)||^2 / (H*W*C) matching paper Eq. 6.
+        vae, images, scaling_factor: required when error_space="pixel".
+        text_emb: [1, seq, dim] or [B, seq, dim] text conditioning.
+    """
     device = latent.device
     batch_size = latent.size(0)
     all_errors = []
-    emb = uncond_emb.expand(batch_size, -1, -1)
+
+    if text_emb.size(0) == 1:
+        emb = text_emb.expand(batch_size, -1, -1)
+    else:
+        emb = text_emb
 
     for idx, t in enumerate(timesteps):
         t_tensor = torch.full((batch_size,), t, device=device, dtype=torch.long)
@@ -159,7 +172,7 @@ def main():
     alphas_bar = scheduler.alphas_cumprod.to(device=device, dtype=torch.float16)
     T = len(alphas_bar)
 
-    # Unconditional text embedding
+    # Text embedding setup
     tokenizer = ref_pipe.tokenizer
     text_encoder = ref_pipe.text_encoder
     with torch.no_grad():

@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiO: Latent vs Pixel Space | Experiment Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-deep: #0a0e1a;
+    --bg-panel: #111827;
+    --bg-card: #1a2235;
+    --bg-card-hover: #1f2943;
+    --border: #2a3550;
+    --border-accent: #3b4f7a;
+    --text-primary: #e8ecf4;
+    --text-secondary: #8899b8;
+    --text-muted: #556688;
+    --amber: #f0a030;
+    --amber-dim: #c08020;
+    --amber-glow: rgba(240, 160, 48, 0.15);
+    --cyan: #40c8e0;
+    --cyan-dim: #2898b0;
+    --cyan-glow: rgba(64, 200, 224, 0.12);
+    --red: #e85050;
+    --red-dim: #b83838;
+    --green: #40d080;
+    --green-dim: #28a060;
+    --pass: #40d080;
+    --fail: #e85050;
+    --grid-line: rgba(42, 53, 80, 0.5);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    text-align: center;
+    margin-bottom: 72px;
+    animation: fadeUp 0.8s ease-out;
+  }
+
+  .hero-label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+
+  .hero h1 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 52px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    letter-spacing: -1px;
+  }
+
+  .hero h1 span.lat { color: var(--cyan); }
+  .hero h1 span.pix { color: var(--amber); }
+
+  .hero-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    max-width: 700px;
+    margin: 16px auto 0;
+    line-height: 1.8;
+  }
+
+  .hero-meta {
+    margin-top: 28px;
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  .hero-meta span { display: flex; align-items: center; gap: 6px; }
+  .hero-meta .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    display: inline-block;
+  }
+  .hero-meta .dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  /* ===== SECTION HEADERS ===== */
+  .section-header {
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp 0.6s ease-out;
+  }
+
+  .section-num {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--amber-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .section-header h2 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .section-desc {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    max-width: 800px;
+  }
+
+  /* ===== CARDS ===== */
+  section { margin-bottom: 80px; }
+
+  .card-grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .cell {
+    background: var(--bg-card);
+    padding: 28px 32px;
+    transition: background 0.25s;
+    position: relative;
+  }
+  .cell:hover { background: var(--bg-card-hover); }
+
+  .cell-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .cell-title {
+    font-family: 'Crimson Pro', serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  .cell-title.lat { color: var(--cyan); }
+  .cell-title.pix { color: var(--amber); }
+
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(42, 53, 80, 0.4);
+  }
+  .metric-row:last-child { border-bottom: none; }
+
+  .metric-key {
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .metric-val {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .metric-val.high { color: var(--green); }
+  .metric-val.mid { color: var(--amber); }
+  .metric-val.low { color: var(--red); }
+
+  .cell-badge {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  .cell-badge.best {
+    background: rgba(64, 208, 128, 0.15);
+    color: var(--green);
+    border: 1px solid rgba(64, 208, 128, 0.3);
+  }
+  .cell-badge.worst {
+    background: rgba(232, 80, 80, 0.1);
+    color: var(--red-dim);
+    border: 1px solid rgba(232, 80, 80, 0.2);
+  }
+
+  /* ===== BIG NUMBERS ===== */
+  .big-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  .big-stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+    transition: border-color 0.3s, transform 0.2s;
+  }
+  .big-stat:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+  }
+
+  .big-stat .number {
+    font-size: 36px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .big-stat .number.cyan { color: var(--cyan); }
+  .big-stat .number.amber { color: var(--amber); }
+  .big-stat .number.green { color: var(--green); }
+  .big-stat .number.red { color: var(--red); }
+
+  .big-stat .label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .big-stat .sublabel {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  /* ===== PHASE 12 TABLE ===== */
+  .data-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  table.data-table thead th {
+    background: var(--bg-panel);
+    padding: 14px 16px;
+    text-align: left;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 500;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+
+  table.data-table tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(42, 53, 80, 0.4);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  table.data-table tbody tr {
+    background: var(--bg-card);
+    transition: background 0.2s;
+  }
+  table.data-table tbody tr:hover { background: var(--bg-card-hover); }
+
+  table.data-table tbody tr.highlight-row {
+    background: rgba(64, 200, 224, 0.06);
+  }
+  table.data-table tbody tr.highlight-row:hover {
+    background: rgba(64, 200, 224, 0.1);
+  }
+
+  table.data-table tbody tr.dim-row { opacity: 0.65; }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .tag.pass { background: rgba(64, 208, 128, 0.15); color: var(--pass); }
+  .tag.fail { background: rgba(232, 80, 80, 0.12); color: var(--fail); }
+  .tag.latent { background: var(--cyan-glow); color: var(--cyan); }
+  .tag.pixel { background: var(--amber-glow); color: var(--amber); }
+
+  /* ===== CHARTS ===== */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+
+  .chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+  }
+
+  .chart-card h3 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+  }
+
+  .chart-wrap { position: relative; height: 280px; }
+
+  /* ===== VERIFICATION MATRIX ===== */
+  .verif-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .verif-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    transition: border-color 0.3s;
+  }
+  .verif-card:hover { border-color: var(--border-accent); }
+
+  .verif-card .vhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .verif-card .vhead h4 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .criterion-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(42, 53, 80, 0.3);
+    font-size: 11px;
+  }
+  .criterion-row:last-child { border-bottom: none; }
+
+  .crit-name { color: var(--text-secondary); }
+  .crit-val { font-weight: 500; }
+
+  /* ===== FINDINGS ===== */
+  .findings-list {
+    display: grid;
+    gap: 16px;
+  }
+
+  .finding {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    transition: border-left-color 0.3s, transform 0.2s;
+  }
+  .finding:hover {
+    border-left-color: var(--cyan);
+    transform: translateX(4px);
+  }
+
+  .finding-num {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--amber-dim);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .finding h4 {
+    font-family: 'Crimson Pro', serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .finding p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 300;
+    line-height: 1.7;
+  }
+
+  .finding .evidence {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 8px 12px;
+    background: rgba(10, 14, 26, 0.5);
+    border-radius: 4px;
+    border-left: 2px solid var(--border-accent);
+  }
+
+  /* ===== FOOTER ===== */
+  .footer {
+    text-align: center;
+    padding: 48px 0 24px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+  }
+
+  /* ===== ANIMATIONS ===== */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .stagger-1 { animation: fadeUp 0.6s ease-out 0.1s both; }
+  .stagger-2 { animation: fadeUp 0.6s ease-out 0.2s both; }
+  .stagger-3 { animation: fadeUp 0.6s ease-out 0.3s both; }
+  .stagger-4 { animation: fadeUp 0.6s ease-out 0.4s both; }
+  .stagger-5 { animation: fadeUp 0.6s ease-out 0.5s both; }
+  .stagger-6 { animation: fadeUp 0.6s ease-out 0.6s both; }
+
+  /* ===== TAB SWITCHER ===== */
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--bg-panel);
+    padding: 4px;
+    border-radius: 6px;
+    width: fit-content;
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    padding: 8px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.25s;
+  }
+  .tab-btn:hover { color: var(--text-secondary); }
+  .tab-btn.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    .card-grid-2x2 { grid-template-columns: 1fr; }
+    .big-stats { grid-template-columns: 1fr 1fr; }
+    .chart-grid { grid-template-columns: 1fr; }
+    .verif-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ===== HERO ===== -->
+  <header class="hero">
+    <div class="hero-label">Membership-is-Ownership / SD v1.4 Experiment</div>
+    <h1><span class="lat">Latent</span> vs <span class="pix">Pixel</span> Space</h1>
+    <p class="hero-sub">
+      Comparing t-error measurement spaces and caption conditioning for
+      membership inference-based ownership verification of Stable Diffusion LoRA models.
+    </p>
+    <div class="hero-meta">
+      <span><span class="dot live"></span> Phase 12 Complete</span>
+      <span>A6 Owner Model + B1/B2 Adversaries</span>
+      <span>COCO2014 &middot; 1000 Members</span>
+      <span>2026-03-22</span>
+    </div>
+  </header>
+
+  <!-- ===== SECTION 1: Quick Eval 2x2 ===== -->
+  <section class="stagger-1">
+    <div class="section-header">
+      <div class="section-num">Experiment I</div>
+      <h2>2 &times; 2 Ablation Grid</h2>
+      <p class="section-desc">
+        Quick evaluation on A6 model &mdash; 100 members + 100 non-members.
+        Isolates the effect of error space (latent vs pixel) and text conditioning (empty vs caption).
+      </p>
+    </div>
+
+    <div class="card-grid-2x2">
+      <!-- Top-left: Latent + Empty -->
+      <div class="cell">
+        <div class="cell-label">Latent Space &middot; Empty Prompt</div>
+        <div class="cell-title lat">V1 &mdash; Latent + Empty</div>
+        <div class="metric-row"><span class="metric-key">AUC</span><span class="metric-val high">0.9811</span></div>
+        <div class="metric-row"><span class="metric-key">TPR@1%FPR</span><span class="metric-val mid">0.4900</span></div>
+        <div class="metric-row"><span class="metric-key">Cohen's d</span><span class="metric-val high">2.80</span></div>
+        <div class="metric-row"><span class="metric-key">Mem mean &plusmn; std</span><span class="metric-val">-21.01 &plusmn; 9.80</span></div>
+        <div class="metric-row"><span class="metric-key">Non-mem mean &plusmn; std</span><span class="metric-val">+3.39 &plusmn; 7.47</span></div>
+        <div class="metric-row"><span class="metric-key">Time</span><span class="metric-val">122s</span></div>
+      </div>
+
+      <!-- Top-right: Latent + Caption -->
+      <div class="cell">
+        <span class="cell-badge best">Best</span>
+        <div class="cell-label">Latent Space &middot; Per-Image Caption</div>
+        <div class="cell-title lat">V2 &mdash; Latent + Caption</div>
+        <div class="metric-row"><span class="metric-key">AUC</span><span class="metric-val high">0.9988</span></div>
+        <div class="metric-row"><span class="metric-key">TPR@1%FPR</span><span class="metric-val high">0.9100</span></div>
+        <div class="metric-row"><span class="metric-key">Cohen's d</span><span class="metric-val high">3.21</span></div>
+        <div class="metric-row"><span class="metric-key">Mem mean &plusmn; std</span><span class="metric-val">-30.17 &plusmn; 13.15</span></div>
+        <div class="metric-row"><span class="metric-key">Non-mem mean &plusmn; std</span><span class="metric-val">+4.93 &plusmn; 8.15</span></div>
+        <div class="metric-row"><span class="metric-key">Time</span><span class="metric-val">124s</span></div>
+      </div>
+
+      <!-- Bottom-left: Pixel + Empty -->
+      <div class="cell">
+        <span class="cell-badge worst">Weakest</span>
+        <div class="cell-label">Pixel Space &middot; Empty Prompt</div>
+        <div class="cell-title pix">V3 &mdash; Pixel + Empty</div>
+        <div class="metric-row"><span class="metric-key">AUC</span><span class="metric-val low">0.9163</span></div>
+        <div class="metric-row"><span class="metric-key">TPR@1%FPR</span><span class="metric-val low">0.2700</span></div>
+        <div class="metric-row"><span class="metric-key">Cohen's d</span><span class="metric-val low">1.71</span></div>
+        <div class="metric-row"><span class="metric-key">Mem mean &plusmn; std</span><span class="metric-val">-0.0002 &plusmn; 0.0002</span></div>
+        <div class="metric-row"><span class="metric-key">Non-mem mean &plusmn; std</span><span class="metric-val">+0.0001 &plusmn; 0.0002</span></div>
+        <div class="metric-row"><span class="metric-key">Time</span><span class="metric-val">485s</span></div>
+      </div>
+
+      <!-- Bottom-right: Pixel + Caption -->
+      <div class="cell">
+        <div class="cell-label">Pixel Space &middot; Per-Image Caption</div>
+        <div class="cell-title pix">V4 &mdash; Pixel + Caption</div>
+        <div class="metric-row"><span class="metric-key">AUC</span><span class="metric-val mid">0.9696</span></div>
+        <div class="metric-row"><span class="metric-key">TPR@1%FPR</span><span class="metric-val mid">0.5900</span></div>
+        <div class="metric-row"><span class="metric-key">Cohen's d</span><span class="metric-val mid">2.04</span></div>
+        <div class="metric-row"><span class="metric-key">Mem mean &plusmn; std</span><span class="metric-val">-0.0003 &plusmn; 0.0003</span></div>
+        <div class="metric-row"><span class="metric-key">Non-mem mean &plusmn; std</span><span class="metric-val">+0.0002 &plusmn; 0.0002</span></div>
+        <div class="metric-row"><span class="metric-key">Time</span><span class="metric-val">493s</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 2: Impact Summary ===== -->
+  <section class="stagger-2">
+    <div class="section-header">
+      <div class="section-num">Impact</div>
+      <h2>Caption Effect vs Space Effect</h2>
+      <p class="section-desc">Quick eval (100+100) on A6 model: isolating each factor's contribution.</p>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h3>AUC by Configuration</h3>
+        <div class="chart-wrap"><canvas id="chartQuickAUC"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>TPR@1%FPR by Configuration</h3>
+        <div class="chart-wrap"><canvas id="chartQuickTPR"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 3: Phase 12 Full Scale ===== -->
+  <section class="stagger-3">
+    <div class="section-header">
+      <div class="section-num">Experiment II &mdash; Phase 12</div>
+      <h2>Full-Scale Verification (1000 + 200 images)</h2>
+      <p class="section-desc">
+        3 variants &times; 3 models: Owner (A6), Domain-shift adversary (B1), Task-shift adversary (B2).
+        All use Phase 11 splits (phase11_w_only.json).
+      </p>
+    </div>
+
+    <!-- Big stats for best config -->
+    <div class="big-stats">
+      <div class="big-stat">
+        <div class="number cyan">0.9956</div>
+        <div class="label">AUC</div>
+        <div class="sublabel">V1 Latent+Caption, A6</div>
+      </div>
+      <div class="big-stat">
+        <div class="number cyan">80.9%</div>
+        <div class="label">TPR@1%FPR</div>
+        <div class="sublabel">V1 Latent+Caption, A6</div>
+      </div>
+      <div class="big-stat">
+        <div class="number cyan">3.24</div>
+        <div class="label">Cohen's d</div>
+        <div class="sublabel">V1 Latent+Caption, A6</div>
+      </div>
+      <div class="big-stat">
+        <div class="number green">4&times;</div>
+        <div class="label">Speed Advantage</div>
+        <div class="sublabel">Latent vs Pixel</div>
+      </div>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('scoring')">Scoring Metrics</button>
+      <button class="tab-btn" onclick="switchTab('verification')">3-Point Verification</button>
+    </div>
+
+    <!-- Scoring table -->
+    <div id="tab-scoring" class="tab-panel active">
+      <div class="data-table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Variant</th>
+              <th>Space</th>
+              <th>Caption</th>
+              <th>Model</th>
+              <th>AUC</th>
+              <th>TPR@1%</th>
+              <th>Cohen's d</th>
+              <th>Mem Mean</th>
+              <th>Mem Std</th>
+              <th>Non-Mem Mean</th>
+              <th>Non-Mem Std</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- V0: latent + empty -->
+            <tr>
+              <td>V0</td>
+              <td><span class="tag latent">Latent</span></td>
+              <td>Empty</td>
+              <td>A6 (owner)</td>
+              <td style="color:var(--green)">0.9871</td>
+              <td>0.7760</td>
+              <td>2.80</td>
+              <td>-20.35</td>
+              <td>9.33</td>
+              <td>+2.56</td>
+              <td>6.83</td>
+            </tr>
+            <tr class="dim-row">
+              <td>V0</td>
+              <td><span class="tag latent">Latent</span></td>
+              <td>Empty</td>
+              <td>B1 (domain)</td>
+              <td>0.9722</td>
+              <td>0.4920</td>
+              <td>2.49</td>
+              <td>-17.79</td>
+              <td>8.04</td>
+              <td>-0.90</td>
+              <td>5.24</td>
+            </tr>
+            <tr class="dim-row">
+              <td>V0</td>
+              <td><span class="tag latent">Latent</span></td>
+              <td>Empty</td>
+              <td>B2 (task)</td>
+              <td>0.9078</td>
+              <td>0.3730</td>
+              <td>1.79</td>
+              <td>-2.00</td>
+              <td>9.17</td>
+              <td>+13.64</td>
+              <td>8.33</td>
+            </tr>
+            <!-- V1: latent + caption (highlight) -->
+            <tr class="highlight-row">
+              <td><strong>V1</strong></td>
+              <td><span class="tag latent">Latent</span></td>
+              <td><strong>Caption</strong></td>
+              <td><strong>A6 (owner)</strong></td>
+              <td style="color:var(--cyan);font-weight:600">0.9956</td>
+              <td style="color:var(--cyan);font-weight:600">0.8090</td>
+              <td style="color:var(--cyan);font-weight:600">3.24</td>
+              <td>-29.19</td>
+              <td>12.03</td>
+              <td>+3.77</td>
+              <td>7.94</td>
+            </tr>
+            <tr class="highlight-row">
+              <td><strong>V1</strong></td>
+              <td><span class="tag latent">Latent</span></td>
+              <td><strong>Caption</strong></td>
+              <td>B1 (domain)</td>
+              <td style="color:var(--cyan)">0.9882</td>
+              <td>0.6140</td>
+              <td>2.85</td>
+              <td>-23.75</td>
+              <td>9.76</td>
+              <td>-0.93</td>
+              <td>5.71</td>
+            </tr>
+            <tr class="highlight-row">
+              <td><strong>V1</strong></td>
+              <td><span class="tag latent">Latent</span></td>
+              <td><strong>Caption</strong></td>
+              <td>B2 (task)</td>
+              <td style="color:var(--cyan)">0.9780</td>
+              <td>0.7560</td>
+              <td>2.62</td>
+              <td>-13.82</td>
+              <td>10.51</td>
+              <td>+10.68</td>
+              <td>8.00</td>
+            </tr>
+            <!-- V2: pixel + caption -->
+            <tr>
+              <td>V2</td>
+              <td><span class="tag pixel">Pixel</span></td>
+              <td>Caption</td>
+              <td>A6 (owner)</td>
+              <td style="color:var(--amber)">0.9590</td>
+              <td>0.3920</td>
+              <td>2.00</td>
+              <td>-0.0003</td>
+              <td>0.0002</td>
+              <td>+0.0001</td>
+              <td>0.0002</td>
+            </tr>
+            <tr class="dim-row">
+              <td>V2</td>
+              <td><span class="tag pixel">Pixel</span></td>
+              <td>Caption</td>
+              <td>B1 (domain)</td>
+              <td style="color:var(--amber)">0.9306</td>
+              <td>0.1900</td>
+              <td>1.72</td>
+              <td>-0.0002</td>
+              <td>0.0002</td>
+              <td>+0.0001</td>
+              <td>0.0002</td>
+            </tr>
+            <tr class="dim-row">
+              <td>V2</td>
+              <td><span class="tag pixel">Pixel</span></td>
+              <td>Caption</td>
+              <td>B2 (task)</td>
+              <td style="color:var(--red)">0.8717</td>
+              <td>0.2240</td>
+              <td>1.44</td>
+              <td>-0.0002</td>
+              <td>0.0003</td>
+              <td>+0.0002</td>
+              <td>0.0002</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Verification table -->
+    <div id="tab-verification" class="tab-panel">
+      <div class="verif-grid">
+        <!-- V0 -->
+        <div class="verif-card">
+          <div class="vhead">
+            <h4>V0 <span style="color:var(--cyan)">Latent</span> + Empty</h4>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;letter-spacing:1px">VS B1 (DOMAIN SHIFT)</div>
+          <div class="criterion-row">
+            <span class="crit-name">C1 Consistency</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span></span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C2 Separation |d|</span>
+            <span class="crit-val"><span class="tag pass">PASS</span> 2.55</span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C3 Magnitude</span>
+            <span class="crit-val"><span class="tag pass">PASS</span> 7.96&times;</span>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;letter-spacing:1px">VS B2 (TASK SHIFT)</div>
+          <div class="criterion-row">
+            <span class="crit-name">C1 Consistency</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span></span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C2 Separation |d|</span>
+            <span class="crit-val"><span class="tag pass">PASS</span> 2.55</span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C3 Magnitude</span>
+            <span class="crit-val"><span class="tag pass">PASS</span> 7.96&times;</span>
+          </div>
+        </div>
+
+        <!-- V1 -->
+        <div class="verif-card" style="border-color:var(--cyan-dim)">
+          <div class="vhead">
+            <h4>V1 <span style="color:var(--cyan)">Latent</span> + Caption</h4>
+            <span class="cell-badge best" style="position:static">Recommended</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;letter-spacing:1px">VS B1 (DOMAIN SHIFT)</div>
+          <div class="criterion-row">
+            <span class="crit-name">C1 Consistency</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span></span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C2 Separation |d|</span>
+            <span class="crit-val"><span class="tag pass">PASS</span> 2.88</span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C3 Magnitude</span>
+            <span class="crit-val"><span class="tag pass">PASS</span> 7.74&times;</span>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;letter-spacing:1px">VS B2 (TASK SHIFT)</div>
+          <div class="criterion-row">
+            <span class="crit-name">C1 Consistency</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span></span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C2 Separation |d|</span>
+            <span class="crit-val"><span class="tag pass">PASS</span> 2.88</span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C3 Magnitude</span>
+            <span class="crit-val"><span class="tag pass">PASS</span> 7.74&times;</span>
+          </div>
+        </div>
+
+        <!-- V2 -->
+        <div class="verif-card" style="border-color:var(--red-dim)">
+          <div class="vhead">
+            <h4>V2 <span style="color:var(--amber)">Pixel</span> + Caption</h4>
+            <span class="cell-badge worst" style="position:static">All Fail</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;letter-spacing:1px">VS B1 (DOMAIN SHIFT)</div>
+          <div class="criterion-row">
+            <span class="crit-name">C1 Consistency</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span></span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C2 Separation |d|</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span> 1.86</span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C3 Magnitude</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span> 2.14&times;</span>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;letter-spacing:1px">VS B2 (TASK SHIFT)</div>
+          <div class="criterion-row">
+            <span class="crit-name">C1 Consistency</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span></span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C2 Separation |d|</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span> 1.86</span>
+          </div>
+          <div class="criterion-row">
+            <span class="crit-name">C3 Magnitude</span>
+            <span class="crit-val"><span class="tag fail">FAIL</span> 2.14&times;</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 4: Charts ===== -->
+  <section class="stagger-4">
+    <div class="section-header">
+      <div class="section-num">Visualization</div>
+      <h2>Phase 12 &mdash; Cross-Model Comparison</h2>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h3>AUC by Variant &times; Model</h3>
+        <div class="chart-wrap"><canvas id="chartPhase12AUC"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Cohen's d by Variant &times; Model</h3>
+        <div class="chart-wrap"><canvas id="chartPhase12D"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Robustness: B2 Degradation from A6</h3>
+        <div class="chart-wrap"><canvas id="chartRobust"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>TPR@1%FPR by Variant &times; Model</h3>
+        <div class="chart-wrap"><canvas id="chartPhase12TPR"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 5: Findings ===== -->
+  <section class="stagger-5">
+    <div class="section-header">
+      <div class="section-num">Conclusions</div>
+      <h2>Key Findings</h2>
+    </div>
+
+    <div class="findings-list">
+      <div class="finding">
+        <div class="finding-num">Finding 01</div>
+        <h4>Latent space dominates pixel space across all models</h4>
+        <p>Latent-space t-error provides a substantially stronger membership signal than pixel-space.
+           VAE decode introduces lossy reconstruction noise that dilutes the membership signal.</p>
+        <div class="evidence">
+          V1 (latent+cap) A6: AUC=0.9956, d=3.24 &nbsp;vs&nbsp; V2 (pixel+cap) A6: AUC=0.9590, d=2.00
+          &nbsp;&mdash;&nbsp; &Delta;AUC=+0.037, &Delta;TPR@1%=+0.417, &Delta;d=+1.24
+        </div>
+      </div>
+
+      <div class="finding">
+        <div class="finding-num">Finding 02</div>
+        <h4>Pixel space fails all verification criteria</h4>
+        <p>V2 (pixel+caption) fails both Criterion 2 (|d|=1.86 &lt; 2.0 threshold) and Criterion 3
+           (ratio=2.14&times; &lt; 5.0&times; threshold). Latent-space V0 and V1 both pass Criteria 2+3.</p>
+        <div class="evidence">
+          V1 Latent: C2 |d|=2.88 PASS, C3 7.74&times; PASS &nbsp;&mdash;&nbsp;
+          V2 Pixel: C2 |d|=1.86 FAIL, C3 2.14&times; FAIL
+        </div>
+      </div>
+
+      <div class="finding">
+        <div class="finding-num">Finding 03</div>
+        <h4>Caption conditioning amplifies signal in both spaces</h4>
+        <p>Per-image COCO captions consistently improve metrics because the LoRA model learned
+           image-caption associations during training. The caption anchors reconstruction to training memories.</p>
+        <div class="evidence">
+          Latent: V0 (empty) AUC=0.9871 &rarr; V1 (caption) AUC=0.9956 (+0.009)
+          &nbsp;|&nbsp; Quick eval: V1 0.9811 &rarr; V2 0.9988 (+0.018)
+        </div>
+      </div>
+
+      <div class="finding">
+        <div class="finding-num">Finding 04</div>
+        <h4>Caption conditioning improves adversary robustness</h4>
+        <p>B2 (task-shift adversary) AUC degradation is smallest with caption conditioning.
+           The caption-conditioned signal is more resilient to post-theft fine-tuning.</p>
+        <div class="evidence">
+          B2 degradation: V0 (empty)=-0.079, V1 (caption)=-0.018, V2 (pixel+cap)=-0.087
+        </div>
+      </div>
+
+      <div class="finding">
+        <div class="finding-num">Finding 05</div>
+        <h4>Recommended: Latent + Caption (V1)</h4>
+        <p>Best AUC (0.9956), best Cohen's d (3.24), passes verification, most robust
+           to adversary fine-tuning, and 4&times; faster than pixel-space (no VAE decode needed).</p>
+        <div class="evidence">
+          Latent inference: ~12 min / 1200 images &nbsp;&mdash;&nbsp;
+          Pixel inference: ~50 min / 1200 images (4.2&times; slower)
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    MiO: Membership-is-Ownership &middot; SD v1.4 LoRA Experiment &middot;
+    Phase 12 &mdash; Latent vs Pixel Space Comparison &middot; 2026-03-22
+  </footer>
+</div>
+
+<script>
+// ===== Chart.js config =====
+Chart.defaults.color = '#8899b8';
+Chart.defaults.borderColor = 'rgba(42,53,80,0.5)';
+Chart.defaults.font.family = "'JetBrains Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const cyan = '#40c8e0';
+const cyanA = 'rgba(64,200,224,0.7)';
+const amber = '#f0a030';
+const amberA = 'rgba(240,160,48,0.7)';
+const slate = '#556688';
+const slateA = 'rgba(85,102,136,0.7)';
+
+// ----- Quick Eval Charts -----
+new Chart(document.getElementById('chartQuickAUC'), {
+  type: 'bar',
+  data: {
+    labels: ['V1\nLatent+Empty', 'V2\nLatent+Caption', 'V3\nPixel+Empty', 'V4\nPixel+Caption'],
+    datasets: [{
+      data: [0.9811, 0.9988, 0.9163, 0.9696],
+      backgroundColor: [cyanA, cyan, amberA, amber],
+      borderColor: [cyan, cyan, amber, amber],
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0.85, max: 1.0, grid: { color: 'rgba(42,53,80,0.3)' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('chartQuickTPR'), {
+  type: 'bar',
+  data: {
+    labels: ['V1\nLatent+Empty', 'V2\nLatent+Caption', 'V3\nPixel+Empty', 'V4\nPixel+Caption'],
+    datasets: [{
+      data: [0.49, 0.91, 0.27, 0.59],
+      backgroundColor: [cyanA, cyan, amberA, amber],
+      borderColor: [cyan, cyan, amber, amber],
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { min: 0, max: 1.0, grid: { color: 'rgba(42,53,80,0.3)' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ----- Phase 12 Charts -----
+const models = ['A6 (owner)', 'B1 (domain)', 'B2 (task)'];
+
+new Chart(document.getElementById('chartPhase12AUC'), {
+  type: 'bar',
+  data: {
+    labels: models,
+    datasets: [
+      { label: 'V0 Latent+Empty', data: [0.9871, 0.9722, 0.9078], backgroundColor: slateA, borderColor: slate, borderWidth: 1, borderRadius: 3 },
+      { label: 'V1 Latent+Caption', data: [0.9956, 0.9882, 0.9780], backgroundColor: cyanA, borderColor: cyan, borderWidth: 1, borderRadius: 3 },
+      { label: 'V2 Pixel+Caption', data: [0.9590, 0.9306, 0.8717], backgroundColor: amberA, borderColor: amber, borderWidth: 1, borderRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } } },
+    scales: {
+      y: { min: 0.85, max: 1.0, grid: { color: 'rgba(42,53,80,0.3)' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('chartPhase12D'), {
+  type: 'bar',
+  data: {
+    labels: models,
+    datasets: [
+      { label: 'V0 Latent+Empty', data: [2.80, 2.49, 1.79], backgroundColor: slateA, borderColor: slate, borderWidth: 1, borderRadius: 3 },
+      { label: 'V1 Latent+Caption', data: [3.24, 2.85, 2.62], backgroundColor: cyanA, borderColor: cyan, borderWidth: 1, borderRadius: 3 },
+      { label: 'V2 Pixel+Caption', data: [2.00, 1.72, 1.44], backgroundColor: amberA, borderColor: amber, borderWidth: 1, borderRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+      annotation: {}
+    },
+    scales: {
+      y: { min: 0, max: 4.0, grid: { color: 'rgba(42,53,80,0.3)' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('chartPhase12TPR'), {
+  type: 'bar',
+  data: {
+    labels: models,
+    datasets: [
+      { label: 'V0 Latent+Empty', data: [0.776, 0.492, 0.373], backgroundColor: slateA, borderColor: slate, borderWidth: 1, borderRadius: 3 },
+      { label: 'V1 Latent+Caption', data: [0.809, 0.614, 0.756], backgroundColor: cyanA, borderColor: cyan, borderWidth: 1, borderRadius: 3 },
+      { label: 'V2 Pixel+Caption', data: [0.392, 0.190, 0.224], backgroundColor: amberA, borderColor: amber, borderWidth: 1, borderRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } } },
+    scales: {
+      y: { min: 0, max: 1.0, grid: { color: 'rgba(42,53,80,0.3)' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Robustness chart: show B2 degradation from A6
+new Chart(document.getElementById('chartRobust'), {
+  type: 'bar',
+  data: {
+    labels: ['V0 Latent+Empty', 'V1 Latent+Caption', 'V2 Pixel+Caption'],
+    datasets: [
+      {
+        label: 'B2 AUC Degradation',
+        data: [-0.079, -0.018, -0.087],
+        backgroundColor: ['rgba(232,80,80,0.5)', 'rgba(64,208,128,0.5)', 'rgba(232,80,80,0.6)'],
+        borderColor: ['#e85050', '#40d080', '#e85050'],
+        borderWidth: 1,
+        borderRadius: 3,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: {
+        min: -0.1, max: 0,
+        grid: { color: 'rgba(42,53,80,0.3)' },
+        title: { display: true, text: 'AUC drop (A6 → B2)', font: { size: 10 } }
+      },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// ----- Tab Switching -----
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
