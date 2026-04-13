@@ -1,0 +1,478 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% References for ICML 2026 Paper
+% Ownership Verification for Diffusion Models via T-Error and Gaussian QR
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% =============================================================================
+% Diffusion Models - Core
+% =============================================================================
+
+@inproceedings{ho2020ddpm,
+  title={Denoising Diffusion Probabilistic Models},
+  author={Ho, Jonathan and Jain, Ajay and Abbeel, Pieter},
+  booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
+  volume={33},
+  pages={6840--6851},
+  year={2020}
+}
+
+@inproceedings{song2021ddim,
+  title={Denoising Diffusion Implicit Models},
+  author={Song, Jiaming and Meng, Chenlin and Ermon, Stefano},
+  booktitle={International Conference on Learning Representations (ICLR)},
+  year={2021}
+}
+
+@inproceedings{song2021score,
+  title={Score-Based Generative Modeling through Stochastic Differential Equations},
+  author={Song, Yang and Sohl-Dickstein, Jascha and Kingma, Diederik P and Kumar, Abhishek and Ermon, Stefano and Poole, Ben},
+  booktitle={International Conference on Learning Representations (ICLR)},
+  year={2021}
+}
+
+@inproceedings{dhariwal2021diffusion,
+  title={Diffusion Models Beat {GANs} on Image Synthesis},
+  author={Dhariwal, Prafulla and Nichol, Alexander},
+  booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
+  volume={34},
+  pages={8780--8794},
+  year={2021}
+}
+
+@inproceedings{rombach2022high,
+  title={High-Resolution Image Synthesis with Latent Diffusion Models},
+  author={Rombach, Robin and Blattmann, Andreas and Lorenz, Dominik and Esser, Patrick and Ommer, Bj{\"o}rn},
+  booktitle={IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={10684--10695},
+  year={2022}
+}
+
+% =============================================================================
+% Membership Inference Attacks
+% =============================================================================
+
+@inproceedings{shokri2017membership,
+  title={Membership Inference Attacks Against Machine Learning Models},
+  author={Shokri, Reza and Stronati, Marco and Song, Congzheng and Shmatikov, Vitaly},
+  booktitle={IEEE Symposium on Security and Privacy (S\&P)},
+  pages={3--18},
+  year={2017}
+}
+
+@inproceedings{yeom2018privacy,
+  title={Privacy Risk in Machine Learning: Analyzing the Connection to Overfitting},
+  author={Yeom, Samuel and Giacomelli, Irene and Fredrikson, Matt and Jha, Somesh},
+  booktitle={IEEE Computer Security Foundations Symposium (CSF)},
+  pages={268--282},
+  year={2018}
+}
+
+@inproceedings{salem2019ml,
+  title={{ML-Leaks}: Model and Data Independent Membership Inference Attacks and Defenses on Machine Learning Models},
+  author={Salem, Ahmed and Zhang, Yang and Humbert, Mathias and Berrang, Pascal and Fritz, Mario and Backes, Michael},
+  booktitle={Network and Distributed System Security Symposium (NDSS)},
+  year={2019}
+}
+
+@inproceedings{carlini2022membership,
+  title={Membership Inference Attacks From First Principles},
+  author={Carlini, Nicholas and Chien, Steve and Nasr, Milad and Song, Shuang and Terzis, Andreas and Tramer, Florian},
+  booktitle={IEEE Symposium on Security and Privacy (S\&P)},
+  pages={1897--1914},
+  year={2022}
+}
+
+% =============================================================================
+% Diffusion Model Memorization and Privacy
+% =============================================================================
+
+@inproceedings{carlini2023extracting,
+  title={Extracting Training Data from Diffusion Models},
+  author={Carlini, Nicholas and Hayes, Jamie and Nasr, Milad and Jagielski, Matthew and Sehwag, Vikash and Tram{\`e}r, Florian and Balle, Borja and Ippolito, Daphne and Wallace, Eric},
+  booktitle={Proceedings of the 32nd USENIX Security Symposium (USENIX Security 2023)},
+  pages={5253--5270},
+  year={2023}
+}
+
+@inproceedings{somepalli2023diffusion,
+  title={Diffusion Art or Digital Forgery? Investigating Data Replication in Diffusion Models},
+  author={Somepalli, Gowthami and Singla, Vasu and Goldblum, Micah and Geiping, Jonas and Goldstein, Tom},
+  booktitle={IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={6048--6058},
+  year={2023}
+}
+
+@inproceedings{duan2023diffusion,
+  title={Diffusion Model Membership Inference via Reverse Process Discrepancy},
+  author={Duan, Jiaxin and Kong, Fanbo and Wang, Ruoxi and Gu, Karan and others},
+  booktitle={International Conference on Machine Learning (ICML)},
+  year={2023}
+}
+
+@inproceedings{matsumoto2023membership,
+  title={Membership Inference Attacks Against Diffusion Models},
+  author={Matsumoto, Tomoya and Miura, Takayuki and Yanai, Naoto},
+  booktitle={IEEE Security and Privacy Workshops (SPW)},
+  pages={77--83},
+  year={2023}
+}
+
+@article{wu2023membership,
+  title={Membership Inference Attacks Against Text-to-Image Generation Models},
+  author={Wu, Yixin and Yu, Ning and Li, Zheng and Backes, Michael and Zhang, Yang},
+  journal={arXiv preprint arXiv:2210.00968},
+  year={2023}
+}
+
+@inproceedings{pang2025black,
+  title={Black-box Membership Inference Attacks against Fine-tuned Diffusion Models},
+  author={Pang, Yan and Wang, Tianhao},
+  booktitle={Proceedings of the Network and Distributed System Security Symposium (NDSS)},
+  year={2025}
+}
+
+@article{pang2025white,
+  title={White-box Membership Inference Attacks against Diffusion Models},
+  author={Pang, Yan and Wang, Tianhao and Kang, Xuhui and Huai, Mengdi and Zhang, Yang},
+  journal={Proceedings on Privacy Enhancing Technologies},
+  volume={2025},
+  number={2},
+  pages={398--415},
+  year={2025}
+}
+
+@inproceedings{hu2023loss,
+  title={Loss and Likelihood Based Membership Inference of Diffusion Models},
+  author={Hu, Hailong and Pang, Jun},
+  booktitle={Proceedings of the 26th Information Security Conference (ISC)},
+  series={Lecture Notes in Computer Science},
+  volume={14411},
+  pages={121--141},
+  publisher={Springer},
+  year={2023}
+}
+
+@article{liang2024real,
+  title={Real-World Benchmarks Make Membership Inference Attacks Fail on Diffusion Models},
+  author={Liang, Chumeng and You, Jiaxuan},
+  journal={arXiv preprint arXiv:2410.03640},
+  year={2024}
+}
+
+@inproceedings{li2024unveiling,
+  title={Unveiling Structural Memorization: Structural Membership Inference Attack for Text-to-Image Diffusion Models},
+  author={Li, Qiao and Fu, Xiaomeng and Wang, Xi and Liu, Jin and Gao, Xingyu and Dai, Jiao and Han, Jizhong},
+  booktitle={Proceedings of the 32nd ACM International Conference on Multimedia (MM)},
+  pages={10554--10562},
+  year={2024}
+}
+
+@article{rao2025score,
+  title={Score-based Membership Inference on Diffusion Models},
+  author={Rao, Mingxing and Qu, Bowen and Moyer, Daniel},
+  journal={arXiv preprint arXiv:2509.25003},
+  year={2025}
+}
+
+@inproceedings{tang2024membership,
+  title={Membership Inference Attacks on Diffusion Models via Quantile Regression},
+  author={Tang, Shuai and Wu, Zhiwei Steven and Ayd{\"o}re, Serg{\"u}l and Kearns, Michael and Roth, Aaron},
+  booktitle={Proceedings of the 41st International Conference on Machine Learning (ICML)},
+  series={Proceedings of Machine Learning Research},
+  volume={235},
+  year={2024}
+}
+
+@inproceedings{kong2024efficient,
+  title={An Efficient Membership Inference Attack for the Diffusion Model by Proximal Initialization},
+  author={Kong, Fei and Duan, Jinhao and Ma, Ruipeng and Shen, Heng Tao and Shi, Xiaoshuang and Zhu, Xiaofeng and Xu, Kaidi},
+  booktitle={Proceedings of the 12th International Conference on Learning Representations (ICLR)},
+  year={2024}
+}
+
+@inproceedings{bertran2023scalable,
+  title={Scalable Membership Inference Attacks via Quantile Regression},
+  author={Bertran, Martin and Tang, Shuai and Kearns, Michael and Morgenstern, Jamie and Roth, Aaron and Wu, Zhiwei Steven},
+  booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
+  volume={36},
+  year={2023}
+}
+
+% =============================================================================
+% Diffusion Model Memorization
+% =============================================================================
+
+@inproceedings{chen2024towards,
+  title={Towards Memorization-Free Diffusion Models},
+  author={Chen, Chen and Liu, Daochang and Xu, Chang},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={8425--8434},
+  year={2024}
+}
+
+@inproceedings{ren2024unveiling,
+  title={Unveiling and Mitigating Memorization in Text-to-Image Diffusion Models through Cross Attention},
+  author={Ren, Jie and Li, Yaxin and Zeng, Shenglai and Xu, Han and Lyu, Lingjuan and Xing, Yue and Tang, Jiliang},
+  booktitle={Computer Vision -- ECCV 2024},
+  series={Lecture Notes in Computer Science},
+  volume={15135},
+  pages={340--356},
+  year={2024}
+}
+
+@inproceedings{wen2024detecting,
+  title={Detecting, Explaining, and Mitigating Memorization in Diffusion Models},
+  author={Wen, Yuxin and Liu, Yuchen and Chen, Chen and Lyu, Lingjuan},
+  booktitle={Proceedings of the 12th International Conference on Learning Representations (ICLR)},
+  year={2024}
+}
+
+@article{gu2025on,
+  title={On Memorization in Diffusion Models},
+  author={Gu, Xiangming and Du, Chao and Pang, Tianyu and Li, Chongxuan and Lin, Min and Wang, Ye},
+  journal={Transactions on Machine Learning Research (TMLR)},
+  year={2025}
+}
+
+@inproceedings{somepalli2023understanding,
+  title={Understanding and Mitigating Copying in Diffusion Models},
+  author={Somepalli, Gowthami and Singla, Vasu and Goldblum, Micah and Geiping, Jonas and Goldstein, Tom},
+  booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
+  volume={36},
+  pages={47783--47803},
+  year={2023}
+}
+
+% =============================================================================
+% Model Watermarking
+% =============================================================================
+
+@inproceedings{adi2018turning,
+  title={Turning Your Weakness Into a Strength: Watermarking Deep Neural Networks by Backdooring},
+  author={Adi, Yossi and Baum, Carsten and Ciss{\'e}, Moustapha and Pinkas, Benny and Keshet, Joseph},
+  booktitle={USENIX Security Symposium},
+  pages={1615--1631},
+  year={2018}
+}
+
+@inproceedings{zhang2018protecting,
+  title={Protecting Intellectual Property of Deep Neural Networks with Watermarking},
+  author={Zhang, Jialong and Gu, Zhongshu and Jang, Jiyong and Wu, Hui and Stoecklin, Marc Ph and Huang, Heqing and Molloy, Ian},
+  booktitle={ACM Asia Conference on Computer and Communications Security (ASIACCS)},
+  pages={159--172},
+  year={2018}
+}
+
+@inproceedings{uchida2017embedding,
+  title={Embedding Watermarks into Deep Neural Networks},
+  author={Uchida, Yusuke and Nagai, Yuki and Sakazawa, Shigeyuki and Satoh, Shin'ichi},
+  booktitle={ACM International Conference on Multimedia Retrieval (ICMR)},
+  pages={269--277},
+  year={2017}
+}
+
+% -----------------------------------------------------------------------------
+% Diffusion Model Watermarking
+% -----------------------------------------------------------------------------
+
+@inproceedings{chen2019deepmarks,
+  title={{DeepMarks}: A Secure Fingerprinting Framework for Digital Rights Management of Deep Learning Models},
+  author={Chen, Huili and Rohani, Bita Darvish and Koushanfar, Farinaz},
+  booktitle={ACM International Conference on Multimedia Retrieval (ICMR)},
+  pages={105--113},
+  year={2019}
+}
+
+@article{peng2023watermark,
+  title={Protecting the Intellectual Property of Diffusion Models by the Watermark Diffusion Process},
+  author={Peng, Sen and Nie, Yufei and Zhang, Yongzhen and Xiong, Jie},
+  journal={arXiv preprint arXiv:2306.03436},
+  year={2023}
+}
+
+@article{duan2025visual,
+  title={Visual Watermarking in the Era of Diffusion Models: Advances and Challenges},
+  author={Duan, Junxian and Guan, Jiyang and Yang, Wenkui and He, Ran},
+  journal={arXiv preprint arXiv:2505.08197},
+  year={2025}
+}
+
+@inproceedings{li2025gaussmarker,
+  title={GaussMarker: Robust Dual-Domain Watermark for Diffusion Models},
+  author={Li, Kecen and Huang, Zhicong and Hou, Xinwen and Hong, Cheng},
+  booktitle={Proceedings of the 42nd International Conference on Machine Learning (ICML)},
+  year={2025}
+}
+
+@inproceedings{wang2025sleepermark,
+  title={SleeperMark: Towards Robust Watermark against Fine-Tuning Text-to-Image Diffusion Models},
+  author={Wang, Zilan and Guo, Junfeng and Zhu, Jiacheng and Li, Yiming and Huang, Heng and Chen, Muhao},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year={2025}
+}
+
+@article{zhao2023recipe,
+  title={A Recipe for Watermarking Diffusion Models},
+  author={Zhao, Yunqing and Pang, Tianyu and Du, Chao and Yang, Xiao and Cheung, Ngai-Man and Lin, Min},
+  journal={arXiv preprint arXiv:2303.10137},
+  year={2023}
+}
+
+@inproceedings{ci2024ringid,
+  title={RingID: Rethinking Tree-Ring Watermarking for Enhanced Multi-key Identification},
+  author={Ci, Hai and Yang, Pei and Song, Yiren and Shou, Mike Zheng},
+  booktitle={Computer Vision -- ECCV 2024},
+  series={Lecture Notes in Computer Science},
+  volume={15086},
+  pages={338--354},
+  year={2024}
+}
+
+@inproceedings{kim2024wouaf,
+  title={{WOUAF}: Weight Modulation for User Attribution and Fingerprinting in Text-to-Image Diffusion Models},
+  author={Kim, Changhoon and Min, Kyle and Patel, Maitreya and Cheng, Sheng and Yang, Yezhou},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={8974--8983},
+  year={2024}
+}
+
+@article{liu2023watermarking,
+  title={Watermarking Diffusion Model},
+  author={Liu, Yugeng and Li, Zheng and Backes, Michael and Shen, Yun and Zhang, Yang},
+  journal={arXiv preprint arXiv:2305.12502},
+  year={2023}
+}
+
+@inproceedings{fernandez2023stable,
+  title={The Stable Signature: Rooting Watermarks in Latent Diffusion Models},
+  author={Fernandez, Pierre and Couairon, Guillaume and J{\'e}gou, Herv{\'e} and Douze, Matthijs and Furon, Teddy},
+  booktitle={Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
+  year={2023}
+}
+
+@article{wen2023tree,
+  title={Tree-Ring Watermarks: Fingerprints for Diffusion Images that are Invisible and Robust},
+  author={Wen, Yuxin and Kirchenbauer, John and Geiping, Jonas and Goldstein, Tom},
+  journal={arXiv preprint arXiv:2305.20030},
+  year={2023}
+}
+
+% =============================================================================
+% Quantile Regression
+% =============================================================================
+
+@article{koenker1978regression,
+  title={Regression Quantiles},
+  author={Koenker, Roger and Bassett Jr, Gilbert},
+  journal={Econometrica},
+  volume={46},
+  number={1},
+  pages={33--50},
+  year={1978}
+}
+
+@inproceedings{chung2021beyond,
+  title={Beyond Pinball Loss: Quantile Methods for Calibrated Uncertainty Quantification},
+  author={Chung, Youngseog and Neiswanger, Willie and Char, Ian and Schneider, Jeff},
+  booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
+  volume={34},
+  pages={10971--10984},
+  year={2021}
+}
+
+% =============================================================================
+% Maximum Mean Discrepancy
+% =============================================================================
+
+@article{gretton2012kernel,
+  title={A Kernel Two-Sample Test},
+  author={Gretton, Arthur and Borgwardt, Karsten M and Rasch, Malte J and Sch{\"o}lkopf, Bernhard and Smola, Alexander and others},
+  journal={Journal of Machine Learning Research (JMLR)},
+  volume={13},
+  number={1},
+  pages={723--773},
+  year={2012}
+}
+
+% =============================================================================
+% CLIP
+% =============================================================================
+
+@inproceedings{radford2021learning,
+  title={Learning Transferable Visual Models From Natural Language Supervision},
+  author={Radford, Alec and Kim, Jong Wook and Hallacy, Chris and Ramesh, Aditya and Goh, Gabriel and Agarwal, Sandhini and Sastry, Girish and Askell, Amanda and Mishkin, Pamela and Clark, Jack and others},
+  booktitle={International Conference on Machine Learning (ICML)},
+  pages={8748--8763},
+  year={2021}
+}
+
+% =============================================================================
+% Statistics
+% =============================================================================
+
+@book{cohen1988statistical,
+  title={Statistical Power Analysis for the Behavioral Sciences},
+  author={Cohen, Jacob},
+  edition={2nd},
+  publisher={Lawrence Erlbaum Associates},
+  year={1988}
+}
+
+% =============================================================================
+% Datasets
+% =============================================================================
+
+@techreport{krizhevsky2009learning,
+  title={Learning Multiple Layers of Features from Tiny Images},
+  author={Krizhevsky, Alex and Hinton, Geoffrey},
+  institution={University of Toronto},
+  year={2009}
+}
+
+@inproceedings{coates2011analysis,
+  title={An Analysis of Single-Layer Networks in Unsupervised Feature Learning},
+  author={Coates, Adam and Ng, Andrew and Lee, Honglak},
+  booktitle={International Conference on Artificial Intelligence and Statistics (AISTATS)},
+  pages={215--223},
+  year={2011}
+}
+
+@inproceedings{liu2015deep,
+  title={Deep Learning Face Attributes in the Wild},
+  author={Liu, Ziwei and Luo, Ping and Wang, Xiaogang and Tang, Xiaoou},
+  booktitle={IEEE International Conference on Computer Vision (ICCV)},
+  pages={3730--3738},
+  year={2015}
+}
+
+% =============================================================================
+% Neural Network Architectures
+% =============================================================================
+
+@inproceedings{he2016deep,
+  title={Deep Residual Learning for Image Recognition},
+  author={He, Kaiming and Zhang, Xiangyu and Ren, Shaoqing and Sun, Jian},
+  booktitle={IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={770--778},
+  year={2016}
+}
+
+@inproceedings{ronneberger2015u,
+  title={{U-Net}: Convolutional Networks for Biomedical Image Segmentation},
+  author={Ronneberger, Olaf and Fischer, Philipp and Brox, Thomas},
+  booktitle={Medical Image Computing and Computer-Assisted Intervention (MICCAI)},
+  pages={234--241},
+  year={2015}
+}
+
+% =============================================================================
+% Defenses
+% =============================================================================
+
+@inproceedings{zhao2024protective,
+  title={Can Protective Perturbation Safeguard Personal Data from Being Exploited by Stable Diffusion?},
+  author={Zhao, Zhengyue and Duan, Jinhao and Xu, Kaidi and Wang, Chenan and Zhang, Rui and Du, Zidong and Guo, Qi and Hu, Xing},
+  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages={24398--24407},
+  year={2024}
+}
