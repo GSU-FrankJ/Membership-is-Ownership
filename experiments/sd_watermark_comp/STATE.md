@@ -1,8 +1,9 @@
 # STATE — SD Watermark Comparison Experiment
 
-> Last updated: 2026-03-22
-> Current phase: **Phase 12 complete** (latent vs pixel space comparison)
-> Overall progress: ████████████ 12/12
+
+> Last updated: 2026-03-25
+> Current phase: **Phase 13 complete** (extended experiments + verification)
+> Overall progress: █████████████ 13/13
 
 ---
 
@@ -22,6 +23,8 @@
 | 10    | ✅ DONE   | 2026-03-15 | Ablation complete: A5 timestep sweep + A6 scale validation (AUC=0.982 at 1k members) |
 | 11    | ✅ DONE   | 2026-03-17 | 3-point verification: B1 domain-shift PASS, B2 task-shift partial (AUC=0.908) |
 | 12    | ✅ DONE   | 2026-03-22 | Latent vs pixel: latent+caption best (AUC=0.996), pixel fails verification |
+| 13    | ✅ DONE   | 2026-03-25 | Extended: full-FT A7 + LoRA r256 A8 + 1000 non-members. Algorithm 2 FAIL for all SD models |
+
 
 ---
 
@@ -277,9 +280,9 @@ Signal degrades gracefully with set size. Key threshold: **~80 epochs/image mini
 | **Owner (A6)** | -20.35 | +2.56 | 2.55 | 0.987 |
 | B1 (domain shift) | -17.79 | -0.90 | 2.21 | 0.972 |
 | B2 (task shift) | -2.00 | +13.64 | 1.73 | 0.908 |
-| Baseline (SD v1.4) | 0 (by definition) | 0 | — | — |
+| Reference (SD v1.4) | 0 (by definition) | 0 | — | — |
 
-Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is ~1% of base model error.
+Raw t-error: owner=1877.6, reference=1898.0 (ratio=1.011x). LoRA perturbation is ~1% of base model error.
 
 ### Verification Results (Algorithm 2, adapted for derivative models)
 
@@ -453,68 +456,84 @@ Raw t-error: owner=1877.6, baseline=1898.0 (ratio=1.011x). LoRA perturbation is 
 - Result: Phase 11 complete. LaTeX tables in `tables/sd_verification.tex` and `tables/sd_robustness.tex`.
 - Next: Integrate verification results into paper (discuss delta-based adaptation for derivative models)
 
-### Session 5 — 2026-03-22
-- Phase: 12 (latent vs pixel space comparison)
-- Actions: Created phase_12.md, updated STATE.md. Running 6 scoring runs (3 models x 2 variants) serial on single GPU, then verification + markdown table.
-- Results: Latent+caption (V1) is best: AUC=0.996, d=3.24, passes C2+C3. Pixel+caption (V2) fails all verification criteria (|d|=1.86, ratio=2.14x). Caption conditioning improves robustness (B2 degradation -0.018 vs -0.079).
-- Result: Phase 12 complete.
+### Session 5 — 2026-03-25
+- Phase: 12+13 (latent vs pixel + extended experiments)
+- Actions:
+  - Phase 12: Ran latent+caption/pixel+caption scoring on Phase 11 models (A6/B1/B2), 1200 images. Fixed verify_ownership.py to match paper Algorithm 2 exactly. All C2/C3 FAIL for LoRA (raw ratio ~1.01x).
+  - Phase 13: Expanded non-members 200→1000. Trained A7 (full FT, 1000 members, 40ep, 10k steps, 1h51m) and A8 (LoRA r256, 1000 members, 80ep, 20k steps, 2h49m). Fixed latent normalization to mean/(HWC). Scored all 5 models with latent+caption on 2000-image split. Ran 6 verifications.
+- Key findings:
+  - Full FT (A7) has highest AUC (0.999) and separation but raw ratio still only 1.028x
+  - LoRA r256 (A8) has highest Cohen's d (3.93) for membership detection
+  - Algorithm 2 fails for ALL SD models (LoRA and full FT alike)
+  - C1 correctly identifies lineage: only A6 passes consistency with B1/B2 (B was derived from A6, not A7/A8)
+- Result: Phase 13 complete.
 
-## Phase 12: Latent vs Pixel Space Comparison
+## Phase 13: Extended Experiments
 
-### Goal
-Compare t-error measurement in latent space vs pixel space under the Phase 11 verification setup, both with per-image COCO caption conditioning. Determine whether measurement space affects verification outcomes.
+### New Models
 
-### Experiment Matrix
+| Model | Type | Members | Steps | Epochs | Params | Loss | Time |
+|-------|------|---------|-------|--------|--------|------|------|
+| A7 | Full FT | 1000 | 10,000 | 40 | 860M (100%) | 0.217 | 1h51m |
+| A8 | LoRA r256 | 1000 | 20,000 | 80 | 134M (15.6%) | 0.106 | 2h49m |
 
-| Variant | Error Space | Caption | Source |
-|---------|------------|---------|--------|
-| V0 (baseline) | latent | empty | Reuse Phase 11 CSVs |
-| V1 | latent | per-image | New |
-| V2 | pixel | per-image | New |
+### Scoring (latent + caption + mean normalization, 1000 mem + 1000 non-mem)
 
-Models: A6 (owner), B1 (domain-shift), B2 (task-shift)
-Eval set: 1200 images (1000 members + 200 non-members)
+| Model | AUC | TPR@1% | Cohen's d | Mem mean | Non-mem mean |
+|-------|-----|--------|-----------|----------|-------------|
+| A6 (LoRA r64, 3.9%) | 0.9949 | 0.8280 | 3.26 | -0.001782 | +0.000239 |
+| **A7 (Full FT, 100%)** | **0.9986** | **0.9640** | **3.41** | -0.003110 | +0.000307 |
+| **A8 (LoRA r256, 15.6%)** | **0.9994** | **0.9850** | **3.93** | -0.002831 | +0.000782 |
+| B1 (adversary, domain) | 0.9858 | 0.6600 | 2.83 | -0.001450 | -0.000045 |
+| B2 (adversary, task) | 0.9799 | 0.7130 | 2.70 | -0.000843 | +0.000689 |
 
-### Execution Plan
-- 6 scoring runs (serial, single GPU): V1 × {A6, B1, B2} then V2 × {A6, B1, B2}
-- 4 verification runs: V1 × {B1, B2}, V2 × {B1, B2} (V0 reuses existing)
-- Generate markdown comparison table
-- Estimated total: ~3h
+### Adversary Models (each derived from its own parent, LoRA r64, 2000 steps, lr=5e-5)
 
-### Scoring Results
+| Adversary | Parent | Type | AUC | TPR@1% | Cohen's d |
+|-----------|--------|------|-----|--------|-----------|
+| B1_a6 | A6 (r64) | Domain shift | 0.9858 | 0.6600 | 2.83 |
+| B2_a6 | A6 (r64) | Task shift | 0.9799 | 0.7130 | 2.70 |
+| B1_a7 | A7 (full) | Domain shift | 0.9970 | 0.9320 | 3.22 |
+| B2_a7 | A7 (full) | Task shift | 0.9950 | 0.8820 | 3.13 |
+| B1_a8 | A8 (r256) | Domain shift | 0.9977 | 0.9210 | 3.51 |
+| B2_a8 | A8 (r256) | Task shift | 0.9972 | 0.9450 | 3.46 |
 
-| Variant | Model | AUC | TPR@1% | Cohen's d | Mem mean | Nonmem mean |
-|---------|-------|-----|--------|-----------|----------|-------------|
-| V0 (latent+empty) | A6 | 0.9871 | 0.7760 | 2.80 | -20.35 | +2.56 |
-| V0 (latent+empty) | B1 | 0.9722 | 0.4920 | 2.49 | -17.79 | -0.90 |
-| V0 (latent+empty) | B2 | 0.9078 | 0.3730 | 1.79 | -2.00 | +13.64 |
-| **V1 (latent+cap)** | **A6** | **0.9956** | **0.8090** | **3.24** | -29.19 | +3.77 |
-| V1 (latent+cap) | B1 | 0.9882 | 0.6140 | 2.85 | -23.75 | -0.93 |
-| V1 (latent+cap) | B2 | 0.9780 | 0.7560 | 2.62 | -13.82 | +10.68 |
-| V2 (pixel+cap) | A6 | 0.9590 | 0.3920 | 2.00 | -0.0003 | +0.0001 |
-| V2 (pixel+cap) | B1 | 0.9306 | 0.1900 | 1.72 | -0.0002 | +0.0001 |
-| V2 (pixel+cap) | B2 | 0.8717 | 0.2240 | 1.44 | -0.0002 | +0.0002 |
+### Verification (Algorithm 2, raw scores — each owner vs its own adversaries)
 
-### Verification Results
-
-| Variant | Adversary | C1 | C2 (|d|) | C3 (ratio) | Verdict |
-|---------|-----------|----|---------|-----------|----|
-| V0 (latent+empty) | B1 | FAIL | PASS (2.55) | PASS (7.96x) | C2+C3 pass |
-| V0 (latent+empty) | B2 | FAIL | PASS (2.55) | PASS (7.96x) | C2+C3 pass |
-| V1 (latent+cap) | B1 | FAIL | PASS (2.88) | PASS (7.74x) | C2+C3 pass |
-| V1 (latent+cap) | B2 | FAIL | PASS (2.88) | PASS (7.74x) | C2+C3 pass |
-| V2 (pixel+cap) | B1 | FAIL | FAIL (1.86) | FAIL (2.14x) | All fail |
-| V2 (pixel+cap) | B2 | FAIL | FAIL (1.86) | FAIL (2.14x) | All fail |
+| Owner | Adversary | C1 (p>0.05) | C2 (\|d\|>2.0) | C3 (ratio>5.0) | Verdict |
+|-------|-----------|-------------|----------------|----------------|---------|
+| A6 r64 | B1_a6 | PASS (p=0.73) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
+| A6 r64 | B2_a6 | PASS (p=0.34) | FAIL (0.08) | FAIL (1.016x) | REJECTED |
+| A7 full | B1_a7 | PASS (p=0.71) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
+| A7 full | B2_a7 | PASS (p=0.18) | FAIL (0.14) | FAIL (1.028x) | REJECTED |
+| A8 r256 | B1_a8 | PASS (p=0.54) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
+| A8 r256 | B2_a8 | PASS (p=0.22) | FAIL (0.13) | FAIL (1.025x) | REJECTED |
 
 ### Key Findings
 
-1. **Latent >> pixel**: V1 (latent+cap) AUC=0.996, Cohen's d=3.24 vs V2 (pixel+cap) AUC=0.959, d=2.00. Pixel-space fails verification Criteria 2+3.
-2. **Caption helps both spaces**: V1 vs V0: AUC +0.009, d +0.44. Caption conditioning amplifies membership signal.
-3. **Caption improves robustness**: B2 degradation V0=-0.079, V1=-0.018, V2=-0.087. Caption conditioning makes signal more resilient to task-shift adversary.
-4. **Pixel 4x slower, weaker signal**: VAE decode introduces lossy noise that masks the membership signal.
-5. **Best config: latent + caption (V1)**.
+1. **A8 (LoRA r256) achieves the best membership detection**: AUC=0.9994, TPR@1%=0.985, d=3.93.
+2. **A7 (full FT) has the highest raw ratio** (1.028x vs 1.016x for r64), but still far from 5.0x threshold.
+3. **Algorithm 2 fails for ALL SD models** — even full fine-tune with 860M params. Base model variance (std~0.022) is ~7x the membership signal (~0.003).
+4. **C1 works correctly**: all adversaries pass consistency with their parent model (p>0.05). Adversary LoRA r64 fine-tuning preserves the parent's reconstruction characteristics on W.
 
 ### Output Files
-- Scores: `scores/phase11/v1_latcap_{a,b1,b2}.csv`, `v2_pixcap_{a,b1,b2}.csv`
-- Verification: `scores/phase11/verification_v{1,2}_{b1,b2}.json`
-- Comparison table: `tables/latent_vs_pixel_comparison.md`
+- Owner scores: `scores/phase13/{a6,a7,a8}_latcap.csv`
+- A6 adversary scores: `scores/phase13/{b1,b2}_latcap.csv`
+- A7 adversary scores: `scores/phase13/a7_{b1,b2}_latcap.csv`
+- A8 adversary scores: `scores/phase13/a8_{b1,b2}_latcap.csv`
+- Verification: `scores/phase13/verification_{a6,a7,a8}_{b1,b2}.json`
+
+### Adapted Verification: Paired t-test (A1)
+
+Algorithm 2 的 C2/C3 用 raw score 比较 owner vs baseline，因 per-image variance (~0.022) 远大于 membership signal (~0.003) 导致全部 FAIL。Adapted protocol 改用 paired difference δ(x) = S_tgt(x) - S_ref(x)，对同一张图配对消除 per-image variance。
+
+**C2 adapted**: paired t-test on δ(W), H0: mean(δ_W)=0. Pass: p < 1e-6 AND |d| > 2.0.
+**C3 adapted**: |mean(δ_W)| / |mean(δ_nonW)| > 5.0.
+
+| Owner | C2 p-value | C2 effect \|d\| | C2 | C3 ratio | C3 |
+|-------|-----------|----------------|-----|---------|-----|
+| A6 (LoRA r64) | ~0 | 2.43 | PASS | 7.46x | PASS |
+| A7 (Full FT) | ~0 | 2.38 | PASS | 10.12x | PASS |
+| A8 (LoRA r256) | ~0 | 2.55 | PASS | 3.62x | FAIL |
+
+A6 和 A7 全部通过。A8 的 C3 fail（3.62x < 5.0），因 r256 高容量对 non-member 也产生了较大的 delta 偏移（0.000782 vs A6 的 0.000239），拉低了 ratio。

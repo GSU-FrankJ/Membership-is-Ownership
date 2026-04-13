@@ -99,7 +99,7 @@ The script should:
 
 1. **Load Model A** and compute t-error (K=50, Q25) for all 50K training images → save as `all_train_t_errors.npy`
 2. **Load non-member split** (test set, ~10K images) → compute t-error → save as `test_t_errors.npy`
-3. **Load baseline model** (HuggingFace public) → compute t-error on W_D → save as `baseline_wd_t_errors.npy`
+3. **Load reference model** (HuggingFace public) → compute t-error on W_D → save as `baseline_wd_t_errors.npy`
 
 To build this script, first read:
 ```bash
@@ -114,7 +114,7 @@ head -50 src/attack_qr/features/t_error.py
 
 Using precomputed t-errors (all instant numpy ops, no GPU):
 
-**Scenario A — 100 Random Subsets**: Sample 100 random subsets of 5000 indices from training set. For each, compute Cohen's d against baseline t-errors. Report distribution.
+**Scenario A — 100 Random Subsets**: Sample 100 random subsets of 5000 indices from training set. For each, compute Cohen's d against reference model t-errors. Report distribution.
 
 **Scenario B — Cherry-Picked Top-5K**: Sort all 50K training t-errors ascending, take indices 0-4999. Compute Cohen's d. This is the adversary's BEST case.
 
@@ -122,7 +122,7 @@ Using precomputed t-errors (all instant numpy ops, no GPU):
 
 **Scenario D — Non-Member Set**: Use test set t-errors. Expect three-point FAIL.
 
-**Scenario E — Wrong Model**: Use baseline model's t-errors on W_D. Expect three-point FAIL.
+**Scenario E — Wrong Model**: Use reference model's t-errors on W_D. Expect three-point FAIL.
 
 ### Step 6.7: Save Results
 

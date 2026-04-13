@@ -46,6 +46,7 @@ from src.ddpm_ddim.schedulers.betas import build_cosine_schedule
 from src.attacks.baselines import (
     load_hf_baseline,
     load_baseline_from_registry,
+    load_random_baseline,
     compute_baseline_scores,
     BASELINE_MODELS,
 )
@@ -379,21 +380,24 @@ def check_ownership_criteria(tests: Dict, stats: Dict) -> Dict[str, bool]:
         test = tests["model_a_vs_model_b"]
         criteria["consistency"] = test["t_test"]["p_value_two_sided"] > 0.05
     
-    # Criterion 2: ModelB vs Baseline should be very different
-    baseline_tests = [k for k in tests if "baseline" in k.lower() or "ddpm-" in k or "ldm-" in k]
+    # Criterion 2: ModelB vs Baseline should be very different (ALL baselines must pass)
+    baseline_tests = [k for k in tests
+                      if any(tag in k.lower() for tag in ("baseline", "ddpm-", "ldm-", "random"))]
     if baseline_tests:
-        best_p = min(tests[k]["t_test"]["p_value_one_sided"] for k in baseline_tests)
-        best_d = max(abs(tests[k]["effect_size"]["cohens_d"]) for k in baseline_tests)
-        criteria["separation"] = best_p < 1e-6 and best_d > 2.0
-    
-    # Criterion 3: Ratio check
+        all_d = [abs(tests[k]["effect_size"]["cohens_d"]) for k in baseline_tests]
+        all_p = [tests[k]["t_test"]["p_value_one_sided"] for k in baseline_tests]
+        criteria["separation"] = max(all_p) < 1e-6 and min(all_d) > 2.0
+        criteria["separation_range"] = (round(min(all_d), 2), round(max(all_d), 2))
+
+    # Criterion 3: Ratio check (ALL baselines must pass)
     if "model_b" in stats and baseline_tests:
-        baseline_means = [stats.get(k.replace("model_b_vs_", ""), {}).get("mean", float('inf')) 
+        baseline_means = [stats.get(k.replace("model_b_vs_", ""), {}).get("mean", float('inf'))
                         for k in baseline_tests]
         model_b_mean = stats["model_b"]["mean"]
         if model_b_mean > 0:
-            best_ratio = max(bm / model_b_mean for bm in baseline_means if bm != float('inf'))
-            criteria["ratio"] = best_ratio > 5.0
+            all_ratios = [bm / model_b_mean for bm in baseline_means if bm != float('inf')]
+            criteria["ratio"] = min(all_ratios) > 5.0 if all_ratios else False
+            criteria["ratio_range"] = (round(min(all_ratios), 2), round(max(all_ratios), 2)) if all_ratios else None
     
     # Overall
     criteria["ownership_verified"] = all([
@@ -474,9 +478,19 @@ def main():
         
         for baseline in baselines:
             name = baseline["name"]
-            LOGGER.info(f"Loading baseline: {name}")
+            btype = baseline.get("type", "ddpm")
+            LOGGER.info(f"Loading baseline: {name} (type={btype})")
             try:
-                model, alphas = load_baseline_from_registry(name, args.dataset, args.device)
+                if btype == "random":
+                    torch.manual_seed(42)
+                    model, alphas = load_random_baseline(
+                        device=args.device,
+                        input_mean=mean,
+                        input_std=std,
+                        resolution=image_size,
+                    )
+                else:
+                    model, alphas = load_baseline_from_registry(name, args.dataset, args.device)
                 models[name] = (model, alphas)
             except Exception as e:
                 LOGGER.warning(f"Failed to load {name}: {e}")
@@ -539,7 +553,25 @@ def main():
         "tests": tests,
         "ownership_criteria": criteria,
     }
-    
+
+    # Per-baseline breakdown
+    baselines_cfg = load_yaml(args.baselines_config).get(args.dataset, []) if args.baselines_config.exists() else []
+    role_map = {b["name"]: b.get("role", "unknown") for b in baselines_cfg}
+    per_baseline = {}
+    for name in all_scores:
+        if name.startswith("model_"):
+            continue
+        comp_key = f"model_b_vs_{name}" if f"model_b_vs_{name}" in tests else f"model_a_vs_{name}"
+        if comp_key not in tests:
+            # Try reversed order (tests use sorted pair)
+            comp_key = f"{name}_vs_model_b" if f"{name}_vs_model_b" in tests else f"{name}_vs_model_a"
+        entry = {"role": role_map.get(name, "unknown"), "mean_t_error": round(float(statistics[name]["mean"]), 4)}
+        if comp_key in tests:
+            entry["cohens_d"] = round(abs(tests[comp_key]["effect_size"]["cohens_d"]), 2)
+            entry["p_value"] = tests[comp_key]["t_test"]["p_value_one_sided"]
+        per_baseline[name] = entry
+    report["per_baseline"] = per_baseline
+
     # Save report (include split in filename)
     output_path = args.output / f"baseline_comparison_{args.dataset}_{args.split}.json"
     with output_path.open("w", encoding="utf-8") as f:
@@ -570,11 +602,22 @@ def main():
         print(f"{name:<20} {stat['mean']:>12.4f} {stat['std']:>12.4f} {stat['q25']:>12.4f}")
     print("-" * 70)
     
+    if per_baseline:
+        print(f"\n{'Baseline':<20} {'Role':<12} {'Mean T-Err':>12} {'|d|':>10}")
+        print("-" * 56)
+        for bname, binfo in per_baseline.items():
+            d_str = f"{binfo['cohens_d']:>10.2f}" if "cohens_d" in binfo else f"{'N/A':>10}"
+            print(f"{bname:<20} {binfo['role']:<12} {binfo['mean_t_error']:>12.4f} {d_str}")
+        print("-" * 56)
+
     print("\nOwnership Criteria:")
     for k, v in criteria.items():
-        status = "PASS" if v else "FAIL"
-        print(f"  {k}: {status}")
-    
+        if isinstance(v, tuple):
+            print(f"  {k}: {v}")
+        else:
+            status = "PASS" if v else "FAIL"
+            print(f"  {k}: {status}")
+
     print("=" * 70)
 
 

@@ -58,6 +58,11 @@ BASELINE_MODELS = {
         "resolution": 256,
         "type": "ldm",
     },
+    "ddpm-church": {
+        "model_id": "google/ddpm-ema-church-256",
+        "resolution": 256,
+        "type": "ddpm",
+    },
 }
 
 
@@ -84,10 +89,10 @@ def list_baselines_for_dataset(dataset: str, config_path: Optional[pathlib.Path]
     
     # Default fallback
     defaults = {
-        "cifar10": [BASELINE_MODELS["ddpm-cifar10"]],
-        "cifar100": [BASELINE_MODELS["ddpm-cifar10"]],
-        "stl10": [BASELINE_MODELS["ddpm-bedroom"]],
-        "celeba": [BASELINE_MODELS["ddpm-celebahq"], BASELINE_MODELS["ldm-celebahq"]],
+        "cifar10": [BASELINE_MODELS["ddpm-cifar10"], BASELINE_MODELS["ddpm-bedroom"]],
+        "cifar100": [BASELINE_MODELS["ddpm-cifar10"], BASELINE_MODELS["ddpm-bedroom"]],
+        "stl10": [BASELINE_MODELS["ddpm-cifar10"], BASELINE_MODELS["ddpm-church"], BASELINE_MODELS["ddpm-bedroom"]],
+        "celeba": [BASELINE_MODELS["ddpm-celebahq"], BASELINE_MODELS["ldm-celebahq"], BASELINE_MODELS["ddpm-bedroom"]],
     }
     return defaults.get(dataset, [])
 

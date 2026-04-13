@@ -2,8 +2,8 @@
 
 > **Claude Code**: Read this FIRST every session. Update after every completed step.
 
-## Next Phase: DONE — All phases complete
-## Status: PHASE 08 COMPLETE — All tables, narrative, and summary generated
+## Next Phase: Phase 09 — Multi-Reference-Model Expansion
+## Status: PHASE 09 IN PROGRESS — Expanding to 3+ reference models per dataset
 
 ---
 
@@ -15,7 +15,7 @@
 | 2026-03-09 | CLIP = ViT-B-32, matches paper | Default in `load_clip()` is `ViT-B-32`; `finetune_mmd_ddm.py` uses default. No change needed. |
 | 2026-03-09 | σ GO — proceed with Zhao | All 5 mapping tests pass. σ range [0.0000, 641.66] covers EDM [0.002, 80]. |
 | 2026-03-09 | Created `src/attacks/scores/` module | Was referenced but missing from codebase. Contains `uniform_timesteps`, `t_error_aggregate`, `compute_error_stats`, `SplitDataset`. |
-| 2026-03-09 | MiO dry run Cohen's d = -0.63 (member vs nonmember, same model) | Expected -23.9 was owner-vs-baseline comparison. Member mean 28.71 matches expected ~28.6. |
+| 2026-03-09 | MiO dry run Cohen's d = -0.63 (member vs nonmember, same model) | Expected -23.9 was owner-vs-reference-model comparison. Member mean 28.71 matches expected ~28.6. |
 | 2026-03-09 | WDM architecture NOT compatible with our UNet | WDM: 3 res_blocks, attn at [16,8], linear schedule, dropout=0.1. Ours: 2 res_blocks, attn at [16], cosine schedule, dropout=0.0. Must use WDM native model + adapter. |
 | 2026-03-09 | WDM uses all 50K CIFAR-10 images | `image_datasets.py` loads all images from `data_dir` recursively. No split mechanism. |
 | 2026-03-09 | WDM model params: 49,062,787 | Created with CIFAR-10 config (128ch, [1,2,2,2], 3 res_blocks). |
@@ -236,8 +236,8 @@ python detect_watermark_cifar10.py
 ### Retroactive Claim Defense
 - [x] All 50K t-errors precomputed — saved to: `experiments/baseline_comparison/results/retroactive_defense/all_train_t_errors.npy`
 - [x] Test set 10K t-errors: `test_t_errors.npy` (mean=112.75)
-- [x] Baseline (HF google/ddpm-cifar10-32) on W_D: `baseline_wd_t_errors.npy` (mean=704.33)
-- [x] **Reference** (Real W_D): Cohen's d=`-24.07`, three-point=`PASS`, W_D mean=28.73, baseline mean=704.33
+- [x] Reference model (HF google/ddpm-cifar10-32) on W_D: `baseline_wd_t_errors.npy` (mean=704.33)
+- [x] **Reference** (Real W_D): Cohen's d=`-24.07`, three-point=`PASS`, W_D mean=28.73, reference mean=704.33
 - [x] 100 random sets — Cohen's d distribution: mean=`-16.97`, std=`0.17`; pass rate=`100/100`
 - [x] Cherry-picked top-5K — Cohen's d: `-25.49`, three-point: `PASS`, mean=13.86
 - [x] Sophisticated adversary (top-5K lowest) — Cohen's d: `-25.49`, overlap with real W_D: `596/5000 (11.9%)`
@@ -245,8 +245,8 @@ python detect_watermark_cifar10.py
 - [x] Wrong-model — Cohen's d: `0.00`, three-point: `FAIL`
 - [x] Results JSON: `experiments/baseline_comparison/results/retroactive_defense/results.json`
 - Notes:
-  - Scenarios A-D all PASS because Model A's t-errors (even on non-members) are much lower than baseline (112 vs 704). This is the owner-vs-baseline comparison, not member-vs-nonmember.
-  - Only Scenario E (wrong model) FAILS as expected — baseline model has no ownership signal.
+  - Scenarios A-D all PASS because Model A's t-errors (even on non-members) are much lower than the reference model (112 vs 704). This is the owner-vs-reference comparison, not member-vs-nonmember.
+  - Only Scenario E (wrong model) FAILS as expected — the reference model has no ownership signal.
   - Key insight: the retroactive defense shows that cherry-picking (B/C) gives slightly better d (-25.5 vs -24.1) but only 11.9% overlap with real W_D, confirming pre-commitment matters for provenance.
 
 ## Phase 07: Robustness + FID (GPU)
@@ -313,3 +313,28 @@ python detect_watermark_cifar10.py
   - All pruned FIDs > clean FIDs (sanity check passed)
   - MiO FID (56.03) higher than WDM (13.42) and Zhao (9.28) due to different architectures/samplers, not watermarking overhead
   - MMD-FT only evaluated for MiO (WDM/Zhao architectures incompatible with DDIM-based FT loop)
+
+## Phase 09: Multi-Reference-Model Expansion (GPU)
+### Step 9.1: Registry & Config
+- [ ] `ddpm-church` added to `BASELINE_MODELS` in `huggingface_loader.py`
+- [ ] Fallback defaults updated in `list_baselines_for_dataset()`
+- [ ] `baselines_by_dataset.yaml` expanded to 3+ reference models per dataset with role annotations
+
+### Step 9.2: Eval Pipeline
+- [ ] Random reference model dispatch added to `eval_ownership.py` loader loop
+- [ ] Reference model name matching regex updated to include `random`
+- [ ] Conservative criteria: ALL reference models must pass d > 2.0 and ratio > 5.0
+- [ ] Per-reference-model JSON reporting added
+
+### Step 9.3: Run Evals
+- [ ] CIFAR-10: 3 reference models evaluated
+- [ ] CIFAR-100: 3 reference models evaluated
+- [ ] STL-10: 3 reference models evaluated (ddpm-cifar10 as domain-matched fix)
+- [ ] CelebA: 4 reference models evaluated
+
+### Step 9.4: Paper Updates
+- [ ] Main table updated with conservative (min |d|) reporting
+- [ ] Appendix table with per-reference-model breakdown
+- [ ] Experimental setup text updated
+- [ ] Domain-gap discussion paragraph added
+- [ ] Abstract/conclusion numbers verified

@@ -43,7 +43,7 @@ src/attack_qr/
 
 ### 1.2 Baseline Loaders (`src/attacks/baselines/`)
 
-Public baseline model loading:
+Public reference model loading:
 
 ```
 src/attacks/baselines/
@@ -186,7 +186,7 @@ src/attack_qr/engine/cli_eval.py
 
 ## 6. Import Examples
 
-### 6.1 Loading Baseline Models
+### 6.1 Loading Reference Models
 
 ```python
 from src.attacks.baselines import (

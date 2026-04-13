@@ -6,7 +6,7 @@ This document provides a comprehensive methodology overview for the ownership ve
 
 ## Abstract
 
-We propose a t-error based ownership verification framework for diffusion models that leverages the reconstruction error disparity between owner models and public baselines. Our approach combines:
+We propose a t-error based ownership verification framework for diffusion models that leverages the reconstruction error disparity between owner models and public reference models. Our approach combines:
 
 1. **T-error scoring** for membership inference
 2. **Gaussian Quantile Regression** for distributional modeling
@@ -22,7 +22,7 @@ We propose a t-error based ownership verification framework for diffusion models
 Given:
 - A diffusion model $M$ potentially trained on private dataset $\mathcal{D}_{private}$
 - A private watermark set $\mathcal{W}_D \subset \mathcal{D}_{private}$
-- Public baseline models $\{M_{public}^{(i)}\}$ trained on public data
+- Public reference models $\{M_{public}^{(i)}\}$ trained on public data
 
 **Goal**: Determine if $M$ was trained on $\mathcal{D}_{private}$ by comparing reconstruction quality on $\mathcal{W}_D$.
 
@@ -32,7 +32,7 @@ Given:
 
 **Adversary**: Obtains a copy of Model A (possibly through API access or model theft) and fine-tunes to create Model B.
 
-**Verification**: Owner proves Model B derives from Model A by demonstrating both exhibit significantly lower reconstruction errors on $\mathcal{W}_D$ compared to public baselines.
+**Verification**: Owner proves Model B derives from Model A by demonstrating both exhibit significantly lower reconstruction errors on $\mathcal{W}_D$ compared to public reference models.
 
 ---
 
@@ -164,7 +164,7 @@ $$\mathcal{L}_{MMD} = \text{MMD}^2(f_{CLIP}(\hat{x}_0), f_{CLIP}(x_{real}))$$
 
 ### 4.4 Key Property
 
-MMD fine-tuning preserves the memorization signal: Model B retains low t-error on $\mathcal{W}_D$ similar to Model A, while public baselines maintain high t-error.
+MMD fine-tuning preserves the memorization signal: Model B retains low t-error on $\mathcal{W}_D$ similar to Model A, while public reference models maintain high t-error.
 
 ---
 
@@ -179,9 +179,9 @@ MMD fine-tuning preserves the memorization signal: Model B retains low t-error o
 | STL-10 | 96×96 | 5,000 | 1,000 |
 | CelebA | 64×64 | 162,770 | 5,000 |
 
-### 5.2 Public Baselines
+### 5.2 Public Reference Models
 
-| Dataset | Baseline Model |
+| Dataset | Reference Model |
 |---------|----------------|
 | CIFAR-10/100 | `google/ddpm-cifar10-32` |
 | STL-10 | `google/ddpm-ema-bedroom-256` |
@@ -221,7 +221,7 @@ $$d = \frac{\bar{s}_{owner} - \bar{s}_{baseline}}{\sigma_{pooled}}$$
 | Criterion | Condition | Interpretation |
 |-----------|-----------|----------------|
 | **Consistency** | T-test $p > 0.05$ (Model A vs B) | Models share same origin |
-| **Separation** | T-test $p < 10^{-6}$, $|d| > 2.0$ | Owner ≠ Baseline |
+| **Separation** | T-test $p < 10^{-6}$, $|d| > 2.0$ | Owner ≠ Reference |
 | **Ratio** | $\frac{s_{baseline}}{s_{owner}} > 5.0$ | Strong discrimination |
 
 **Ownership Verified** if all three criteria are satisfied.
@@ -266,7 +266,7 @@ Step 5: Statistical tests and ownership verification
 
 ### 8.1 Typical Performance
 
-| Dataset | Owner t-error | Baseline t-error | Ratio | Cohen's d |
+| Dataset | Owner t-error | Reference t-error | Ratio | Cohen's d |
 |---------|---------------|------------------|-------|-----------|
 | CIFAR-10 | ~0.006 | ~0.032 | 5.4× | >20 |
 | CIFAR-100 | ~0.007 | ~0.030 | 4.3× | >18 |
@@ -277,8 +277,8 @@ Step 5: Statistical tests and ownership verification
 
 All datasets should satisfy:
 - **Consistency**: Model A ≈ Model B (p > 0.05)
-- **Separation**: Owner ≪ Baseline (p < $10^{-6}$, |d| > 2.0)
-- **Ratio**: Baseline/Owner > 5×
+- **Separation**: Owner ≪ Reference (p < $10^{-6}$, |d| > 2.0)
+- **Ratio**: Reference/Owner > 5×
 
 ---
 
