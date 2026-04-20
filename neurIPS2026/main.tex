@@ -847,7 +847,7 @@ protocol, which is invariant to adversary fine-tuning direction.
 LoRA $r\!=\!64$ and full fine-tuning pass all three criteria in the
 paired-delta verification protocol.
 LoRA $r\!=\!256$ achieves the highest per-sample detection
-(AUC${}\!=\!0.9994$, $|d|_{\text{mem}}\!=\!3.93$) but fails the
+(AUC${}\!=\!0.999$, $d_{\text{membership}}\!=\!3.93$) but fails the
 C3 ratio criterion: the high adapter capacity induces a non-trivial
 $\delta$ shift even on non-member images, compressing the
 $|\bar\delta_{\mathcal{W}}| / |\bar\delta_{\text{non-}\mathcal{W}}|$
