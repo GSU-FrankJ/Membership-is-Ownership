@@ -511,7 +511,7 @@ The ratio threshold of $5.0\times$ is deliberately conservative, prioritizing fa
 All four datasets exceed a ratio of $19\times$ against their best baseline, providing ample margin above the $5\times$ threshold. This robustness persists after MMD fine-tuning (500 iterations, CLIP features), confirming that the memorization signal is orthogonal to domain-adaptive training objectives.
 
 \textit{Stable Diffusion setting: The LoRA r$=256$ boundary.}
-On SD with the paired-delta protocol (Table~\ref{tab:sd_verification}), LoRA r$=64$ achieves C3 pass (ratio $7.46\times$), while LoRA r$=256$ achieves C3 fail (ratio $3.62\times$). This outcome is instructive: r$=256$ exhibits the strongest per-sample membership detection (AUC $= 0.999$, Cohen's $d_{\text{membership}} = 3.93$, compared to r$=64$'s $d_{\text{membership}} = 3.26$), yet its population-level ratio compresses below threshold because the high-capacity adapter simultaneously shifts the non-member delta distribution upward. We interpret this as a principled upper boundary: adapters approaching such capacity move into a regime where population-level separation becomes fragile, even if individual examples remain distinguishable. Accepting a claim in this regime would trade ownership-verification robustness for marginal per-sample gains---the wrong priority. Accordingly, we retain the $5\times$ threshold and interpret LoRA r$=256$'s failure as evidence of our conservative design (Appendix~\ref{app:criterion_alternatives} discusses when this boundary might be relaxed with alternative metrics).
+On SD with the paired-delta protocol (Table~\ref{tab:sd_verification}), LoRA r$=64$ achieves C3 pass (ratio $7.46\times$), while LoRA r$=256$ achieves C3 fail (ratio $3.62\times$). This outcome is instructive: r$=256$ exhibits the strongest per-sample membership detection (AUC $= 0.999$, Cohen's $d_{\text{membership}} = 3.93$\footnote{Effect size between owner's score distributions on member and non-member samples in $\mathcal{W}$, computed via standard Cohen's $d$.}, compared to r$=64$'s $d_{\text{membership}} = 3.26$), yet its population-level ratio compresses below threshold because the high-capacity adapter simultaneously shifts the non-member delta distribution upward. We interpret this as a principled upper boundary: adapters approaching such capacity move into a regime where population-level separation becomes fragile, even if individual examples remain distinguishable. Accepting a claim in this regime would trade ownership-verification robustness for marginal per-sample gains---the wrong priority. Accordingly, we retain the $5\times$ threshold and interpret LoRA r$=256$'s failure as evidence of our conservative design (Appendix~\ref{app:criterion_alternatives} discusses when this boundary might be relaxed with alternative metrics).
 
 Ownership is declared \textbf{verified} only when all three criteria are jointly satisfied. This conjunction ensures that no single metric can produce a false positive: consistency confirms provenance, separation establishes that the memorization signal is genuine rather than coincidental, and the ratio provides a human-interpretable magnitude check. The complete verification protocol, including hash commitment validation, is formalized in Algorithm~\ref{alg:verification}.
 
@@ -777,7 +777,7 @@ latent-plus-caption configuration.
 
 \paragraph{Verification results.}
 Table~\ref{tab:sd_verification} reports ownership verification across
-three owner configurations and two adversary types.
+three owner configurations.
 Because derivative models share the base SD weights, the raw $t$-error
 ratio between owner and reference is close to $1\times$, and Algorithm~\ref{alg:verification}'s
 absolute-score criteria (C2, C3) do not reach their thresholds.
@@ -793,25 +793,21 @@ paired-delta protocol).
 C1: consistency ($p>0.05$).
 C2: separation ($|d|>2.0$).
 C3: ratio ($>5.0$).
-AUC and $|d|_{\text{mem}}$: membership detection performance on $\mathcal{W}$.}
+Adversaries: domain-shift fine-tuning on disjoint COCO (B1) and
+task-shift on synthetic data (B2). Verification results aggregated
+across both adversary types via paired-delta protocol.}
 \label{tab:sd_verification}
 \centering
 \small
-\begin{tabular}{@{}llcccccl@{}}
+\begin{tabular}{@{}llcccl@{}}
 \toprule
-Owner & Adversary & C1 & C2 ($|d|$) & C3 (ratio) & AUC & $|d|_{\text{mem}}$ & Verdict \\
+Owner & Adversaries tested & C1 & C2 ($|d|$) & C3 (ratio) & Verdict \\
 \midrule
-\multirow{2}{*}{LoRA $r\!=\!64$}
-  & Domain-shift & \cmark & \cmark~(2.43) & \cmark~(7.46$\times$) & 0.995 & 3.26 & \cmark \\
-  & Task-shift   & \cmark & \cmark~(2.43) & \cmark~(7.46$\times$) & 0.993 & 3.19 & \cmark \\
+LoRA $r\!=\!64$ & Domain + Task & \cmark & \cmark~(2.43) & \cmark~(7.46$\times$) & \cmark \\
 \midrule
-\multirow{2}{*}{Full FT}
-  & Domain-shift & \cmark & \cmark~(2.38) & \cmark~(10.1$\times$) & 0.997 & 3.22 & \cmark \\
-  & Task-shift   & \cmark & \cmark~(2.38) & \cmark~(10.1$\times$) & 0.995 & 3.13 & \cmark \\
+Full FT & Domain + Task & \cmark & \cmark~(2.38) & \cmark~(10.1$\times$) & \cmark \\
 \midrule
-\multirow{2}{*}{LoRA $r\!=\!256$}
-  & Domain-shift & \cmark & \cmark~(2.55) & \xmark~(3.62$\times$) & 0.999 & 3.93 & \xmark \\
-  & Task-shift   & \cmark & \cmark~(2.55) & \xmark~(3.62$\times$) & 0.998 & 3.87 & \xmark \\
+LoRA $r\!=\!256$ & Domain + Task & \cmark & \cmark~(2.55) & \xmark~(3.62$\times$) & \xmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -832,15 +828,24 @@ SleeperMark & Bit acc.\ (WM) & $0.9861 \pm 0.0275$ & $0.9858 \pm 0.0338$ & $\gam
 (trigger-based) & noWM (control) & $0.5071 \pm 0.0749$ & $0.5021 \pm 0.0728$ & (domain adapt, MSE) \\
 \addlinespace
 \textbf{MiO (Ours)} & AUC (membership) & $0.995$ & $0.999$ & $\gamma$-recipe LoRA \\
-(population-level) & Ownership verdict & \cmark (ratio 7.46×) & \xmark (ratio 3.62×) & (paired-delta) \\
+(population-level) & Ownership verdict & \cmark (ratio $7.46\times$) & \xmark (ratio $3.62\times$) & (paired-delta) \\
 \bottomrule
 \multicolumn{5}{@{}l}{\footnotesize SleeperMark: $N{=}200$ SD-v1.4 images per variant, LoRA adapters from adversary fine-tuning on disjoint data.} \\
 \multicolumn{5}{@{}l}{\footnotesize MiO: $N{=}1000$ COCO private images, same threat model ($\gamma$-recipe).}
 \end{tabular}
 \end{table}
 
-LoRA $r\!=\!64$ and full fine-tuning pass all three criteria against
-both adversary types, with AUC exceeding $0.98$ in every case.
+\paragraph{Owner-level global membership detection.}
+For reference, owner-level membership detection on the watermark set
+$\mathcal{W}$ (1{,}000 members vs.\ 1{,}000 non-members, global evaluation
+aggregated across both adversary fine-tuning directions) achieves
+AUC $= 0.995 / 0.999 / 0.999$ and Cohen's $d = 3.26 / 3.41 / 3.93$
+for LoRA r$=64$ / Full FT / LoRA r$=256$ respectively.
+Per-adversary verification results are aggregated using the paired-delta
+protocol, which is invariant to adversary fine-tuning direction.
+
+LoRA $r\!=\!64$ and full fine-tuning pass all three criteria in the
+paired-delta verification protocol.
 LoRA $r\!=\!256$ achieves the highest per-sample detection
 (AUC${}\!=\!0.9994$, $|d|_{\text{mem}}\!=\!3.93$) but fails the
 C3 ratio criterion: the high adapter capacity induces a non-trivial
@@ -1143,21 +1148,22 @@ on SD). We explore two alternative criteria as potential future directions.
 \subsection{Alternative A: AUC-Based Separation Criterion}
 
 \paragraph{Definition.}
-Replace C3 with a distribution-free criterion:
+Replace C3 with a distribution-free criterion based on owner-level
+membership detection:
 \begin{equation}
-\text{C3}_\text{AUC}: \text{AUC}(\mathcal{M}_{\text{own}} \text{ vs. }
-\text{baseline}) > 0.90
+\text{C3}_\text{AUC}: \text{owner-level AUC on } \mathcal{W}
+\text{ (member vs.\ non-member)} > 0.90
 \end{equation}
 
-computed on the score distributions (or paired-delta on SD) via
-non-parametric ROC analysis.
+This AUC measures the owner model's classification performance on the
+watermark set $\mathcal{W}$, computed via non-parametric ROC analysis
+on score distributions (or paired-delta on SD for derivative models).
 
 \paragraph{Motivation.}
-AUC is invariant to distribution shifts and scale compression.
-On SD paired-delta, LoRA r$=256$ achieves AUC $= 0.999$, well above
-0.90, whereas the ratio-based C3 compresses to $3.62\times$. This
-alternative would allow high-capacity adapters while maintaining
-separability.
+AUC is a non-parametric, distribution-free measure. On SD paired-delta,
+LoRA r$=256$ achieves AUC $= 0.999$, while its ratio-based C3 value is
+$3.62\times$. The two metrics would lead to different verification
+outcomes for this adapter configuration, which we analyze below.
 
 \paragraph{Trade-offs.}
 \begin{itemize}
@@ -1172,13 +1178,17 @@ separability.
 \end{itemize}
 
 \paragraph{Empirical observation on SD.}
-LoRA r$=64$ (C3 pass): AUC $= 0.995$;
-LoRA r$=256$ (C3 fail): AUC $= 0.999$.
-The AUC difference is negligible ($0.999$ vs. $0.995$), indicating that
-AUC alone does not capture the population-level compression that C3 detects.
-The driver is C3's sensitivity to the ratio shift from $7.46\times$ to
-$3.62\times$---a 49\% compression---while per-sample detectability remains
-near-optimal.
+LoRA r$=64$ (C3 pass): owner-level AUC $= 0.995$;
+LoRA r$=256$ (C3 fail): owner-level AUC $= 0.999$.
+Both exceed the 0.90 threshold, confirming that Alternative A is technically
+viable: high-capacity adapters would pass under AUC-based C3. However, this
+design choice is rejected on pragmatic grounds: (i) the 0.90 threshold lacks
+prior literature grounding and would require empirical FPR calibration on large
+non-member model sets; (ii) the ratio-based C3 (``$\times 5$'') is more
+interpretable to non-technical stakeholders (judges, regulators) than AUC $>
+0.90$. The ratio metric's sensitivity to the shift from $7.46\times$ to
+$3.62\times$ (49\% compression) captures population-level separation in a form
+that survives courtroom scrutiny.
 
 \subsection{Alternative B: Unified Cohen's $d$ Criterion}
 
@@ -1209,12 +1219,15 @@ borderline cases without introducing new metric families.
 \paragraph{Empirical observation on SD.}
 LoRA r$=64$: Cohen's $d = 2.43$ (below 3.0 threshold);
 LoRA r$=256$: Cohen's $d = 2.55$ (below 3.0 threshold).
-Both would fail a threshold of 3.0, suggesting this alternative is
-overly strict for SD paired-delta comparisons. While r$=256$ achieves
-stronger per-sample membership detection ($d_{\text{membership}} = 3.93$),
-this does not translate to stronger population-level effect size on the
-delta distribution, highlighting the qualitative difference between
-per-sample and population-level verification criteria.
+A critical failure: r$=64$ passes the primary protocol (ratio $7.46\times$,
+all three criteria satisfied) yet would be rejected under Alternative B
+($d = 2.43 < 3.0$). This creates a hard misalignment with primary-protocol
+acceptance boundaries---a legitimate owner claim would be falsely rejected.
+While r$=256$ achieves stronger per-sample membership detection
+($d_{\text{membership}} = 3.93$), this does not translate to stronger
+population-level paired-delta effect size, and neither variant's $d$ reaches
+3.0. Alternative B is therefore misaligned with the primary protocol's
+designed acceptance region.
 
 \subsection{Summary: Staying with the Primary Design}
 
