@@ -101,4 +101,33 @@
 2. ~~**Rebuttal draft section**~~: Resolved — not ported (only clean body from `main`).
 3. ~~**Appendix content**~~: Resolved — all appendix sections ported.
 4. **Checklist Q5 — Open access to data and code**: Changed to `\answerYes{}` per Frank's instruction. Justification points to Section 5.1 and Appendix A. **ACTION NEEDED**: Frank must prepare the anonymized supplementary zip before submission deadline.
-5. **Body page count ~10 pages**: Exceeds the 9-page NeurIPS limit by ~1 page. **Needs Frank decision**: where to cut? (See Phase 5 report for per-section accounting.)
+5. **Body page count ~10.5 pages**: Exceeds the 9-page NeurIPS limit by ~1.5 pages. Page cuts deferred until after content additions — running page budget tracked below.
+
+## (f) Running Page Budget
+
+**Target**: 9.0 pp body | **Current**: ~10.5 pp | **Deficit**: ~1.5 pp to cut
+
+This section tracks page count changes as content is added/cut. Update after every edit.
+
+| Change | Delta (pp) | Running Total (pp) | Notes |
+|---|---|---|---|
+| Clean baseline (tag: `neurips-port-clean-baseline`) | — | ~10.5 | Direct port, no cuts |
+| *(future additions/cuts go here)* | | | |
+
+## (g) Supplementary Material Status
+
+- `supplementary/README.md` — skeleton + anonymization checklist
+- `supplementary/pack.sh` — hardened anonymization + packaging script (see (h) below)
+- `supplementary/code/` — **NOT YET POPULATED** (Frank: copy relevant scripts/src/configs here before deadline)
+
+**Pre-submission checklist**:
+- [ ] Install `nbstripout` (`pip install nbstripout`) — needed if any `.ipynb` files are included
+- [ ] Copy `scripts/`, `src/`, `configs/`, `requirements.txt` into `supplementary/code/`
+- [ ] Write `supplementary/code/README.md` with reproduction steps
+- [ ] Run `bash supplementary/pack.sh` — must exit 0 (no leaks)
+- [ ] Unzip output and verify manually
+- [ ] Upload `supplementary.zip` to NeurIPS submission portal
+
+## (h) Supplementary Scanner Hardening
+
+`pack.sh` was hardened with 5 additions beyond the original known-identity scan. The pipeline now runs in order: (1) junk file removal (`__pycache__`, `.pyc`, `.DS_Store`, IDE dirs, cache dirs — 9 patterns), (2) notebook pre-processing via `nbstripout` (strips cell outputs, execution counts, kernelspec metadata; falls back to `jupyter nbconvert --clear-output` with a warning, or aborts if neither tool is available), (3) known-identity scan (original 9 patterns: names, emails, GSU, fjiang4), (4) hardcoded-path scan (original 2 patterns), (5) implicit-identity scan (12 new patterns: Linux/macOS/Windows home paths, wandb entity/project, GitHub user URLs, `.edu` emails, `hostname`/`gethostname()`/`os.getlogin()`/`getpass.getuser()` calls, `$USER`/`${USER}` shell vars, tilde-expanded paths), (6) checkpoint/binary file warning with interactive prompt for `.pkl`/`.pt`/`.ckpt`/`.pth`/`.safetensors`/`.npz`/`.h5` files (warns but does not auto-abort — user must acknowledge). All scan steps abort on first hit. Gate tests verified 12/12 implicit patterns fire, junk removal cleans 7/7 fixture items, and notebook stripping works via the `jupyter` fallback path (server does not have `nbstripout` installed).

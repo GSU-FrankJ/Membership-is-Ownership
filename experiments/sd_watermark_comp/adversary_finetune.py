@@ -84,6 +84,8 @@ def main():
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--log-every", type=int, default=100)
+    parser.add_argument("--lora-rank", type=int, default=64, help="LoRA rank (only used if --full-ft not set)")
+    parser.add_argument("--full-ft", action="store_true", help="Full fine-tune (unfreeze all UNet params) instead of LoRA")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -99,9 +101,20 @@ def main():
     # Step 1: Load the stolen model (merge any existing LoRA into base UNet)
     if args.full_model_path:
         print(f"Loading stolen full model from {args.full_model_path}...")
-        pipe = StableDiffusionPipeline.from_pretrained(
-            args.full_model_path, torch_dtype=torch.float32, safety_checker=None
-        ).to(device)
+        # Detect if this is a complete pipeline dir (has model_index.json) or UNet-only
+        if os.path.exists(os.path.join(args.full_model_path, "model_index.json")):
+            pipe = StableDiffusionPipeline.from_pretrained(
+                args.full_model_path, torch_dtype=torch.float32, safety_checker=None
+            ).to(device)
+        else:
+            print(f"  No model_index.json — loading base pipeline + swapping UNet from {args.full_model_path}...")
+            from diffusers import UNet2DConditionModel
+            pipe = StableDiffusionPipeline.from_pretrained(
+                args.base_model, torch_dtype=torch.float32, safety_checker=None
+            ).to(device)
+            unet_subdir = os.path.join(args.full_model_path, "unet") if os.path.isdir(os.path.join(args.full_model_path, "unet")) else args.full_model_path
+            swapped_unet = UNet2DConditionModel.from_pretrained(unet_subdir, torch_dtype=torch.float32).to(device)
+            pipe.unet = swapped_unet
         # Full FT model: UNet already contains all modifications, no merge needed
     else:
         print(f"Loading base model from {args.base_model}...")
@@ -122,30 +135,35 @@ def main():
     tokenizer = pipe.tokenizer
     noise_scheduler = DDPMScheduler.from_pretrained(args.base_model, subfolder="scheduler")
 
-    # Step 2: Add fresh LoRA r64 on top of the merged/stolen UNet
-    print("Adding fresh LoRA r64 for adversary fine-tuning...")
-    lora_config = LoraConfig(
-        r=64,
-        lora_alpha=64,
-        target_modules=["to_q", "to_k", "to_v", "to_out.0"],
-        lora_dropout=0.0,
-    )
-    unet = get_peft_model(unet, lora_config)
+    # Step 2: Add fresh LoRA or unfreeze all UNet params for full FT
+    if args.full_ft:
+        print("Full FT mode: unfreezing all UNet parameters...")
+        vae.requires_grad_(False)
+        text_encoder.requires_grad_(False)
+        unet.requires_grad_(True)
+        train_params = [p for p in unet.parameters() if p.requires_grad]
+    else:
+        print(f"Adding fresh LoRA r={args.lora_rank} for adversary fine-tuning...")
+        lora_config = LoraConfig(
+            r=args.lora_rank,
+            lora_alpha=args.lora_rank,
+            target_modules=["to_q", "to_k", "to_v", "to_out.0"],
+            lora_dropout=0.0,
+        )
+        unet = get_peft_model(unet, lora_config)
+        vae.requires_grad_(False)
+        text_encoder.requires_grad_(False)
+        train_params = [p for p in unet.parameters() if p.requires_grad]
 
-    # Freeze everything except the new LoRA parameters
-    vae.requires_grad_(False)
-    text_encoder.requires_grad_(False)
-    lora_params = [p for p in unet.parameters() if p.requires_grad]
-
-    trainable = sum(p.numel() for p in lora_params)
+    trainable = sum(p.numel() for p in train_params)
     total = sum(p.numel() for p in unet.parameters())
-    print(f"Trainable LoRA parameters: {trainable:,} / {total:,} total ({100*trainable/total:.2f}%)")
+    print(f"Trainable parameters: {trainable:,} / {total:,} total ({100*trainable/total:.2f}%)")
 
     if trainable == 0:
-        print("ERROR: No LoRA parameters found! Check that load_lora_weights worked.")
+        print("ERROR: No trainable parameters found!")
         sys.exit(1)
 
-    optimizer = torch.optim.AdamW(lora_params, lr=args.lr, weight_decay=1e-2)
+    optimizer = torch.optim.AdamW(train_params, lr=args.lr, weight_decay=1e-2)
 
     # Dataset
     transform = transforms.Compose([
@@ -203,7 +221,7 @@ def main():
 
             optimizer.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(lora_params, 1.0)
+            torch.nn.utils.clip_grad_norm_(train_params, 1.0)
             optimizer.step()
 
             losses.append(loss.item())
@@ -216,16 +234,22 @@ def main():
                 print(f"  Step {step}/{args.max_steps} | loss={avg_loss:.4f} | "
                       f"{elapsed:.0f}s elapsed | ETA {eta:.0f}s | {step/elapsed:.1f} steps/s")
 
-    # Save LoRA weights
+    # Save weights (full UNet for full-FT, LoRA-only otherwise)
     os.makedirs(args.output_dir, exist_ok=True)
-    lora_state_dict = {}
-    for key, val in unet.state_dict().items():
-        if "lora" in key.lower():
-            lora_state_dict[key] = val.cpu()
-    from safetensors.torch import save_file
-    save_path = os.path.join(args.output_dir, "pytorch_lora_weights.safetensors")
-    save_file(lora_state_dict, save_path)
-    print(f"Saved {len(lora_state_dict)} LoRA tensors to {save_path}")
+    if args.full_ft:
+        unet_save_dir = os.path.join(args.output_dir, "unet")
+        os.makedirs(unet_save_dir, exist_ok=True)
+        unet.save_pretrained(unet_save_dir)
+        print(f"Saved full UNet to {unet_save_dir}")
+    else:
+        lora_state_dict = {}
+        for key, val in unet.state_dict().items():
+            if "lora" in key.lower():
+                lora_state_dict[key] = val.cpu()
+        from safetensors.torch import save_file
+        save_path = os.path.join(args.output_dir, "pytorch_lora_weights.safetensors")
+        save_file(lora_state_dict, save_path)
+        print(f"Saved {len(lora_state_dict)} LoRA tensors to {save_path}")
 
     elapsed = time.time() - t_start
     final_loss = np.mean(losses[-100:]) if len(losses) >= 100 else np.mean(losses)
