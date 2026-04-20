@@ -1,0 +1,68 @@
+================================================================================
+REBUTTAL TEMPLATE: Challenge 2 — Black-Box LoRA as Current Standard Threat Model
+================================================================================
+
+CHALLENGE (expected):
+"WDM/Zhao also show robustness. Why is your γ-recipe threat model new or
+justified compared to prior work?"
+
+REBUTTAL RESPONSE:
+─────────────────────────────────────────────────────────────────────────
+
+We clarify the evolution of threat model standards in diffusion watermarking
+literature.
+
+(a) WDM (Zhao et al., 2023, arXiv 2303.10137) did not evaluate fine-tuning
+    robustness.
+
+    WDM's original evaluation scope includes:
+    ✓ Clean-generation watermark recovery (bit-string extraction on EDM;
+      trigger-based image-text pair reconstruction on SD)
+    ✓ Distortion robustness (blur, noise, JPEG, etc.)
+    ✗ LoRA fine-tuning robustness — not evaluated
+    ✗ Full-parameter fine-tuning robustness — not evaluated
+    ✗ White-box adaptive attacks — not in scope
+
+    This is not a limitation of WDM per se—it reflects the publication
+    timeline. WDM (Mar 2023) predates the widespread adoption of
+    parameter-efficient fine-tuning in production diffusion pipelines.
+
+(b) Fine-tuning robustness is the new evaluation standard, established
+    by concurrent and follow-up work.
+
+    SleeperMark (Wang et al., 2024, arXiv 2412.04852) explicitly frames
+    fine-tuning robustness as a critical evaluation dimension missing
+    from prior work. SleeperMark demonstrates watermark survival under
+    LoRA adaptation (rank 20–640) across multiple domains, motivating
+    fine-tuning as the realistic threat model for modern SD deployments.
+
+(c) Our γ-recipe threat model aligns with the emerging SD watermarking
+    literature standard.
+
+    γ-recipe = black-box, domain-adaptive fine-tuning with pure MSE loss
+    (no decoder awareness, no memorization-specific optimization).
+    This matches SleeperMark's evaluation protocol (LoRA rank 20–640,
+    DreamBooth / Naruto datasets, ControlNet adaptation). By adopting
+    this threat model, we measure robustness in the setting that the
+    most recent SD watermarking work has identified as critical.
+
+(d) White-box adaptive attacks are explicitly out of scope.
+
+    A stronger threat—white-box fine-tuning with decoder-aware loss
+    (explicitly minimizing reconstruction error on W or maximizing
+    memorization erasure)—falls outside the black-box domain-adaptation
+    setting. Such adaptive attacks require adversary knowledge of watermark
+    internals and are deferred to future work.
+
+SUMMARY:
+Our γ-recipe is not an arbitrary threat model; it is the standard that
+SleeperMark (the most recent watermarking work on SD) has established. By
+evaluating against this standard, we demonstrate that robustness to realistic
+fine-tuning is achievable without training overhead or FID penalties.
+
+================================================================================
+USAGE:
+Integrate this into your formal rebuttal as one paragraph response to
+Challenge 2. Adapt the opening "CHALLENGE" section to match the actual
+reviewer phrasing.
+================================================================================

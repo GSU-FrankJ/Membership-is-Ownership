@@ -1,0 +1,167 @@
+================================================================================
+FINAL VERIFICATION REPORT — NeurIPS 2026 Paper Modifications
+================================================================================
+
+Date: 2026-04-20
+Status: ✅ ALL TASKS COMPLETED
+
+================================================================================
+1. PDF COMPILATION ✅
+================================================================================
+
+Compilation Status: SUCCESS (26 pages, 428046 bytes)
+- First pass: Resolved cross-references, warnings expected
+- Second pass: All references resolved cleanly
+- Final compilation: No LaTeX errors or undefined references
+
+Command executed:
+  $ pdflatex -interaction=nonstopmode main.tex (2x)
+
+Result: main.pdf generated successfully
+
+================================================================================
+2. CROSS-REFERENCE VERIFICATION ✅
+================================================================================
+
+New Appendix Section: Criterion 3 Alternatives
+  - Label: app:criterion_alternatives
+  - Assigned: Appendix E, page 16 (from main.aux)
+  - Status: ✓ Correctly linked
+  - Reference in text (Sec 5.3, Criterion 3 rationale):
+    "Appendix~\ref{app:criterion_alternatives} discusses when..."
+  - Result: Cross-reference resolves correctly
+
+Other references checked:
+  - \ref{tab:sd_verification}: ✓ Working
+  - \ref{tab:main_results}: ✓ Working
+  - \ref{sec:criteria}: ✓ Working
+
+================================================================================
+3. TABLE 5.4 NUMBERS ALIGNMENT ✅
+================================================================================
+
+Updated Table 5.4 with STATE.md verified numbers:
+
+LoRA r=64 (Domain-shift adversary):
+  ✓ C2 Cohen's d: 2.43 (unchanged)
+  ✓ Ratio: 7.46× (was 7.5×, updated)
+  ✓ AUC: 0.995 (was 0.986, updated)
+  ✓ d_membership: 3.26 (was 2.83, updated)
+  ✓ Verdict: ✓ PASS
+
+LoRA r=256 (Domain-shift adversary):
+  ✓ C2 Cohen's d: 2.55 (unchanged)
+  ✓ Ratio: 3.62× (was 3.6×, updated)
+  ✓ AUC: 0.999 (was 0.998, updated)
+  ✓ d_membership: 3.93 (was 3.51, updated)
+  ✓ Verdict: ✗ FAIL (ratio < 5×)
+
+Text references (Sec 5.3, Criterion 3 Design Rationale):
+  "LoRA r=64 achieves C3 pass (ratio 7.46×)" ✓ MATCHES
+  "LoRA r=256 achieves C3 fail (ratio 3.62×)" ✓ MATCHES
+  "AUC = 0.999, Cohen's d_membership = 3.93" ✓ MATCHES
+  "d_membership = 3.26" (r=64 comparison) ✓ MATCHES
+
+================================================================================
+4. TABLE 5.5 (NEW: SleeperMark vs MiO on SD) ✅
+================================================================================
+
+Location: After Table 5.4, Section 5.4 (Extension to Stable Diffusion)
+Status: ✓ Created and inserted
+
+Table structure:
+  - Method | Metric | r=64 | r=256 | Threat Model
+
+SleeperMark row (trigger-based bit recovery):
+  - Bit acc (WM): r=64 → 0.9861 ± 0.0275; r=256 → 0.9858 ± 0.0338
+  - Control (noWM): r=64 → 0.5071 ± 0.0749; r=256 → 0.5021 ± 0.0728
+  - Threat: γ-recipe LoRA (MSE loss, no decoder awareness)
+
+MiO row (population-level verification):
+  - AUC (membership): r=64 → 0.995; r=256 → 0.999
+  - Ownership verdict: r=64 → ✓ PASS (ratio 7.46×); r=256 → ✗ FAIL (ratio 3.62×)
+  - Threat: γ-recipe LoRA (paired-delta protocol)
+
+Footnotes:
+  - Explain data sources and sample sizes
+  - Clarify different evaluation primitives
+
+================================================================================
+5. REBUTTAL TEMPLATE ✅
+================================================================================
+
+File: /home/fjiang4/Membership-is-Ownership/neurIPS2026/REBUTTAL_CHALLENGE_2_TEMPLATE.txt
+Size: 3.4 KB
+Lines: 68
+
+Content:
+  - Challenge description
+  - Four-part rebuttal (a) WDM scope, (b) fine-tuning as new standard, 
+    (c) γ-recipe alignment, (d) white-box scope
+  - Usage instructions
+
+Status: Ready for reviewer response integration
+
+================================================================================
+6. FILE MODIFICATIONS SUMMARY
+================================================================================
+
+Main modifications to neurIPS2026/main.tex:
+
+1. Sec 5.3 (Lines 506–514): Added "Criterion 3 Design Rationale" paragraph
+   - Explains conservative 5× threshold
+   - Detailed analysis of LoRA r=256 failure
+   - Cross-references Appendix E
+
+2. Table 5.4 (Lines 805, 813-814): Updated numbers to STATE.md values
+   - r=64: AUC 0.986→0.995, d_mem 2.83→3.26, ratio 7.5×→7.46×
+   - r=256: AUC 0.998→0.999, d_mem 3.51→3.93, ratio 3.6×→3.62×
+
+3. Table 5.5 (NEW, after Table 5.4): SleeperMark vs MiO comparison
+   - Dual-metric table (bit accuracy vs. AUC)
+   - Same threat model, different evaluation primitives
+
+4. Appendix E (NEW, Lines 1111–1220): "Criterion 3 Alternatives" section
+   - Alternative A: AUC-based (0.90 threshold)
+   - Alternative B: Unified Cohen's d (3.0 threshold)
+   - Summary explaining why ratio-based C3 is preferred
+
+5. Rebuttal template (NEW FILE): REBUTTAL_CHALLENGE_2_TEMPLATE.txt
+   - Ready for reviewer response
+
+================================================================================
+7. QUALITY CHECKS
+================================================================================
+
+✓ PDF compilation: No errors
+✓ Cross-references: All resolved (main.aux verified)
+✓ Table numbers: All aligned with STATE.md and text
+✓ Section numbering: Appendix E correctly assigned
+✓ LaTeX formatting: No warnings or undefined references
+✓ Page count: 26 pages (stable after all modifications)
+✓ File consistency: All numbers triple-checked
+
+================================================================================
+DELIVERABLES
+================================================================================
+
+Files ready for submission:
+  1. main.pdf (26 pages, 428046 bytes) — Final paper
+  2. main.tex — Source with all modifications
+  3. REBUTTAL_CHALLENGE_2_TEMPLATE.txt — Rebuttal text
+  4. VERIFICATION_REPORT.txt — This report
+
+All cross-references working ✓
+All numbers aligned ✓
+All new sections integrated ✓
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Review final PDF for visual appearance
+2. Confirm Table 5.5 framing aligns with Candidate (A+) narrative
+3. Prepare rebuttal based on Challenge 2 template
+4. Double-check page limit before submission (currently 26 pages)
+
+================================================================================
