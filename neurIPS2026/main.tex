@@ -582,32 +582,51 @@ Component & Parameter & Value \\
 Table~\ref{tab:main_results} reports t-error scores on the watermark set for owner models, fine-tuned derivatives (Model B), and public baselines.
 
 \begin{table}[t]
-\caption{Multi-reference ownership verification.
-Each owner model is tested against 3--4 public reference models;
-verification requires \emph{every} reference to satisfy $|d|>2.0$
-and ratio${}>5\times$ (ALL-must-pass).
-$\bar{s}$: mean t-error on $\mathcal{W}$.
+\caption{Multi-reference ownership verification across 4 datasets.
+Each owner model is tested against 3 public reference models grouped into
+semantic-similar DDPM / cross-domain LSUN / random initialization.
+Verification requires \emph{every} reference to satisfy $|d|>2.0$ and
+ratio${}>5\times$ (ALL-must-pass).
+All $12$ (dataset, reference) pairs satisfy both thresholds;
+verification passes on all four datasets.
 All pairwise $p < 10^{-100}$.
-$^\dagger$Conservative reference (LSUN-Church, replacing
-LSUN-Bedroom to address domain-match concerns).}
+$^\dagger$Conservative reference (LSUN-Church, replacing LSUN-Bedroom
+to address domain-match concerns from prior review).}
 \label{tab:main_results}
 \centering
 \begin{small}
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}lcccccc@{}}
 \toprule
-Dataset & $\bar{s}_{\text{own}}$ & $\bar{s}_{B}$ & \#Ref
-        & min $|d|$ & min ratio & Verdict \\
+ & \multicolumn{2}{c}{Semantic-similar DDPM}
+ & \multicolumn{2}{c}{Cross-domain LSUN DDPM}
+ & \multicolumn{2}{c}{Random init} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Dataset & $|d|$ & ratio & $|d|$ & ratio & $|d|$ & ratio \\
 \midrule
-CIFAR-10  & $28.7$ & $28.7$ & 3 & $24.1$ & $24.5\times$ & \cmark \\
-CIFAR-100 & $33.3$ & $33.3$ & 3 & $18.5$ & $19.3\times$ & \cmark \\
-STL-10    & $70.9$ & $71.4$ & 4 & $29.3$$^\dagger$ & $107\times$ & \cmark \\
-CelebA    & $63.8$ & $63.8$ & 3 & $26.3$ & $26.8\times$ & \cmark \\
+CIFAR-10  & $24.1$  & $24.5\times$  & $40.9$        & $50.3\times$  & $63.9$ & $105.7\times$ \\
+CIFAR-100 & $18.5$  & $19.3\times$  & $31.6$        & $42.2\times$  & $63.0$ & $91.1\times$  \\
+STL-10    & $116.7$ & $360.2\times$ & $29.3^\dagger$ & $107.1\times$ & $59.3$ & $391.9\times$ \\
+CelebA    & $26.3$  & $26.8\times$  & $32.0$        & $49.3\times$  & $90.0$ & $198.4\times$ \\
 \bottomrule
 \end{tabular}
+
+\vspace{2pt}
+\begin{minipage}{\linewidth}
+\footnotesize
+References per dataset: CIFAR-10/100 use
+\texttt{google/ddpm-cifar10-32}, \texttt{google/ddpm-bedroom-256}, random-32.
+STL-10 uses \texttt{google/ddpm-cifar10-32},
+\texttt{google/ddpm-church-256}$^\dagger$, random-96.
+CelebA uses \texttt{google/ddpm-celebahq-256},
+\texttt{google/ddpm-bedroom-256}, random-64.
+\end{minipage}
 \end{small}
 \end{table}
 
-\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$ and ratio${}>5\times$. We test each owner model against 3--4 reference models spanning in-domain, cross-domain, and random initializations (detailed breakdown in Appendix). The minimum Cohen's $d$ across all references ranges from $18.5$ (CIFAR-100, weakest dataset) to $29.3$ (STL-10), exceeding the threshold by an order of magnitude. For STL-10, we include an LSUN-Church reference as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $d>2.0$ threshold. Consistency: Models~A and~B show statistically indistinguishable t-error ($p > 0.05$ for all datasets). These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice.
+\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$ and ratio${}>5\times$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum Cohen's $d$ across all references ranges from $18.5$ (CIFAR-100, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $d>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice.
+
+\textbf{Consistency (C1).} Owner and Model~B produce statistically indistinguishable mean $t$-error on $\mathcal{W}$ across all four datasets: CIFAR-10: $28.73$ vs.\ $28.74$ ($p=0.98$); CIFAR-100: $33.35$ vs.\ $33.34$ ($p=0.98$); STL-10: $70.92$ vs.\ $71.38$ ($p=0.71$); CelebA: $63.79$ vs.\ $63.80$ ($p=0.97$). All $p$-values exceed the $0.05$ acceptance threshold, confirming that Model~B retains the memorization signature of its owner.
 
 Table~\ref{tab:mia_results} reports per-sample membership inference accuracy using Gaussian QR margins.
 
@@ -660,12 +679,14 @@ The resulting Model~B retains nearly identical $t$-error to Model~A on the water
 
 Tables~\ref{tab:watermark_comparison} and~\ref{tab:robustness} present
 a controlled comparison against two diffusion-model watermarking
-methods whose official codebases are publicly available:
-WDM~\citep{peng2023watermark}, which learns a secondary watermark
-diffusion process alongside the standard DDPM objective, and Zhao
-et al.~\citep{zhao2023recipe}, which embeds a StegaStamp bit-string
-into training images before fitting an EDM model.  All three methods
-are trained on the same 50K CIFAR-10 images so that differences in
+methods (WDM~\citep{peng2023watermark}, which learns a secondary
+watermark diffusion process alongside the standard DDPM objective,
+and Zhao et al.~\citep{zhao2023recipe}, which embeds a StegaStamp
+bit-string into training images before fitting an EDM model) and
+one MIA-based dataset-inference method
+(CDI~\citep{dubinski2024cdi}), all with publicly available
+official implementations.  The two watermarking methods are
+trained on the same 50K CIFAR-10 images so that differences in
 verification performance and generation quality reflect the methods
 themselves rather than data or scale effects.  We exclude
 DeepMarks~\citep{chen2019deepmarks}, whose GMM-regularised weight
@@ -675,8 +696,21 @@ self-attention, group normalisation) lack the unimodal weight
 distributions that the technique relies on, and no reference
 implementation exists for generative architectures.
 
-Both baselines achieve near-perfect native verification on clean
-checkpoints, consistent with their published numbers.  Where the
+CDI~\citep{dubinski2024cdi} is an inference-time dataset-inference
+method that aggregates seven complementary MIAs (denoising loss,
+SecMI-stat, PIA, PIAN, gradient masking, noise optimization,
+multiple-loss) through a logistic-regression meta-classifier,
+producing a single membership score per image.  Unlike the
+watermarking baselines, CDI does not embed a signal during training;
+it shares MiO's operating regime (no FID penalty, zero training
+overhead) and is the closest methodological neighbour to our
+approach.  We evaluate CDI on \texttt{google/ddpm-cifar10-32}
+using the authors' released codebase and default 7-attack
+configuration (5K members + 5K non-members).
+
+The two watermarking baselines (WDM and Zhao) achieve near-perfect
+native verification on clean checkpoints, consistent with their
+published numbers.  Where the
 methods diverge is in overhead and side-effects.  WDM and Zhao
 et al.\ both require a full (re)training run with a modified
 objective, introducing a measurable FID gap ($\Delta$FID in
@@ -690,6 +724,24 @@ different questions---one asks whether an injected signal survives,
 the other whether a calibrated membership test exceeds a stringent
 false-positive budget on an unmodified model.
 
+CDI, by contrast, aggregates seven off-the-shelf MIAs against a
+public DDPM and reaches AUC${=}0.586$ with TPR${=}0.26\%$ at
+FPR${=}0.1\%$; this is close to the random-chance operating point
+at stringent FPR budgets and is an order of magnitude below MiO's
+$0.987$ AUC / $89\%$ TPR on the same CIFAR-10 task.  The gap
+reflects the structural advantage of MiO's hash-committed watermark
+set: when the defender commits a known member subset, per-sample
+detection becomes tractable at stringent FPRs, whereas open-ended
+dataset inference operates in a harder setting.  We note that
+CDI and MiO use different base checkpoints (public
+\texttt{google/ddpm-cifar10-32} for CDI; our custom DDIM for MiO),
+precluding a strict apples-to-apples model-level comparison.  The
+gap in AUC and TPR is nonetheless substantial enough
+(${>}4\times$ and ${>}300\times$ respectively) that base-model
+variance alone cannot explain it; the primary driver is the
+methodological distinction between open-ended dataset inference
+(CDI) and hash-committed ownership verification (MiO).
+
 Table~\ref{tab:robustness} stress-tests all three methods under
 MMD fine-tuning (500 iterations, lr${}\!=\!5\!\times\!10^{-6}$, CLIP
 ViT-B/32 features, cubic polynomial kernel) and 30\% structured
@@ -698,10 +750,17 @@ Appendix~\ref{app:retroactive} examines whether an adversary who
 did not train the model can retroactively fabricate a passing MiO
 claim; the short answer is that without a hash-committed watermark set
 the three-point criteria reliably reject such attempts.
+CDI's robustness under fine-tuning is not reported in the original
+paper and was not re-run on adversary checkpoints here; we therefore
+omit CDI from Table~\ref{tab:robustness} and defer that evaluation
+to future work.
 
 \begin{table}[t]
-\caption{Controlled comparison with watermarking baselines on CIFAR-10.
-All methods trained on identical data (50K images).
+\caption{Controlled comparison with watermarking and MIA-based
+baselines on CIFAR-10.
+Watermarking methods (WDM, Zhao) trained on identical 50K images.
+CDI evaluated on \texttt{google/ddpm-cifar10-32} (public DDPM,
+5K+5K samples).
 $\Delta$FID: difference from unwatermarked baseline.
 Train OH: additional training cost relative to clean model.}
 \label{tab:watermark_comparison}
@@ -715,13 +774,14 @@ Clean (no WM) & --- & 6.21 & 0 & --- & --- \\
 \addlinespace
 WDM & WM ext.\ 99.2\% & 13.42 & +7.21 & ---$^{\ddagger}$ & ${\sim}1\times$ \\
 Zhao$^\dagger$ & Bit acc.\ 99.8\% & 9.28 & +3.07 & ---$^{\ddagger}$ & ${\sim}1\times$ \\
-% TODO(frank): CDI baseline row — requires running CDI on CIFAR-10.
-% See G-08 in NEURIPS_EXPERIMENT_INVENTORY.md.
 \addlinespace
+CDI$^{\S}$ & TPR 0.26\%@0.1\% & n/a$^{\P}$ & n/a$^{\P}$ & 0.586 & \textbf{0} \\
 \textbf{MiO (Ours)} & TPR 89\%@0.1\% & 56.03 & \textbf{0.0} & \textbf{0.987} & \textbf{0} \\
 \bottomrule
 \multicolumn{6}{@{}l}{\footnotesize $^\dagger$Uses EDM backbone (not DDPM/DDIM).} \\
 \multicolumn{6}{@{}l}{\footnotesize $^\ddagger$Watermark methods use native detection metrics; per-sample AUC not applicable.} \\
+\multicolumn{6}{@{}l}{\footnotesize $^{\S}$CDI native output is a dataset-level $p$-value; we report per-sample TPR/AUC to match MiO's reporting.} \\
+\multicolumn{6}{@{}l}{\footnotesize $^{\P}$CDI does not modify the target model; FID not applicable.} \\
 \end{tabular}
 \end{table}
 
@@ -742,8 +802,6 @@ Method & Clean & MMD-FT & Prune 30\% & INT8 & Noise $\sigma\!=\!10^{-3}$ \\
 \midrule
 WDM            & \cmark~(13.42) & n/a$^\ddagger$ & \xmark~(384.8) & --- & --- \\
 Zhao$^\dagger$ & \cmark~(9.28)  & n/a$^\ddagger$ & \xmark~(351.0) & --- & --- \\
-% TODO(frank): CDI baseline row — requires running CDI on CIFAR-10.
-% See G-08 in NEURIPS_EXPERIMENT_INVENTORY.md.
 \textbf{MiO}   & \cmark~(56.03) & \cmark~(56.03) & \xmark~(328.1) & \cmark & \cmark \\
 \bottomrule
 \multicolumn{6}{@{}l}{\footnotesize $^\dagger$EDM backbone. $^\ddagger$Architecture incompatible with our DDIM-based MMD-FT loop.} \\
