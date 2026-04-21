@@ -537,6 +537,16 @@ Ownership is declared \textbf{verified} only when all three criteria are jointly
 \end{algorithmic}
 \end{algorithm}
 
+\paragraph{Variant for derivative models.}
+When $\mathcal{M}_B$ is a derivative of $\mathcal{M}_A$ (shared
+base weights via fine-tuning), the raw $t$-error ratio between
+owner and reference approaches $1\times$ and
+Algorithm~\ref{alg:verification}'s absolute-score criteria
+C2/C3 no longer apply directly.  We replace per-sample scores $s(x)$
+with paired differences
+$\delta(x) = s_{\text{tgt}}(x) - s_{\text{ref}}(x)$ and apply
+C1/C2/C3 to the $\delta$ distribution (see
+Section~\ref{sec:sd} for full treatment).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 5. EXPERIMENTS
