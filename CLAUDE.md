@@ -28,6 +28,16 @@
 7. **After apply**: post compile log + PDF screenshots before
    declaring "done". "I applied the changes" is not sufficient.
 
+## LaTeX table formatting rules
+
+- Do NOT put long explanatory text (>30 words) in
+  `\multicolumn{N}{@{}l}{\footnotesize ...}` footnote rows.
+  The `@{}l` alignment does not wrap and will overflow \textwidth.
+- For long footnote content, use the table caption instead
+  (captions wrap automatically) OR wrap in `\begin{minipage}{\linewidth}`.
+- Short footnotes (< 20 words, single-line phrases) are fine as
+  `\multicolumn` rows.
+
 ## Known issues (not to be fixed without discussion)
 
 - fig:overview (Figure 1 system diagram) overflows \textwidth by
