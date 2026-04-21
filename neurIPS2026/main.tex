@@ -802,7 +802,13 @@ with FID in parentheses where applicable.
 MMD-FT: 500 iterations, lr${}=5\text{e-}6$, CLIP features.
 Prune: 30\% structured L1 channel pruning.
 INT8: post-training quantisation.
-Noise: additive Gaussian $\mathcal{N}(0,\sigma^{2}I)$ on weights.}
+Noise: additive Gaussian $\mathcal{N}(0,\sigma^{2}I)$ on weights.
+Larger noise magnitudes ($\sigma \geq 10^{-2}$) destroy the model's
+reconstruction capability on both member and non-member samples (owner
+$t$-error increases ${\sim}2\times$, Criterion~3 ratio ${<}1$),
+producing a degenerate regime reflecting model destruction rather than
+successful watermark removal; we therefore restrict the reported noise
+column to $\sigma = 10^{-3}$.}
 \label{tab:robustness}
 \centering
 \small
