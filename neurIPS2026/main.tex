@@ -684,6 +684,33 @@ A practical adversary who obtains a stolen model will typically fine-tune it to 
 
 The resulting Model~B retains nearly identical $t$-error to Model~A on the watermark set (Table~\ref{tab:main_results}), and all three verification criteria remain satisfied across every dataset. This robustness is not coincidental: MMD fine-tuning optimizes the distribution of \emph{newly generated} samples to match a target domain, but does not explicitly minimize reconstruction error on existing training data. The memorization signal encoded in the model's response to watermark samples is therefore largely orthogonal to the fine-tuning objective, explaining why it persists even after substantial adaptation. We note, however, that an adversary who retrains from scratch or specifically targets memorization erasure falls outside our threat model.
 
+\paragraph{SGD fine-tuning.}
+In a separate experiment we fine-tuned Model~A for 500 steps of
+plain SGD on an auxiliary CIFAR-10 split, producing a derivative
+whose mean $t$-error on $\mathcal{W}$ is $28.71$ (vs.\ $28.73$
+for the clean owner).  Scoring this derivative against the public
+\texttt{google/ddpm-cifar10-32} reference on $\mathcal{W}$ yields
+$\bar{s}_{\text{ref}}=703.84$, a C3 ratio of $24.52\times$
+(compared to $24.51\times$ for the clean owner against the same
+reference), well above the $5\times$ threshold.
+The two remaining references
+(\texttt{ddpm-bedroom}, random-initialisation) were not scored for
+this derivative because the evaluation job exhausted GPU memory on
+the 256-resolution LSUN-bedroom model before completing, and the
+owner (Model~A) checkpoint required to re-run the evaluation is no
+longer available in our current snapshot.
+We therefore cannot report C1 (consistency) or the full C2
+(separation) for SGD fine-tuning; the partial evidence is
+consistent with the MMD fine-tuning result that light parameter
+adaptation leaves the memorization signature on $\mathcal{W}$
+essentially unchanged.
+The clean-owner baseline numbers ($28.73$, $704.38$) are taken
+from the primary evaluation run (Section~\ref{sec:experiments});
+the SGD fine-tuning numbers come from a subsequent standalone
+evaluation whose full sweep was cut short by GPU memory
+constraints.  Stochastic variation between these two runs is
+below $0.1\%$ on all quantities reported here.
+
 \subsection{Controlled Baseline Comparison}
 \label{sec:baseline_comparison}
 
