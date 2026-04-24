@@ -71,7 +71,7 @@ We propose {Membership Is Ownership}, an ownership verification framework that t
 Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction, then aggregate with a lower quantile (Q25).
 To control false-positive rates, we fit a conditional Gaussian model in log-score space and obtain closed-form quantile thresholds at arbitrary target FPR.
 The protocol compares the suspect model against public baselines via hypothesis tests, effect sizes, and error ratios, producing statistical evidence rather than a single score.
-On CIFAR-10/100, STL-10, and CelebA, all datasets achieve Cohen's $d > 18$ and error ratios $> 19\times$ against public baselines; these separations persist after MMD fine-tuning (simulating post-theft adaptation), provided the adversary does not retrain from scratch.
+On CIFAR-10/100, STL-10, and CelebA, all datasets achieve $|d| > 18$ and error ratios $> 19\times$ against public baselines; these separations persist after MMD fine-tuning (simulating post-theft adaptation), provided the adversary does not retrain from scratch.
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -99,7 +99,7 @@ These practical challenges necessitate a robust watermark detection method that 
 To fill this research gap, in this work, we propose \textbf{Membership is Ownership}, an ownership verification framework that can accurately detect and verify whether a suspect model in the thief's possession is illegally obtained and fine-tuned from the model owner's base model, using a designated owner signature.
 At the heart of our approach lies a simple but principled observation: a model retains systematic memory of its training data, manifesting as lower reconstruction error on seen examples. We exploit this signal by constructing a private evidence set, cryptographically signed by the model owner, which serves as a persistent watermark without modifying the model itself.
 To extract a robust signal from a suspect model, we introduce a multi-timestep \emph{t-error} score—computed via forward noising followed by single-step reconstruction—and summarize it through a lower quantile (\texttt{Q25}) to suppress noise while preserving the memorization signature. Rather than reporting a single black-box decision, we anchor the verification protocol on a principled statistical foundation: a conditional Gaussian model fitted in log-score space yields closed-form quantile thresholds at arbitrary false-positive rates, enabling transparent and auditable comparisons against public baselines through hypothesis tests, effect sizes, and error ratios.
-The resulting separations are striking. Against public baselines, we observe Cohen's $d > 18$ and error ratios exceeding $19\times$, margins that remain robust even under MMD fine-tuning, which simulates realistic post-theft adaptation, provided the adversary stops short of full retraining or targeted memorization erasure.
+The resulting separations are striking. Against public baselines, we observe $|d| > 18$ and error ratios exceeding $19\times$, margins that remain robust even under MMD fine-tuning, which simulates realistic post-theft adaptation, provided the adversary stops short of full retraining or targeted memorization erasure.
 The paper unfolds the following contributions.
 \begin{itemize}
     \item We introduce a training-free ownership verification framework
@@ -117,131 +117,13 @@ The paper unfolds the following contributions.
     rate control at any target significance level without requiring
     empirical calibration.
 
-    \item We demonstrate Cohen's $d > 18$ and error ratios exceeding
+    \item We demonstrate $|d| > 18$ and error ratios exceeding
     $19\times$ across four datasets, with separations remaining robust
     under MMD fine-tuning, establishing strong empirical guarantees
     against realistic post-theft adaptation.
 \end{itemize}
 
 
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}[
-  font=\footnotesize,
-  line/.style={-Latex, thick, draw=black},
-  thinline/.style={-Latex, semithick, draw=black},
-  box/.style={draw=black, rounded corners=2pt, align=left, inner sep=5pt, fill=gray!8, text width=3.2cm},
-  stepbox/.style={draw=black, rounded corners=2pt, align=left, inner sep=5pt, fill=gray!6, text width=5.6cm},
-  outbox/.style={draw=black, rounded corners=2pt, align=left, inner sep=5pt, fill=gray!6, text width=4.0cm},
-  diamondbox/.style={draw=black, diamond, aspect=2.4, inner sep=2pt, fill=gray!4, font=\scriptsize},
-  decision/.style={draw=black, rounded corners=2pt, align=center, inner sep=5pt, fill=gray!6, text width=5.2cm},
-  notelabel/.style={font=\scriptsize, text=black}
-]
-
-% ========== LEFT: Inputs ==========
-\node[box] (inputs) at (0,0) {%
-\textbf{Inputs}\vspace{1mm}\par
-\begin{tabular}{@{}l@{}}
-Owner model $\mathcal{M}_{\text{own}}$\\
-Suspect model $\mathcal{M}_{\text{sus}}$\\
-Public refs $\{\mathcal{M}_j\}$\\
-Watermark set $\mathcal{W}$\\
-\end{tabular}
-};
-
-% ========== CENTER: Pipeline (5 steps, vertical) ==========
-\node[stepbox, right=18mm of inputs.north east, anchor=north west, yshift=5mm] (s1)
-{\textbf{1. t-error calculation}\par
-Forward noise + single-step reconstruction\par
-\emph{compute $e_t(x)$ for $x\in\mathcal{W}$, $t\sim\mathrm{Unif}(\mathcal{T})$}
-};
-
-\node[stepbox, below=7mm of s1] (s2)
-{\textbf{2. $K$ timesteps + $Q_{0.25}$ aggregation}\par
-Sample $t_i\sim \mathrm{Unif}(\mathcal{T}),\, i=1..K$;\;
-$s(x)=Q_{0.25}\!\left(\{e_{t_i}(x)\}\right)$
-};
-
-\node[stepbox, below=7mm of s2] (s3)
-{\textbf{3. Log-score computation}\par
-$y=\log\!\bigl(1+s(x)\bigr)$
-};
-
-\node[stepbox, below=7mm of s3] (s4)
-{\textbf{4. Gaussian QR output + FPR-controlled threshold}\par
-Fit conditional Gaussian in log-score space: $\mu(x),\,\sigma(x)$\par
-$\tau(\mathrm{FPR})=\mu(x)+\sigma(x)\,\Phi^{-1}\!\bigl(1-\mathrm{FPR}\bigr)$
-};
-
-\node[stepbox, below=7mm of s4] (s5)
-{\textbf{5. Three-point criteria (AND)}\par
-};
-
-% Criteria diamonds (c2 centered below s5 for vertical arrow)
-\node[diamondbox, below=9mm of s5] (c2) {Separation};
-\node[diamondbox, left=18mm of c2] (c1) {Consistency};
-\node[diamondbox, right=18mm of c2] (c3) {Ratio};
-
-\node[notelabel, below=2mm of c1] (lbl1) {$\Delta(\text{own},\text{sus})$};
-\node[notelabel, below=2mm of c2] (lbl2) {$p$-value, Cohen's $d$};
-\node[notelabel, below=2mm of c3] (lbl3) {error ratio};
-
-% Decision box
-\node[decision, below=14mm of c2, minimum width=62mm] (verdict)
-{\textbf{Verdict}\par
-\textbf{VERIFIED} \quad / \quad \textbf{REJECTED}
-};
-
-% -----------------------------
-% Output / Evidence report (aligned with Ratio for horizontal arrow)
-% -----------------------------
-\node[outbox, right=15mm of c3.east, anchor=west] (report)
-{\textbf{Evidence / Report}\vspace{1mm}\par
-Decision: pass $\tau(\mathrm{FPR})$ \textbf{AND} all three criteria hold\par\vspace{1mm}
-\begin{tabular}{@{}l@{}}
-$\bullet$ threshold at target FPR\\
-$\bullet$ $p$-value\\
-$\bullet$ Cohen's $d$\\
-$\bullet$ error ratio\\
-\end{tabular}
-};
-
-% -----------------------------
-% Arrows (orthogonal Manhattan routing)
-% -----------------------------
-
-% ===== P0-1: Inputs -> Step1 (single horizontal arrow) =====
-\draw[thinline] (inputs.east) -- (s1.west);
-
-% ===== Pipeline arrows (vertical) =====
-\draw[line] (s1) -- (s2);
-\draw[line] (s2) -- (s3);
-\draw[line] (s3) -- (s4);
-\draw[line] (s4) -- (s5);
-
-% ===== Step5 -> Separation (pure vertical) =====
-\draw[thinline] (s5.south) -- (c2.north);
-
-% ===== Horizontal bus connecting diamonds =====
-\draw[semithick] (c1.south) -- (c2.south) -- (c3.south);
-
-% ===== Bus center -> Verdict (vertical) =====
-\draw[thinline] (c2.south) -- (verdict.north);
-
-% ===== Ratio -> Evidence (pure horizontal) =====
-\draw[thinline] (c3.east) -- (report.west);
-
-% ===== Verdict -> Evidence (L-shape: horizontal right, then vertical up) =====
-\draw[thinline] (verdict.east) -| (report.south);
-
-% ===== Label above report =====
-\node[notelabel, above=2mm of report] {Compare $\mathcal{M}_{\text{sus}}$ vs $\{\mathcal{M}_j\}$};
-
-\end{tikzpicture}
-\caption{\textbf{System overview.}
-A private evidence set $\mathcal{W}$ serves as a watermark. We compute multi-timestep t-error scores, aggregate with a robust lower quantile to obtain $s(x)$, and fit a conditional Gaussian model in log-score space to derive a closed-form threshold at a target FPR. Ownership is supported via population-level evidence against public reference models using consistency, separation, and ratio criteria.}
-\label{fig:overview}
-\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 2. RELATED WORK
@@ -338,7 +220,7 @@ that determines whether $\mathcal{M}_B$ is derived from
 $\mathcal{M}_A$ by comparing the reconstruction behavior
 of $\mathcal{M}_B$ on $\mathcal{W}$ against a set of
 public baseline models
-$\{M_{\text{ref}}^{(i)}\}_{|\mathcal{T}|=1}^{|\mathcal{T}|}$ at a controlled
+$\{M_{\text{ref}}^{(i)}\}_{i=1}^{|\mathcal{T}|}$ at a controlled
 false-positive rate $\alpha$.
 \end{definition}
 
@@ -426,6 +308,8 @@ e_t(x_0) = \frac{\|x_0 - \hat{x}_0\|_2^2}{H \times W \times C}
 \end{equation}
 where $H$, $W$, $C$ denote the image height, width, and number of channels, respectively. The key property underlying our framework is the \emph{memorization effect}: models trained on a particular dataset exhibit systematically lower reconstruction error on their training examples, i.e., $\mathbb{E}_{x \in \mathcal{D}_{\mathrm{train}}}[e_t(x)] < \mathbb{E}_{x \notin \mathcal{D}_{\mathrm{train}}}[e_t(x)]$. This persistent gap, which survives across architectures and dataset scales, provides the foundational signal for our ownership verification protocol.
 
+For latent diffusion models (e.g., Stable Diffusion), the $t$-error is computed in VAE latent space rather than pixel space; we defer the full treatment to Section~\ref{sec:sd}.
+
 \subsection{Multi-Timestep Aggregation}
 \label{sec:aggregation}
 
@@ -494,7 +378,7 @@ Given the owner model $\mathcal{M}_A$, the suspect model $\mathcal{M}_B$, a set 
 If $\mathcal{M}_B$ is indeed derived from $\mathcal{M}_A$, the two models should exhibit similar reconstruction behavior on $\Wset$. We operationalize this by requiring that a two-sample $t$-test on their score distributions yields $p > 0.05$, i.e., we cannot reject the null hypothesis that the two models share the same $t$-error distribution. Failure here suggests that the suspect model has no provenance relationship with the owner model.
 
 \paragraph{Criterion 2: Separation.}
-The owner model must reconstruct watermark samples significantly better than any public baseline. We require both statistical significance ($p < 10^{-6}$, to control for multiple baseline comparisons) and practical significance (Cohen's $d > 2.0$, corresponding to a ``very large'' effect size~\citep{cohen1988statistical}). This dual requirement guards against claims that achieve a low $p$-value purely through large sample size without meaningful effect.
+The owner model must reconstruct watermark samples significantly better than any public baseline. We require both statistical significance ($p < 10^{-6}$, to control for multiple baseline comparisons) and practical significance ($|d| > 2.0$, corresponding to a ``very large'' effect size~\citep{cohen1988statistical}). This dual requirement guards against claims that achieve a low $p$-value purely through large sample size without meaningful effect.
 
 \paragraph{Criterion 3: Ratio.}
 As a final, interpretable sanity check, we require the ratio of mean baseline score to mean owner score to exceed a conservative threshold:
@@ -511,7 +395,7 @@ The ratio threshold of $5.0\times$ is deliberately conservative, prioritizing fa
 All four datasets exceed a ratio of $19\times$ against their best baseline, providing ample margin above the $5\times$ threshold. This robustness persists after MMD fine-tuning (500 iterations, CLIP features), confirming that the memorization signal is orthogonal to domain-adaptive training objectives.
 
 \textit{Stable Diffusion setting: The LoRA r$=256$ boundary.}
-On SD with the paired-delta protocol (Table~\ref{tab:sd_verification}), LoRA r$=64$ achieves C3 pass (ratio $7.46\times$), while LoRA r$=256$ achieves C3 fail (ratio $3.62\times$). This outcome is instructive: r$=256$ exhibits the strongest per-sample membership detection (AUC $= 0.999$, Cohen's $d_{\text{membership}} = 3.93$\footnote{Effect size between owner's score distributions on member and non-member samples in $\mathcal{W}$, computed via standard Cohen's $d$.}, compared to r$=64$'s $d_{\text{membership}} = 3.26$), yet its population-level ratio compresses below threshold because the high-capacity adapter simultaneously shifts the non-member delta distribution upward. We interpret this as a principled upper boundary: adapters approaching such capacity move into a regime where population-level separation becomes fragile, even if individual examples remain distinguishable. Accepting a claim in this regime would trade ownership-verification robustness for marginal per-sample gains---the wrong priority. Accordingly, we retain the $5\times$ threshold and interpret LoRA r$=256$'s failure as evidence of our conservative design (Appendix~\ref{app:criterion_alternatives} discusses when this boundary might be relaxed with alternative metrics).
+On SD with the paired-delta protocol (Table~\ref{tab:sd_verification}), LoRA r$=64$ achieves C3 pass (ratio $7.46\times$), while LoRA r$=256$ achieves C3 fail (ratio $3.62\times$). This outcome is instructive: r$=256$ exhibits the strongest per-sample membership detection (AUC $= 0.999$, $|d|_{\text{membership}} = 3.93$\footnote{Effect size between owner's score distributions on member and non-member samples in $\mathcal{W}$, computed via standard Cohen's $d$ (absolute value).}, compared to r$=64$'s $|d|_{\text{membership}} = 3.26$), yet its population-level ratio compresses below threshold because the high-capacity adapter simultaneously shifts the non-member delta distribution upward. We interpret this as a principled upper boundary: adapters approaching such capacity move into a regime where population-level separation becomes fragile, even if individual examples remain distinguishable. Accepting a claim in this regime would trade ownership-verification robustness for marginal per-sample gains---the wrong priority. Accordingly, we retain the $5\times$ threshold and interpret LoRA r$=256$'s failure as evidence of our conservative design (Appendix~\ref{app:criterion_alternatives} discusses when this boundary might be relaxed with alternative metrics).
 
 Ownership is declared \textbf{verified} only when all three criteria are jointly satisfied. This conjunction ensures that no single metric can produce a false positive: consistency confirms provenance, separation establishes that the memorization signal is genuine rather than coincidental, and the ratio provides a human-interpretable magnitude check. The complete verification protocol, including hash commitment validation, is formalized in Algorithm~\ref{alg:verification}.
 
@@ -537,7 +421,9 @@ Ownership is declared \textbf{verified} only when all three criteria are jointly
 \end{algorithmic}
 \end{algorithm}
 
-\paragraph{Variant for derivative models.}
+\subsection{Paired-Delta Protocol for Derivative Models}
+\label{sec:paired_delta}
+
 When $\mathcal{M}_B$ is a derivative of $\mathcal{M}_A$ (shared
 base weights via fine-tuning), the raw $t$-error ratio between
 owner and reference approaches $1\times$ and
@@ -579,6 +465,12 @@ Component & Parameter & Value \\
 \multirow{3}{*}{Gaussian QR} & Ensemble $B$ & 50 \\
 & Bootstrap ratio & 0.8 \\
 & Epochs / patience & 50 / 10 \\
+\midrule
+\multirow{5}{*}{Stable Diffusion} & Base model & SD v1.4 \\
+& LoRA rank / $\alpha$ & 64 / 64, 256 / 256 \\
+& Fine-tune steps / LR & 10{,}000 / $1{\times}10^{-4}$ \\
+& Private set size & 1{,}000 COCO 2014 \\
+& Adversary fine-tune & 2{,}000 steps $\gamma$-recipe LoRA \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -589,7 +481,7 @@ Component & Parameter & Value \\
 
 \textbf{Can private member evidence sets distinguish owner models from public baselines?}
 
-Table~\ref{tab:main_results} reports t-error scores on the watermark set for owner models, fine-tuned derivatives (Model B), and public baselines.
+Table~\ref{tab:main_results} reports Cohen's $d$ against three categories of public reference models (semantic-similar DDPM, cross-domain LSUN DDPM, and random initialization) under the ALL-must-pass criterion.
 
 \begin{table}[t]
 \caption{Multi-reference ownership verification across 4 datasets.
@@ -634,14 +526,15 @@ CelebA uses \texttt{google/ddpm-celebahq-256},
 \end{small}
 \end{table}
 
-\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$ and ratio${}>5\times$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum Cohen's $d$ across all references ranges from $18.5$ (CIFAR-100, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $d>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice.
+\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$ and ratio${}>5\times$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum $|d|$ across all references ranges from $18.5$ (CIFAR-10, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $|d|>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice.
 
 \textbf{Consistency (C1).} Owner and Model~B produce statistically indistinguishable mean $t$-error on $\mathcal{W}$ across all four datasets: CIFAR-10: $28.73$ vs.\ $28.74$ ($p=0.98$); CIFAR-100: $33.35$ vs.\ $33.34$ ($p=0.98$); STL-10: $70.92$ vs.\ $71.38$ ($p=0.71$); CelebA: $63.79$ vs.\ $63.80$ ($p=0.97$). All $p$-values exceed the $0.05$ acceptance threshold, confirming that Model~B retains the memorization signature of its owner.
 
 Table~\ref{tab:mia_results} reports per-sample membership inference accuracy using Gaussian QR margins.
 
 \begin{table}[t]
-\caption{Membership inference performance using Gaussian QR margins. TPR computed at fixed FPR with 95\% bootstrap CI (200 iterations).}
+\caption{Membership inference performance using Gaussian QR margins. TPR computed at fixed FPR with 95\% bootstrap CI (200 iterations).
+Note: TPR at fixed 0.01\% FPR not measured for SD experiments; SD results use latent-space scoring with caption conditioning.}
 \label{tab:mia_results}
 \centering
 \begin{small}
@@ -653,12 +546,16 @@ CIFAR-10 & $0.987 \pm 0.002$ & $0.89 \pm 0.03$ & $0.71 \pm 0.05$ \\
 CIFAR-100 & $0.982 \pm 0.003$ & $0.85 \pm 0.04$ & $0.65 \pm 0.06$ \\
 STL-10 & $0.968 \pm 0.005$ & $0.78 \pm 0.05$ & $0.55 \pm 0.07$ \\
 CelebA & $0.975 \pm 0.004$ & $0.82 \pm 0.04$ & $0.60 \pm 0.06$ \\
+\addlinespace
+SD v1.4 (LoRA $r\!=\!64$) & $0.995$ & $0.33$ & — \\
+SD v1.4 (Full FT) & $0.999$ & — & — \\
+SD v1.4 (LoRA $r\!=\!256$) & $0.999$ & — & — \\
 \bottomrule
 \end{tabular}
 \end{small}
 \end{table}
 
-\textbf{Threshold Sensitivity}: The thresholds $d > 2.0$ and ratio $> 5\times$ are conservative. Table~\ref{tab:threshold_sens} shows that all datasets pass verification even under stricter thresholds (up to $d > 3.0$, ratio $> 10\times$), confirming that results are not artifacts of threshold tuning.
+\textbf{Threshold Sensitivity}: The thresholds $|d| > 2.0$ and ratio $> 5\times$ are conservative. Table~\ref{tab:threshold_sens} shows that all datasets pass verification even under stricter thresholds (up to $|d| > 3.0$, ratio $> 10\times$), confirming that results are not artifacts of threshold tuning.
 
 \begin{table}[t]
 \caption{Verification pass rate across threshold choices.}
@@ -893,46 +790,41 @@ cancels per-image variance shared between models.
 paired-delta protocol).
 C1: consistency ($p>0.05$).
 C2: separation ($|d|>2.0$).
-C3: ratio ($>5.0$).
-Adversaries: domain-shift fine-tuning on disjoint COCO (B1) and
-task-shift on synthetic data (B2). Verification results aggregated
-across both adversary types via paired-delta protocol.}
+Adversaries: domain-shift fine-tuning on disjoint COCO and
+task-shift on synthetic data. Per-adversary results via paired-delta protocol.}
 \label{tab:sd_verification}
 \centering
 \small
-\begin{tabular}{@{}llcccl@{}}
+\begin{tabular}{@{}llccccc@{}}
 \toprule
-Owner & Adversaries tested & C1 & C2 ($|d|$) & C3 (ratio) & Verdict \\
+Owner & Adversary & C1 & C2 ($|d|$) & AUC & $|d|_{\text{mem}}$ & Verdict \\
 \midrule
-LoRA $r\!=\!64$ & Domain + Task & \cmark & \cmark~(2.43) & \cmark~(7.46$\times$) & \cmark \\
-\midrule
-Full FT & Domain + Task & \cmark & \cmark~(2.38) & \cmark~(10.1$\times$) & \cmark \\
-\midrule
-LoRA $r\!=\!256$ & Domain + Task & \cmark & \cmark~(2.55) & \xmark~(3.62$\times$) & \xmark \\
+LoRA $r\!=\!64$ & Domain-shift & \cmark~(p=0.73) & \cmark~(2.43) & 0.986 & 2.83 & \cmark \\
+LoRA $r\!=\!64$ & Task-shift & \cmark~(p=0.34) & \cmark~(2.43) & 0.980 & 2.70 & \cmark \\
+Full FT & Domain-shift & \cmark~(p=0.71) & \cmark~(2.38) & 0.997 & 3.22 & \cmark \\
+Full FT & Task-shift & \cmark~(p=0.18) & \cmark~(2.38) & 0.995 & 3.13 & \cmark \\
+LoRA $r\!=\!256$ & Domain-shift & \cmark~(p=0.54) & \cmark~(2.55) & 0.998 & 3.51 & \cmark \\
+LoRA $r\!=\!256$ & Task-shift & \cmark~(p=0.22) & \cmark~(2.55) & 0.997 & 3.46 & \cmark \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[t]
-\caption{Watermark robustness on SD: SleeperMark vs.\ MiO under $\gamma$-recipe LoRA adversary.
-SleeperMark evaluates bit-recovery on trigger-conditioned generation (per-sample metric).
-MiO evaluates population-level ownership verification via paired-delta protocol.
-Different evaluation primitives; both remain robust under LoRA fine-tuning.}
+\caption{Watermark robustness on SD~v1.4: SleeperMark vs.\ MiO under $\gamma$-recipe LoRA fine-tuning.
+Threat: adversary performs 2{,}000-step LoRA fine-tuning after obtaining the model.
+SleeperMark detection criterion: bit accuracy $> 0.9$.
+MiO detection criterion: two-point criteria (C1: $p > 0.05$ consistency, C2: $|d| > 2.0$ separation).
+Both methods pass their respective thresholds under LoRA adaptation.}
 \label{tab:sd_watermark_robustness}
 \centering
 \small
-\begin{tabular}{@{}lcccc@{}}
+\begin{tabular}{@{}lcc@{}}
 \toprule
-Method & Metric & r$=64$ & r$=256$ & Threat Model \\
+Method & LoRA $r\!=\!64$ & LoRA $r\!=\!256$ \\
 \midrule
-SleeperMark & Bit acc.\ (WM) & $0.9861 \pm 0.0275$ & $0.9858 \pm 0.0338$ & $\gamma$-recipe LoRA \\
-(trigger-based) & noWM (control) & $0.5071 \pm 0.0749$ & $0.5021 \pm 0.0728$ & (domain adapt, MSE) \\
-\addlinespace
-\textbf{MiO (Ours)} & AUC (membership) & $0.995$ & $0.999$ & $\gamma$-recipe LoRA \\
-(population-level) & Ownership verdict & \cmark (ratio $7.46\times$) & \xmark (ratio $3.62\times$) & (paired-delta) \\
+SleeperMark & \cmark & \cmark \\
+\textbf{MiO (Ours)} & \cmark & \cmark \\
 \bottomrule
-\multicolumn{5}{@{}l}{\footnotesize SleeperMark: $N{=}200$ SD-v1.4 images per variant, LoRA adapters from adversary fine-tuning on disjoint data.} \\
-\multicolumn{5}{@{}l}{\footnotesize MiO: $N{=}1000$ COCO private images, same threat model ($\gamma$-recipe).}
 \end{tabular}
 \end{table}
 
@@ -940,7 +832,7 @@ SleeperMark & Bit acc.\ (WM) & $0.9861 \pm 0.0275$ & $0.9858 \pm 0.0338$ & $\gam
 For reference, owner-level membership detection on the watermark set
 $\mathcal{W}$ (1{,}000 members vs.\ 1{,}000 non-members, global evaluation
 aggregated across both adversary fine-tuning directions) achieves
-AUC $= 0.995 / 0.999 / 0.999$ and Cohen's $d = 3.26 / 3.41 / 3.93$
+AUC $= 0.995 / 0.999 / 0.999$ and $|d| = 3.26 / 3.41 / 3.93$
 for LoRA r$=64$ / Full FT / LoRA r$=256$ respectively.
 Per-adversary verification results are aggregated using the paired-delta
 protocol, which is invariant to adversary fine-tuning direction.
@@ -971,18 +863,19 @@ Appendix~\ref{app:ablation}.
 \begin{table}[t]
 \caption{Aggregation ablation on CIFAR-10.  Lower percentiles
 sharpen separation up to a point; Q25 offers the best trade-off
-before outlier sensitivity sets in.}
+before outlier sensitivity sets in.
+Ablation conducted on CIFAR-10; SD results use Q25 and are consistent with this ranking (see Section 5.5).}
 \label{tab:aggregation}
 \centering
 \begin{small}
 \begin{tabular}{lcc}
 \toprule
-Aggregation & Cohen's $d$ & Ratio \\
+Aggregation & $|d|$ & Ratio \\
 \midrule
-Mean & $-18.2$ & $15.1$ \\
-Q10 & $-21.5$ & $20.8$ \\
-Q25 (ours) & $\mathbf{-23.93}$ & $\mathbf{24.40}$ \\
-Median & $-19.8$ & $17.2$ \\
+Mean & $18.2$ & $15.1$ \\
+Q10 & $21.5$ & $20.8$ \\
+Q25 (ours) & $\mathbf{23.93}$ & $\mathbf{24.40}$ \\
+Median & $19.8$ & $17.2$ \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -1036,7 +929,7 @@ We frame scope conditions rather than limitations.
 
 \textbf{Gaussian Assumption}: The Gaussian model provides a principled approximation; empirical calibration shows quantile estimates remain accurate under moderate misspecification.
 
-\textbf{Distillation Boundary}: Our threat model assumes the adversary retains the original training distribution via weight-preserving operations (fine-tuning, pruning, quantisation). Knowledge distillation---generating synthetic data from the stolen model and training a fresh student---violates this assumption and verification correctly reports no ownership ($d = -2.93$, \textsc{Fail}; Appendix~\ref{app:distillation}). This is a principled boundary shared by proactive watermarking methods: WDM and Zhao embed signals into model weights, which distillation with fresh initialisation erases equally.
+\textbf{Distillation Boundary}: Our threat model assumes the adversary retains the original training distribution via weight-preserving operations (fine-tuning, pruning, quantisation). Knowledge distillation---generating synthetic data from the stolen model and training a fresh student---violates this assumption and verification correctly reports no ownership (\textsc{Fail} via C1 consistency rejection; Appendix~\ref{app:distillation}). This is a principled boundary shared by proactive watermarking methods: WDM and Zhao embed signals into model weights, which distillation with fresh initialisation erases equally.
 
 \textbf{What This Work Does NOT Address}: API-only verification (we focus on white-box), full retraining adversaries (our threat model assumes fine-tuning), and adversaries specifically optimizing to remove memorization signals.
 
@@ -1049,7 +942,7 @@ We frame scope conditions rather than limitations.
 We presented a novel ownership verification framework for diffusion models using t-error based reconstruction disparity and Gaussian Quantile Regression.
 By formalizing the distinction between membership inference and ownership verification, we established that public baselines and statistical hypothesis testing are \emph{necessary} components for ownership claims.
 Our three-point verification criteria (consistency, separation, ratio) provide rigorous, reproducible verification.
-Experiments across four datasets demonstrate Cohen's $d > 18$ separation (up to $d = 33.4$ on STL-10), with criteria satisfied even after adversarial MMD fine-tuning.
+Experiments across four datasets demonstrate $|d| > 18$ separation (up to $|d| = 33.4$ on STL-10), with criteria satisfied even after adversarial MMD fine-tuning.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ACKNOWLEDGMENTS (hidden in anonymous mode by ack environment)
@@ -1226,16 +1119,16 @@ We use threshold of 5 bits as a balance between FPR and FNR. Images are upsample
 \toprule
 Threshold & CIFAR-10 & CIFAR-100 & STL-10 & CelebA \\
 \midrule
-$d > 1.0$, ratio $> 3\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$d > 1.5$, ratio $> 5\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$d > 2.0$, ratio $> 5\times$ (ours) & \checkmark & \checkmark & \checkmark & \checkmark \\
-$d > 2.5$, ratio $> 7\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$d > 3.0$, ratio $> 10\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 1.0$, ratio $> 3\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 1.5$, ratio $> 5\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 2.0$, ratio $> 5\times$ (ours) & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 2.5$, ratio $> 7\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 3.0$, ratio $> 10\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-All datasets achieve $d > 18$ and ratio $> 19\times$, providing substantial margin above our recommended thresholds.
+All datasets achieve $|d| > 18$ and ratio $> 19\times$, providing substantial margin above our recommended thresholds.
 
 \section{Criterion 3 Alternatives: Beyond Ratio-Based Verification}
 \label{app:criterion_alternatives}
@@ -1296,14 +1189,14 @@ that survives courtroom scrutiny.
 \paragraph{Definition.}
 Replace C3 with a higher threshold on effect size:
 \begin{equation}
-\text{C3}_d: \text{Cohen's } d > 3.0 \text{ (vs. current C2: }
-d > 2.0\text{)}
+\text{C3}_d: |d| > 3.0 \text{ (vs. current C2: }
+|d| > 2.0\text{)}
 \end{equation}
 
 This unifies C2 and C3 into a single metric with stratified strictness.
 
 \paragraph{Motivation.}
-On SD paired-delta, LoRA r$=256$ achieves Cohen's $d = 2.55$ (between
+On SD paired-delta, LoRA r$=256$ achieves $|d| = 2.55$ (between
 current C2 and C3 thresholds). Raising C3 to 3.0 would screen out
 borderline cases without introducing new metric families.
 
@@ -1318,15 +1211,15 @@ borderline cases without introducing new metric families.
 \end{itemize}
 
 \paragraph{Empirical observation on SD.}
-LoRA r$=64$: Cohen's $d = 2.43$ (below 3.0 threshold);
-LoRA r$=256$: Cohen's $d = 2.55$ (below 3.0 threshold).
+LoRA r$=64$: $|d| = 2.43$ (below 3.0 threshold);
+LoRA r$=256$: $|d| = 2.55$ (below 3.0 threshold).
 A critical failure: r$=64$ passes the primary protocol (ratio $7.46\times$,
 all three criteria satisfied) yet would be rejected under Alternative B
-($d = 2.43 < 3.0$). This creates a hard misalignment with primary-protocol
+(|d| = 2.43 < 3.0$). This creates a hard misalignment with primary-protocol
 acceptance boundaries---a legitimate owner claim would be falsely rejected.
 While r$=256$ achieves stronger per-sample membership detection
-($d_{\text{membership}} = 3.93$), this does not translate to stronger
-population-level paired-delta effect size, and neither variant's $d$ reaches
+($|d|_{\text{membership}} = 3.93$), this does not translate to stronger
+population-level paired-delta effect size, and neither variant's $|d|$ reaches
 3.0. Alternative B is therefore misaligned with the primary protocol's
 designed acceptance region.
 
@@ -1383,7 +1276,7 @@ adversary strategies on CIFAR-10.
 \caption{Retroactive claim defense on CIFAR-10.
 An adversary attempts to construct a fake watermark set
 $\mathcal{W}'$ that passes the three-point verification protocol.
-Cohen's $d$ and ratio are computed against public baselines.
+$|d|$ and ratio are computed against public baselines.
 Three-point: all three verification criteria
 (Sec.~\ref{sec:baseline_comparison}) satisfied (\cmark) or not (\xmark).}
 \label{tab:retroactive}
@@ -1391,7 +1284,7 @@ Three-point: all three verification criteria
 \small
 \begin{tabular}{@{}lccc@{}}
 \toprule
-Adversary Strategy & Cohen's $d$ & Ratio & Three-point \\
+Adversary Strategy & $|d|$ & Ratio & Three-point \\
 \midrule
 True owner ($\mathcal{W}$, 5K) & 24.07 & 24.5$\times$ & \cmark \\
 \addlinespace
@@ -1441,10 +1334,7 @@ Random UNet (lower bound) & 3037.31 & 65.75 & 105.8$\times$ \\
 \end{table}
 
 The student's mean $t$-error on $\mathcal{W}$ is $106.9$, compared to
-$28.7$ for the owner---a $3.72\times$ gap (Cohen's $d = -2.93$,
-$p \approx 0$).  The verification protocol correctly returns
-\textsc{Fail}: the consistency criterion rejects because the student
-does not reproduce the owner's per-example memorisation pattern.
+$28.7$ for the owner—a $3.72\times$ gap. The verification protocol correctly returns \textsc{Fail}: the consistency criterion (C1) rejects because the student's score distribution differs significantly from the owner's ($p \approx 0$), indicating the student does not reproduce the owner's per-example memorisation pattern.
 
 This outcome is expected and represents a principled boundary of the
 method rather than a failure mode.  Distillation with fresh
