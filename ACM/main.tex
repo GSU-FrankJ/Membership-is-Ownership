@@ -541,6 +541,19 @@ Finally, to reduce prediction variance, we wrap the above procedure in a bagging
 \end{equation}
 where $\hat{q}_\tau^{(b)}(x)$ is the quantile from the $b$-th ensemble member. The ensemble margin $m_\tau^{\text{ens}}(x) = \hat{q}_\tau^{\text{ens}}(x) - \log(1 + s(x))$ serves as the final per-sample statistic; as before, positive values indicate likely membership. Ensembling is embarrassingly parallel and introduces negligible additional inference cost (Section~\ref{sec:cost}).
 
+\paragraph{Auxiliary set construction.}
+We construct the auxiliary set $\mathcal{D}_{\text{aux}}$ from the standard
+\emph{held-out} split of each dataset, disjoint from the owner's training data.
+For DDIM experiments, $\mathcal{D}_{\text{aux}}$ is drawn from the official
+test split of CIFAR-10/100, STL-10, and CelebA, while the owner is trained
+only on the corresponding train split, of which $\mathcal{W}$ is a $K$-sample
+random subset. For Stable Diffusion, $\mathcal{D}_{\text{aux}}$ comprises
+1{,}000 COCO~val2014 images, while the owner is fine-tuned on a disjoint
+1{,}000-image COCO~train2014 subset that coincides with $\mathcal{W}$.
+In both regimes, $\mathcal{D}_{\text{aux}}$ contains genuine non-member samples
+for the owner, and the resulting Gaussian QR calibration reflects the null
+distribution of reconstruction errors on data the owner has never seen.
+
 \subsection{Three-Point Verification Criteria}
 \label{sec:criteria}
 
