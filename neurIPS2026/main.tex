@@ -245,7 +245,7 @@ baselines that share no training overlap with that set.
 Let $\mathcal{M}_A$ denote a base model trained by the
 owner, $\mathcal{M}_B$ a suspect model held by the
 adversary, and $\mathcal{W} = \{x_1, \dots, x_{|\mathcal{W}|}\}$ a private
-evidence set signed by the owner such that
+evidence set held by the owner such that
 $\mathcal{W} \subset \mathcal{D}_{\mathrm{train}}
 (\mathcal{M}_A)$. An ownership verification protocol is
 a hypothesis test
@@ -532,7 +532,7 @@ CelebA uses \texttt{google/ddpm-celebahq-256},
 \end{small}
 \end{table}
 
-\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$ and ratio${}>5\times$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum $|d|$ across all references ranges from $18.5$ (CIFAR-10, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $|d|>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice.
+\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum $|d|$ across all references ranges from $18.5$ (CIFAR-10, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $|d|>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice.
 
 \textbf{Consistency (C1).} Owner and Model~B produce statistically indistinguishable mean $t$-error on $\mathcal{W}$ across all four datasets: CIFAR-10: $28.73$ vs.\ $28.74$ ($p=0.98$); CIFAR-100: $33.35$ vs.\ $33.34$ ($p=0.98$); STL-10: $70.92$ vs.\ $71.38$ ($p=0.71$); CelebA: $63.79$ vs.\ $63.80$ ($p=0.97$). All $p$-values exceed the $0.05$ acceptance threshold, confirming that Model~B retains the memorization signature of its owner.
 
@@ -561,7 +561,7 @@ SD v1.4 (LoRA $r\!=\!256$) & $0.999$ & — & — \\
 \end{small}
 \end{table}
 
-\textbf{Threshold Sensitivity}: The thresholds $|d| > 2.0$ and ratio $> 5\times$ are conservative. Table~\ref{tab:threshold_sens} shows that all datasets pass verification even under stricter thresholds (up to $|d| > 3.0$, ratio $> 10\times$), confirming that results are not artifacts of threshold tuning.
+\textbf{Threshold Sensitivity}: The threshold $|d| > 2.0$ is conservative. Table~\ref{tab:threshold_sens} shows that all datasets pass verification even under stricter thresholds (up to $|d| > 3.0$), confirming that results are not artifacts of threshold tuning.
 
 \begin{table}[t]
 \caption{Verification pass rate across threshold choices.}
@@ -787,7 +787,10 @@ paired-delta protocol).
 C1: consistency ($p>0.05$).
 C2: separation ($|d|>2.0$).
 Adversaries: domain-shift fine-tuning on disjoint COCO and
-task-shift on synthetic data. Per-adversary results via paired-delta protocol.}
+task-shift on synthetic data. Per-adversary results via paired-delta protocol.
+$|d|_{\text{mem}}$: effect size between the owner's score
+distributions on member and non-member samples in $\mathcal{W}$,
+via standard absolute Cohen's $d$.}
 \label{tab:sd_verification}
 \centering
 \small
@@ -857,14 +860,14 @@ Ablation conducted on CIFAR-10; SD results use Q25 and are consistent with this 
 \label{tab:aggregation}
 \centering
 \begin{small}
-\begin{tabular}{lcc}
+\begin{tabular}{lc}
 \toprule
-Aggregation & $|d|$ & Ratio \\
+Aggregation & $|d|$ \\
 \midrule
-Mean & $18.2$ & $15.1$ \\
-Q10 & $21.5$ & $20.8$ \\
-Q25 (ours) & $\mathbf{23.93}$ & $\mathbf{24.40}$ \\
-Median & $19.8$ & $17.2$ \\
+Mean & $18.2$ \\
+Q10 & $21.5$ \\
+Q25 (ours) & $\mathbf{23.93}$ \\
+Median & $19.8$ \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -933,7 +936,7 @@ We frame scope conditions rather than limitations.
 We presented a novel ownership verification framework for diffusion models using t-error based reconstruction disparity and Gaussian Quantile Regression.
 By formalizing the distinction between membership inference and ownership verification, we established that public baselines and statistical hypothesis testing are \emph{necessary} components for ownership claims.
 Our two-point verification criteria (consistency, separation) provide rigorous, reproducible verification.
-Experiments across four datasets demonstrate $|d| > 18$ separation (up to $|d| = 33.4$ on STL-10), with criteria satisfied even after adversarial MMD fine-tuning.
+Experiments across four datasets demonstrate $|d| > 18$ separation against every reference model, with criteria satisfied even after adversarial MMD fine-tuning.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ACKNOWLEDGMENTS (hidden in anonymous mode by ack environment)
@@ -1110,11 +1113,11 @@ We use threshold of 5 bits as a balance between FPR and FNR. Images are upsample
 \toprule
 Threshold & CIFAR-10 & CIFAR-100 & STL-10 & CelebA \\
 \midrule
-$|d| > 1.0$, ratio $> 3\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$|d| > 1.5$, ratio $> 5\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$|d| > 2.0$, ratio $> 5\times$ (ours) & \checkmark & \checkmark & \checkmark & \checkmark \\
-$|d| > 2.5$, ratio $> 7\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$|d| > 3.0$, ratio $> 10\times$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 1.0$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 1.5$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 2.0$ (ours) & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 2.5$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+$|d| > 3.0$ & \checkmark & \checkmark & \checkmark & \checkmark \\
 \bottomrule
 \end{tabular}
 \end{table}
