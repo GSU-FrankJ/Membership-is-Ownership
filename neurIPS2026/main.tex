@@ -376,7 +376,7 @@ Rather than relying on fixed thresholds, we model the \emph{conditional score di
 \begin{equation}
 y = \log(1 + s(x)) \sim \mathcal{N}\!\bigl(\mu(x),\, \sigma^2(x)\bigr)
 \end{equation}
-where $\mu(x)$ and $\sigma(x)$ are jointly predicted by a neural network $f_\psi$. The network uses a ResNet-18 backbone to extract image features, which are concatenated with a compact statistical summary $\phi(x) \in \mathbb{R}^3$ consisting of the mean, standard deviation, and $\ell_2$ norm of the $t$-error sequence. An MLP head maps the combined representation to $(\mu, \log\sigma)$.
+where $\mu(x)$ and $\sigma(x)$ are jointly predicted by a neural network $f_\psi$. The network uses a ResNet-18 backbone to extract image features, which are concatenated with a compact statistical summary $\phi(x) \in \mathbb{R}^3$ consisting of the mean, standard deviation, and $\ell_2$ norm of the $t$-error sequence. An MLP head maps the combined representation to $(\mu, \log\sigma)$. These auxiliary statistics provide a direct view of the $t$-error magnitude that the image features alone cannot capture, stabilizing the quantile predictions.
 
 We train $f_\psi$ by minimizing the Gaussian negative log-likelihood over $N$ auxiliary non-member samples:
 \begin{equation}
@@ -476,11 +476,14 @@ Component & Parameter & Value \\
 & Bootstrap ratio & 0.8 \\
 & Epochs / patience & 50 / 10 \\
 \midrule
-\multirow{5}{*}{Stable Diffusion} & Base model & SD v1.4 \\
+\multirow{8}{*}{Stable Diffusion} & Base model & SD v1.4 \\
 & LoRA rank / $\alpha$ & 64 / 64, 256 / 256 \\
 & Fine-tune steps / LR & 10{,}000 / $1{\times}10^{-4}$ \\
 & Private set size & 1{,}000 COCO 2014 \\
-& Adversary fine-tune & 2{,}000 steps $\gamma$-recipe LoRA \\
+& Adversary fine-tune (steps / lr) & 2{,}000 / $5{\times}10^{-5}$ \\
+& Adversary LoRA target / rank & cross-attention / 64 or 256 \\
+& Adversary loss & $\epsilon$-prediction MSE \\
+& Adversary training data & 1{,}000 COCO images disjoint from $\mathcal{W}$ \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -594,9 +597,9 @@ adversaries (Table~\ref{tab:sd_verification}), producing a
 \subsection{RQ2: Post-Theft Robustness Across Multiple Attacks and Methods}
 \label{sec:theft}
 
-A practical adversary who obtains a stolen model will typically fine-tune it to a new domain or task before deployment. The ownership signal must survive such adaptation. To evaluate this, we simulate post-theft modification via MMD fine-tuning~\citep{gretton2012kernel}, which adapts Model~A to minimize distribution mismatch in CLIP feature space while preserving generation quality. Starting from Model~A, we fine-tune for 500 iterations using 10-step DDIM sampling, a cubic polynomial kernel computed over CLIP ViT-B/32 features, a learning rate of $5{\times}10^{-6}$, and EMA decay 0.9999.
+A practical adversary who obtains a stolen model will typically fine-tune it to a new domain or task before deployment. The ownership signal must survive such adaptation. To evaluate this, we simulate post-theft modification via MMD fine-tuning~\citep{gretton2012kernel}. MMD fine-tuning contrasts CLIP features of the model's DDIM-generated samples against those of real training images sampled fresh each step from $\mathcal{D}_{\mathrm{train}}$ (which includes $\mathcal{W}$), via a cubic polynomial kernel. Starting from Model~A, we fine-tune for 500 iterations using 10-step DDIM sampling, CLIP ViT-B/32 as the feature encoder, a learning rate of $5{\times}10^{-6}$, and EMA decay 0.9999.
 
-The resulting Model~B retains nearly identical $t$-error to Model~A on the watermark set (Table~\ref{tab:main_results}), and both verification criteria remain satisfied across every dataset. This robustness is not coincidental: MMD fine-tuning optimizes the distribution of \emph{newly generated} samples to match a target domain, but does not explicitly minimize reconstruction error on existing training data. The memorization signal encoded in the model's response to watermark samples is therefore largely orthogonal to the fine-tuning objective, explaining why it persists even after substantial adaptation. While WDM and Zhao also withstand these attacks in our evaluation (Table~\ref{tab:robustness}), MiO achieves this robustness without the training-time cost and FID degradation that those methods incur (Table~\ref{tab:watermark_comparison}). We note, however, that an adversary who retrains from scratch or specifically targets memorization erasure falls outside our threat model.
+The resulting Model~B retains nearly identical $t$-error to Model~A on the watermark set (Table~\ref{tab:main_results}), and both verification criteria remain satisfied across every dataset. This robustness is not coincidental: because the loss operates at the distribution level rather than imposing a per-image reconstruction objective on $\mathcal{W}$, the memorization gap on individual $\mathcal{W}$ examples persists. While WDM and Zhao also withstand these attacks in our evaluation (Table~\ref{tab:robustness}), MiO achieves this robustness without the training-time cost and FID degradation that those methods incur (Table~\ref{tab:watermark_comparison}). We note, however, that an adversary who retrains from scratch or specifically targets memorization erasure falls outside our threat model.
 
 Table~\ref{tab:robustness} stress-tests the three diffusion-model
 baselines under four post-theft attacks: MMD fine-tuning and
@@ -657,9 +660,11 @@ paired-delta protocol. Across both domain-shift fine-tuning on
 disjoint COCO and task-shift fine-tuning on synthetic data, the
 verdict holds uniformly for all three owner configurations
 (Table~\ref{tab:sd_verification}). Under the more stringent
-$\gamma$-recipe LoRA adversary that simulates a 2{,}000-step
-post-theft fine-tune, MiO retains the verification verdict for
-both $r{=}64$ and $r{=}256$ adapters, matching SleeperMark's
+2{,}000-step LoRA fine-tune on disjoint COCO data
+(rank $r \in \{64, 256\}$, lr $5{\times}10^{-5}$, cross-attention
+modules only, $\epsilon$-prediction MSE) that simulates post-theft
+adaptation, MiO retains the verification verdict for both
+$r{=}64$ and $r{=}256$ adapters, matching SleeperMark's
 trigger-based bit-accuracy threshold on the same threat model
 (Table~\ref{tab:sd_watermark_robustness}).
 
@@ -811,10 +816,9 @@ LoRA $r\!=\!256$ & Task-shift & \cmark~(p=0.22) & \cmark~(2.55) & 0.997 & 3.46 &
 \end{table}
 
 \begin{table}[t]
-\caption{Watermark robustness on SD~v1.4: SleeperMark vs.\ MiO under $\gamma$-recipe LoRA fine-tuning.
-Threat: adversary performs 2{,}000-step LoRA fine-tuning after obtaining the model.
-SleeperMark detection criterion: bit accuracy $> 0.9$.
-MiO detection criterion: two-point criteria (C1: $p > 0.05$ consistency, C2: $|d| > 2.0$ separation).
+\caption{Watermark robustness on SD~v1.4: SleeperMark vs.\ MiO.
+\textbf{Threat}: adversary obtains the watermarked base model and applies 2{,}000-step LoRA fine-tuning (lr $5{\times}10^{-5}$, cross-attention modules, $\epsilon$-prediction MSE on 1{,}000 disjoint COCO images).
+\textbf{Success criterion}: SleeperMark passes if bit-accuracy $> 0.9$; MiO passes if two-point criteria (C1 + C2) are satisfied.
 Both methods pass their respective thresholds under LoRA adaptation.}
 \label{tab:sd_watermark_robustness}
 \centering
