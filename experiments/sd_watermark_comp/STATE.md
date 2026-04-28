@@ -537,3 +537,58 @@ Algorithm 2 的 C2/C3 用 raw score 比较 owner vs baseline，因 per-image var
 | A8 (LoRA r256) | ~0 | 2.55 | PASS | 3.62x | FAIL |
 
 A6 和 A7 全部通过。A8 的 C3 fail（3.62x < 5.0），因 r256 高容量对 non-member 也产生了较大的 delta 偏移（0.000782 vs A6 的 0.000239），拉低了 ratio。
+
+---
+
+## Deferred — Table 7 row reorder
+
+**Status**: BLOCKED on protocol-level decision (see below)
+
+**Date deferred**: 2026-04-28
+
+**Task**: In `tab:sd_verification` (Table 7) and `tab:mia_results` (Table 3 SD rows),
+reorder configurations from current "LoRA r=64 / Full FT / LoRA r=256" to
+"LoRA r=64 / LoRA r=256 / Full FT" (group LoRA together, Full FT last).
+
+Also update §5.5 paragraph "Owner-level global membership detection" — the
+"respectively" list
+
+> "AUC = 0.995 / 0.999 / 0.999 and \|d\| = 3.26 / 3.41 / 3.93 for
+> LoRA r=64 / Full FT / LoRA r=256 respectively"
+
+must be reordered to
+
+> "AUC = 0.995 / 0.999 / 0.999 and \|d\| = 3.26 / 3.93 / 3.41 for
+> LoRA r=64 / LoRA r=256 / Full FT respectively"
+
+(verify the AUC mapping when reordering — current AUC values are 0.995 / 0.999 /
+0.999 for the three configs; first remains 0.995 (r=64); the two 0.999 values
+need to be confirmed which belongs to Full FT vs LoRA r=256 before swapping).
+
+**Blocked by**: C2 \|d\| protocol clarification — see "Adapted Verification" section
+above and its conflict with §5.5 lines 280-302 (one-sample vs two-sample
+descriptions). Discovered 2026-04-28 in Item 1 read-only investigation:
+
+- Table 7's "C2 (\|d\|)" column values 2.43 / 2.38 / 2.55 reverse-match the
+  one-sample formulation (\|mean(δ_W) / std(δ_W)\|, H0: mean = 0) per STATE.md
+  line 530.
+- Table 7's "\|d\|_mem" column values 2.83 / 2.70 / 3.22 / 3.13 / 3.51 / 3.46
+  match a two-sample Cohen's d on δ_W vs δ_W' for the **adversary** model
+  (per phase13_report_zh.md lines 28-29, e.g., B1_a6 d=2.83, B2_a6 d=2.70).
+- Same δ definition (S_tgt − S_ref) but **different `tgt`** between the two
+  columns: C2 uses `tgt = owner-fine-tuned SD`; \|d\|_mem uses
+  `tgt = adversary's LoRA`. Different effect size formulas.
+- No committed Python file produces 2.43 / 2.38 / 2.55. Only
+  `verify_ownership.py` is committed, and it computes raw-score C2
+  (which fails — see phase13_report_zh.md line 95: 0.08 / 0.14 / 0.13).
+
+**Resolution path**: revisit after advisor decides among:
+  (A) keep one-sample test, write committed code, clarify §4.5 / §5.5 / Table 7
+      caption to make the formula explicit
+  (B) switch C2 to two-sample (member δ vs non-member δ), rerun, replace numbers
+  (C) rename C2 column to reflect one-sample semantics (e.g., "C2 (\|d\|, paired)"),
+      keep \|d\|_mem as-is, write committed code
+
+Reordering Table 7 rows now would entrench the current column semantics (which
+may need to change under any of A/B/C), so the reorder is deferred until the
+column semantics are locked.

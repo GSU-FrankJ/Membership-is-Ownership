@@ -256,7 +256,7 @@ that determines whether $\mathcal{M}_B$ is derived from
 $\mathcal{M}_A$ by comparing the reconstruction behavior
 of $\mathcal{M}_B$ on $\mathcal{W}$ against a set of
 public baseline models
-$\{M_{\text{ref}}^{(i)}\}_{i=1}^{|\mathcal{T}|}$ at a controlled
+$\{M_{\text{ref}}^{(i)}\}_{i=1}^{|\mathcal{R}|}$ at a controlled
 false-positive rate $\alpha$.
 \end{definition}
 
@@ -417,13 +417,14 @@ Ownership is declared \textbf{verified} only when both criteria are jointly sati
 \caption{Ownership Verification Protocol}
 \label{alg:verification}
 \begin{algorithmic}
-\REQUIRE Models $M_A, M_B$, baselines $\{M_{\text{ref}}^{(i)}\}$, watermark set $\mathcal{W}$
+\REQUIRE Models $M_A, M_B$, baselines $\{M_{\text{ref}}^{(i)}\}_{i=1}^{|\mathcal{R}|}$, watermark set $\mathcal{W}$
 \ENSURE $\textsc{Verified}$ or $\textsc{Rejected}$
 \STATE $S_A \leftarrow \{s_{M_A}(x) : x \in \mathcal{W}\}$; $S_B \leftarrow \{s_{M_B}(x) : x \in \mathcal{W}\}$
-\STATE $S_{\text{ref}} \leftarrow \{s_{M_{\text{ref}}}(x) : x \in \mathcal{W}\}$ for best baseline
 \STATE \textbf{O1:} $p_1 \leftarrow \text{TTest}(S_A, S_B)$; \textbf{if} $p_1 < 0.05$ \textbf{return} $\textsc{Rejected}$
-\STATE \textbf{O2:} $p_2, d \leftarrow \text{TTest}(S_A, S_{\text{ref}}), \text{CohenD}(S_A, S_{\text{ref}})$
-\IF{$p_2 > 10^{-6}$ \textbf{or} $|d| < 2.0$}
+\STATE \textbf{O2:} \textbf{for each} reference $i \in \{1, \ldots, |\mathcal{R}|\}$:
+\STATE \quad $S_{\text{ref}}^{(i)} \leftarrow \{s_{M_{\text{ref}}^{(i)}}(x) : x \in \mathcal{W}\}$
+\STATE \quad $p_2^{(i)}, d^{(i)} \leftarrow \text{TTest}(S_A, S_{\text{ref}}^{(i)}), \text{CohenD}(S_A, S_{\text{ref}}^{(i)})$
+\IF{$\exists i: p_2^{(i)} > 10^{-6}$ \textbf{or} $|d^{(i)}| < 2.0$}
     \STATE \textbf{return} $\textsc{Rejected}$
 \ENDIF
 \STATE \textbf{return} $\textsc{Verified}$
@@ -532,15 +533,14 @@ CelebA uses \texttt{google/ddpm-celebahq-256},
 \end{small}
 \end{table}
 
-\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum $|d|$ across all references ranges from $18.5$ (CIFAR-10, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $|d|>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice.
+\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum $|d|$ across all references ranges from $18.5$ (CIFAR-100, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $|d|>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice.
 
 \textbf{Consistency (C1).} Owner and Model~B produce statistically indistinguishable mean $t$-error on $\mathcal{W}$ across all four datasets: CIFAR-10: $28.73$ vs.\ $28.74$ ($p=0.98$); CIFAR-100: $33.35$ vs.\ $33.34$ ($p=0.98$); STL-10: $70.92$ vs.\ $71.38$ ($p=0.71$); CelebA: $63.79$ vs.\ $63.80$ ($p=0.97$). All $p$-values exceed the $0.05$ acceptance threshold, confirming that Model~B retains the memorization signature of its owner.
 
 Table~\ref{tab:mia_results} reports per-sample membership inference accuracy using Gaussian QR margins.
 
 \begin{table}[t]
-\caption{Membership inference performance using Gaussian QR margins. TPR computed at fixed FPR with 95\% bootstrap CI (200 iterations).
-Note: TPR at fixed 0.01\% FPR not measured for SD experiments; SD results use latent-space scoring with caption conditioning.}
+\caption{Membership inference performance. DDIM rows use Gaussian QR margins (TPR computed at fixed FPR with 95\% bootstrap CI, 200 iterations). SD rows use latent-space paired-delta scores evaluated on 1{,}000 members + 1{,}000 non-members; TPR at $0.01\%$ FPR is omitted as it falls below the discretization floor (1 false positive at this split size).}
 \label{tab:mia_results}
 \centering
 \begin{small}
@@ -553,9 +553,9 @@ CIFAR-100 & $0.982 \pm 0.003$ & $0.85 \pm 0.04$ & $0.65 \pm 0.06$ \\
 STL-10 & $0.968 \pm 0.005$ & $0.78 \pm 0.05$ & $0.55 \pm 0.07$ \\
 CelebA & $0.975 \pm 0.004$ & $0.82 \pm 0.04$ & $0.60 \pm 0.06$ \\
 \addlinespace
-SD v1.4 (LoRA $r\!=\!64$) & $0.995$ & $0.33$ & — \\
-SD v1.4 (Full FT) & $0.999$ & — & — \\
-SD v1.4 (LoRA $r\!=\!256$) & $0.999$ & — & — \\
+SD v1.4 (LoRA $r\!=\!64$) & $0.995$ & $0.582$ & — \\
+SD v1.4 (LoRA $r\!=\!256$) & $0.999$ & $0.879$ & — \\
+SD v1.4 (Full FT) & $0.999$ & $0.847$ & — \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -598,6 +598,59 @@ A practical adversary who obtains a stolen model will typically fine-tune it to 
 
 The resulting Model~B retains nearly identical $t$-error to Model~A on the watermark set (Table~\ref{tab:main_results}), and both verification criteria remain satisfied across every dataset. This robustness is not coincidental: MMD fine-tuning optimizes the distribution of \emph{newly generated} samples to match a target domain, but does not explicitly minimize reconstruction error on existing training data. The memorization signal encoded in the model's response to watermark samples is therefore largely orthogonal to the fine-tuning objective, explaining why it persists even after substantial adaptation. While WDM and Zhao also withstand these attacks in our evaluation (Table~\ref{tab:robustness}), MiO achieves this robustness without the training-time cost and FID degradation that those methods incur (Table~\ref{tab:watermark_comparison}). We note, however, that an adversary who retrains from scratch or specifically targets memorization erasure falls outside our threat model.
 
+Table~\ref{tab:robustness} stress-tests the three diffusion-model
+baselines under four post-theft attacks: MMD fine-tuning and
+standard SGD fine-tuning (both 500 iterations at
+lr${}\!=\!5\!\times\!10^{-6}$ on clean CIFAR-10), and additive
+Gaussian weight noise at $\sigma\!=\!10^{-3}$ and
+$\sigma\!=\!10^{-2}$.
+All three methods pass every measured attack cell at our
+chosen strengths; MiO's distinguishing value therefore lies not in
+exclusive robustness but in delivering comparable robustness with
+no training overhead, no FID cost, and no modification to the
+target model's weights
+(Table~\ref{tab:watermark_comparison}).
+CDI's robustness under fine-tuning is not reported in the original
+paper and was not re-run on adversary checkpoints here; we therefore
+omit CDI from Table~\ref{tab:robustness} and defer that evaluation
+to future work.
+
+\begin{table}[t]
+\caption{Robustness of watermark and ownership verification under
+four post-theft attacks on CIFAR-10.  \cmark\ indicates the method
+passes its native pass/fail threshold; ``---'' indicates not
+applicable.  Pass thresholds: pixel accuracy $>0.9$ for WDM (on
+the WDP-extracted watermark image); bit accuracy $>0.9$ for Zhao
+(on $N\!=\!1000$ Heun-18 generated samples decoded with the
+ground-truth 64-bit StegaStamp fingerprint); two-point verification
+(C1: $p>0.05$, C2: $|d|>2.0$) for MiO.  WDM/Zhao thresholds are
+MiO-defined; the original papers do not specify robustness
+thresholds.  Attack configurations: MMD-FT and SGD-FT each run for
+$500$ iterations at lr${}\!=\!5\!\times\!10^{-6}$ on clean CIFAR-10.
+SGD-FT uses each method's native training objective
+($\varepsilon$-prediction MSE for the DDPM-parameterized WDM and
+MiO; $\sigma$-weighted $\hat{x}_0$-prediction MSE for Zhao's EDM
+backbone) to avoid introducing a parameterization mismatch.
+Gaussian weight noise is applied in-place to all parameter tensors
+of each method's native network.
+$^{\ddagger}$Zhao~$\times$~MMD-FT requires a Heun-based
+differentiable sampler not implemented in our DDIM-based MMD
+fine-tuning loop; deferred to future work.}
+\label{tab:robustness}
+\centering
+\small
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Method & MMD-FT & SGD-FT & $\sigma\!=\!10^{-3}$ & $\sigma\!=\!10^{-2}$ \\
+\midrule
+WDM            & \cmark & \cmark & \cmark & \cmark \\
+Zhao$^\dagger$ & ---$^{\ddagger}$ & \cmark & \cmark & \cmark \\
+\textbf{MiO}   & \cmark & \cmark & \cmark & \cmark \\
+\bottomrule
+\multicolumn{5}{@{}l}{\footnotesize $^\dagger$Uses EDM backbone (not DDPM/DDIM).} \\
+\end{tabular}
+\end{table}
+
 \paragraph{SD adversary robustness.}
 Post-theft robustness extends to the SD-PEFT setting under the
 paired-delta protocol. Across both domain-shift fine-tuning on
@@ -613,9 +666,10 @@ trigger-based bit-accuracy threshold on the same threat model
 \subsection{Controlled Baseline Comparison}
 \label{sec:baseline_comparison}
 
-MiO achieves robustness comparable to training-time watermarking
-methods without modifying model weights or incurring training/FID
-costs.
+Whereas Section~\ref{sec:theft} shows that MiO matches WDM and Zhao
+under post-theft attacks, this section focuses on the orthogonal
+question of capability cost: training overhead, FID degradation, and
+weight modification.
 We compare MiO against three existing methods on CIFAR-10:
 two training-time watermarking methods
 (WDM~\citep{peng2023watermark}, which learns a secondary watermark
@@ -660,23 +714,6 @@ controls a known member subset, per-sample detection becomes
 tractable at stringent false-positive rates, whereas open-ended
 dataset inference operates in a harder setting.
 
-Table~\ref{tab:robustness} stress-tests the three diffusion-model
-baselines under four post-theft attacks: MMD fine-tuning and
-standard SGD fine-tuning (both 500 iterations at
-lr${}\!=\!5\!\times\!10^{-6}$ on clean CIFAR-10), and additive
-Gaussian weight noise at $\sigma\!=\!10^{-3}$ and
-$\sigma\!=\!10^{-2}$.
-All three methods pass every measured attack cell at our
-chosen strengths; MiO's distinguishing value therefore lies not in
-exclusive robustness but in delivering comparable robustness with
-no training overhead, no FID cost, and no modification to the
-target model's weights
-(Table~\ref{tab:watermark_comparison}).
-CDI's robustness under fine-tuning is not reported in the original
-paper and was not re-run on adversary checkpoints here; we therefore
-omit CDI from Table~\ref{tab:robustness} and defer that evaluation
-to future work.
-
 \begin{table}[t]
 \caption{Capability matrix of diffusion-model IP protection methods
 on CIFAR-10.
@@ -707,41 +744,6 @@ CDI & \xmark & $0$ & $0$ & $0.586$ \\
 \end{tabular}
 \end{table}
 
-\begin{table}[t]
-\caption{Robustness of watermark and ownership verification under
-four post-theft attacks on CIFAR-10.  \cmark\ indicates the method
-passes its native pass/fail threshold; ``---'' indicates not
-applicable.  Pass thresholds: pixel accuracy $>0.9$ for WDM (on
-the WDP-extracted watermark image); bit accuracy $>0.9$ for Zhao
-(on $N\!=\!1000$ Heun-18 generated samples decoded with the
-ground-truth 64-bit StegaStamp fingerprint); two-point verification
-(C1: $p>0.05$, C2: $|d|>2.0$) for MiO.  WDM/Zhao thresholds are
-MiO-defined; the original papers do not specify robustness
-thresholds.  Attack configurations: MMD-FT and SGD-FT each run for
-$500$ iterations at lr${}\!=\!5\!\times\!10^{-6}$ on clean CIFAR-10.
-SGD-FT uses each method's native training objective
-($\varepsilon$-prediction MSE for the DDPM-parameterized WDM and
-MiO; $\sigma$-weighted $\hat{x}_0$-prediction MSE for Zhao's EDM
-backbone) to avoid introducing a parameterization mismatch.
-Gaussian weight noise is applied in-place to all parameter tensors
-of each method's native network.
-$^{\ddagger}$Zhao~$\times$~MMD-FT requires a Heun-based
-differentiable sampler not implemented in our DDIM-based MMD
-fine-tuning loop; deferred to future work.}
-\label{tab:robustness}
-\centering
-\small
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-Method & MMD-FT & SGD-FT & $\sigma\!=\!10^{-3}$ & $\sigma\!=\!10^{-2}$ \\
-\midrule
-WDM            & \cmark & \cmark & \cmark & \cmark \\
-Zhao$^\dagger$ & ---$^{\ddagger}$ & \cmark & \cmark & \cmark \\
-\textbf{MiO}   & \cmark & \cmark & \cmark & \cmark \\
-\bottomrule
-\multicolumn{5}{@{}l}{\footnotesize $^\dagger$Uses EDM backbone (not DDPM/DDIM).} \\
-\end{tabular}
-\end{table}
 
 \subsection{Extension to Stable Diffusion}
 \label{sec:sd}
@@ -831,8 +833,8 @@ SleeperMark & \cmark & \cmark \\
 For reference, owner-level membership detection on the watermark set
 $\mathcal{W}$ (1{,}000 members vs.\ 1{,}000 non-members, global evaluation
 aggregated across both adversary fine-tuning directions) achieves
-AUC $= 0.995 / 0.999 / 0.999$ and $|d| = 3.26 / 3.41 / 3.93$
-for LoRA r$=64$ / Full FT / LoRA r$=256$ respectively.
+AUC $= 0.995 / 0.999 / 0.999$ and $|d| = 3.26 / 3.93 / 3.41$
+for LoRA r$=64$ / LoRA r$=256$ / Full FT respectively.
 Per-adversary verification results are aggregated using the paired-delta
 protocol, which is invariant to adversary fine-tuning direction.
 
