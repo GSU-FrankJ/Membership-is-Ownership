@@ -489,6 +489,8 @@ Component & Parameter & Value \\
 \end{small}
 \end{table}
 
+We additionally evaluate on Stable Diffusion v1.4 to test whether the framework extends to large-scale parameter-efficient fine-tuning settings. Owner models are obtained by fine-tuning SD~v1.4 on 1{,}000 private COCO 2014 images via LoRA (rank $r \in \{64, 256\}$) or full fine-tuning; full SD experimental setup and the paired-delta verification protocol are described in Section~\ref{sec:sd}.
+
 \subsection{RQ1: Verification Effectiveness}
 \label{sec:main_results}
 
@@ -564,20 +566,21 @@ SD v1.4 (Full FT) & $0.999$ & $0.847$ & — \\
 \end{small}
 \end{table}
 
-\textbf{Threshold Sensitivity}: The threshold $|d| > 2.0$ is conservative. Table~\ref{tab:threshold_sens} shows that all datasets pass verification even under stricter thresholds (up to $|d| > 3.0$), confirming that results are not artifacts of threshold tuning.
+\textbf{Threshold Sensitivity}: The threshold $|d| > 2.0$ is conservative. Table~\ref{tab:threshold_sens} reports the minimum $|d|$ each dataset achieves and the strictest integer threshold it still passes. The smallest margin (CIFAR-100 at $9.3\times$) leaves substantial headroom above the recommended threshold, confirming that results are not artifacts of threshold tuning.
 
 \begin{table}[t]
-\caption{Verification pass rate across threshold choices.}
+\caption{Verification margin per dataset. Each row reports the minimum $|d|$ across all three reference models (semantic-similar / cross-domain LSUN / random initialization), the strictest integer $|d|$ threshold that the dataset still passes, and the multiplicative margin above our recommended threshold $|d| > 2.0$.}
 \label{tab:threshold_sens}
 \centering
 \begin{small}
-\begin{tabular}{@{}lcccc@{}}
+\begin{tabular}{@{}lccc@{}}
 \toprule
-Threshold & C-10 & C-100 & STL & CelebA \\
+Dataset & Min $|d|$ achieved & Strictest threshold passed & Margin above $|d|>2.0$ \\
 \midrule
-$d{>}1.5$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$d{>}2.0$ (ours) & \checkmark & \checkmark & \checkmark & \checkmark \\
-$d{>}3.0$ & \checkmark & \checkmark & \checkmark & \checkmark \\
+CIFAR-10  & 24.1 & $|d| > 24$ & 12.0$\times$ \\
+CIFAR-100 & 18.5 & $|d| > 18$ & 9.3$\times$ \\
+STL-10    & 29.3 & $|d| > 29$ & 14.7$\times$ \\
+CelebA    & 26.3 & $|d| > 26$ & 13.2$\times$ \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -691,8 +694,10 @@ WDM and Zhao are retrained on the same 50K CIFAR-10 images so that
 any differences reflect the methods themselves rather than data or
 scale effects; CDI is evaluated on the public
 \texttt{google/ddpm-cifar10-32} checkpoint using the authors'
-released codebase and default 7-attack configuration
-(5K members + 5K non-members).
+released codebase~\citep{dubinski2024cdi} with three trivial
+patches required for the aggregation stage to execute end-to-end
+(Appendix~\ref{app:hyperparams}); 5K members + 5K non-members
+under the default 7-attack configuration.
 We exclude DeepMarks~\citep{chen2019deepmarks}, whose GMM-regularised
 weight fingerprinting was designed for discriminative classifiers and
 has no reference implementation for generative architectures.
@@ -966,6 +971,9 @@ Experiments across four datasets demonstrate $|d| > 18$ separation against every
 \label{app:details}
 
 \subsection{Hyperparameters}
+\label{app:hyperparams}
+
+\subsubsection{DDIM Owner Model Training}
 
 \begin{table}[!htbp]
 \caption{Training hyperparameters for DDIM models.}
@@ -992,6 +1000,8 @@ Dropout & 0.1 \\
 \end{tabular}
 \end{table}
 
+\subsubsection{Gaussian QR Training}
+
 \begin{table}[!htbp]
 \caption{Gaussian QR training hyperparameters.}
 \centering
@@ -1011,7 +1021,42 @@ Early stopping patience & 10 epochs \\
 \end{tabular}
 \end{table}
 
-\subsection{MMD Fine-tuning Configuration}
+\subsubsection{Stable Diffusion Owner Fine-tuning}
+
+All three configurations share the same 1{,}000-image private subset of COCO 2014 as the watermark set $\mathcal{W}$; no per-configuration data resampling.
+
+We fine-tune Stable Diffusion v1.4 from the official base checkpoint. Common settings: AdamW optimizer, mixed-precision fp16, batch size 4, gradient accumulation 1, $512{\times}512$ resize with center crop, per-image COCO captions used as text conditioning, cosine learning-rate schedule with 500 warmup steps, seed 42.
+
+Variants:
+\begin{itemize}
+\item \textbf{LoRA $r{=}64$ (A6):} 20{,}000 steps, lr $1{\times}10^{-4}$, rank/$\alpha = 64/64$, target modules \{\texttt{to\_q}, \texttt{to\_k}, \texttt{to\_v}, \texttt{to\_out.0}\}, with random horizontal flip during data loading.
+\item \textbf{LoRA $r{=}256$ (A8):} 20{,}000 steps, lr $1{\times}10^{-4}$, rank/$\alpha = 256/256$, same target modules as A6.
+\item \textbf{Full FT (A7):} 10{,}000 steps, lr $5{\times}10^{-6}$, all 860M U-Net parameters trainable.
+\end{itemize}
+
+\subsubsection{Adversary Fine-tuning}
+
+The adversary applies LoRA fine-tuning to either the owner's fine-tuned SD model (Table~\ref{tab:sd_verification}) or the SleeperMark watermarked checkpoint (Table~\ref{tab:sd_watermark_robustness}). Identical settings in both cases: 2{,}000 steps, AdamW (weight decay $10^{-2}$), lr $5{\times}10^{-5}$, batch size 4, gradient clipping at norm 1.0, $\epsilon$-prediction MSE loss on 1{,}000 disjoint COCO images, seed 42. LoRA targets cross-attention modules \{\texttt{to\_q}, \texttt{to\_k}, \texttt{to\_v}, \texttt{to\_out.0}\} with rank/$\alpha \in \{64/64,\ 256/256\}$.
+
+\subsubsection{WDM Baseline}
+
+Architecture: U-Net with 128 base channels, multipliers $[1,2,2,2]$, 3 residual blocks per stage, attention at resolutions $\{16, 8\}$, 4 attention heads, GroupNorm(32), SiLU activation, dropout 0.1. Noise schedule: linear $\beta$ over $T{=}1000$ (note: differs from MiO's cosine schedule). Prediction: $\epsilon$-prediction. Training: 300{,}000 steps, batch 32, lr $1{\times}10^{-4}$, EMA 0.999, AdamW. Watermark-specific: $\gamma_1 = 0.8$ (training blend factor), $\gamma_2 = 0.1$ (training loss weight on watermarked samples; $\gamma_2 = 0.2$ at extraction), watermark seed 1998, fixed trigger image. Loss: $\mathcal{L} = \mathrm{MSE}(\epsilon) + \gamma_2 \cdot \mathrm{MSE}(\epsilon_{\text{wm}})$. FID sampling uses DDIM 50 steps.
+
+\subsubsection{Zhao Baseline}
+
+Three-stage pipeline. \textbf{Stage 1}: train StegaStamp encoder/decoder at $32{\times}32$ resolution, batch 64, 100 epochs, 64-bit fingerprint. \textbf{Stage 2}: embed a fixed 64-bit fingerprint (seed 42) into all 50K CIFAR-10 training images. \textbf{Stage 3}: train EDM with SongUNet (ddpmpp) backbone, 128 channels, multipliers $[2,2,2]$, 4 blocks per stage, attention at resolution 16; EDMPrecond head with $\sigma$-weighted $\hat{x}_0$-prediction MSE loss; total batch 512, dropout 0.13, augmentation probability 0.12, lr $10^{-3}$, EMA 0.5, seed 42. Training duration was early-stopped at 15 Mimg (the original paper trains to 200 Mimg; full duration would require approximately 57 single-GPU-days). The 15 Mimg checkpoint achieves 100\% fingerprint bit accuracy on watermark detection, sufficient for the baseline comparison. FID sampling uses Heun 18 steps.
+
+\subsubsection{SleeperMark Baseline}
+
+We use the pretrained SleeperMark U-Net checkpoint released by the authors (approximately 3.3 GB). No SleeperMark training is performed in our pipeline; the Table~\ref{tab:sd_watermark_robustness} results measure robustness of the released checkpoint under the adversary protocol described above.
+
+\subsubsection{CDI Reproduction}
+
+We re-evaluated CDI~\citep{dubinski2024cdi} on \texttt{google/ddpm-cifar10-32} using the authors' codebase\footnote{\url{https://github.com/sprintml/copyrighted_data_identification}} on a single GPU (Python 3.8.18, PyTorch 2.4.1+cu121, diffusers 0.36.0; total wall-clock $\approx$49 minutes). \textbf{Configuration}: 5{,}000 members and 5{,}000 non-members sampled from CIFAR-10; batch size 100; seed 0; three-stage Hydra pipeline (features\_extraction $\to$ scores\_computation $\to$ evaluation). \textbf{Aggregation}: logistic regression (max\_iter 1000) over the union of four score-based attacks (denoising loss, SecMI-stat, PIA, PIAN) and three feature-based attacks (gradient masking, noise optimization, multiple-loss). Individual attack AUCs ranged from 0.491 (PIAN) to 0.557 (noise optimization); the aggregated CDI AUC reported in Table~\ref{tab:watermark_comparison} is 0.586.
+
+\textbf{Patches.} Three trivial patches were required for the upstream \texttt{scores\_computation/cdi.py} aggregation stage to execute end-to-end: a missing \texttt{import numpy as np}; a \texttt{train\_dataset["data"]} $\to$ \texttt{train\_dataset.data} fix for the \texttt{MIDataset} class API; and a 3D$\to$2D reshape for multi-measurement features. None affects the aggregation algorithm itself.
+
+\subsection{Post-theft Attack Configurations}
 
 \begin{table}[!htbp]
 \caption{MMD fine-tuning hyperparameters.}
@@ -1032,10 +1077,12 @@ Feature extractor & CLIP ViT-B/32 (frozen) \\
 \end{tabular}
 \end{table}
 
-\section{Additional Ablations}
-\label{app:ablation}
+\paragraph{SGD fine-tuning.} 500 iterations, lr $5{\times}10^{-6}$, batch 128, applied on clean CIFAR-10 using each method's native training objective: $\epsilon$-prediction MSE for the DDPM-parameterized WDM and MiO; $\sigma$-weighted $\hat{x}_0$-prediction MSE for Zhao's EDM backbone. The choice of native objectives avoids introducing a parameterization mismatch.
 
-\subsection{Ensemble Size}
+\paragraph{Gaussian weight noise.} Additive isotropic Gaussian noise of standard deviation $\sigma \in \{10^{-3}, 10^{-2}\}$ applied in-place to all parameter tensors of each method's native network. No retraining; the perturbed checkpoint is evaluated directly.
+
+\section{Ensemble Size Ablation}
+\label{app:ablation}
 
 We vary the ensemble size $B$ from 1 to 100 and measure the standard deviation of the predicted quantile $\hat{q}_\tau(x)$ across five independent runs on the CIFAR-10 watermark set at $\tau = 0.999$ (FPR $= 0.1\%$). Table~\ref{tab:ensemble_ablation} reports the results. Prediction variance drops sharply from $B = 1$ to $B = 20$, continues to decrease up to $B = 50$, and plateaus beyond that point. We adopt $B = 50$ as the default, which offers a favorable trade-off between stability and computational cost. Since ensemble members are trained independently, scaling from $B = 50$ to any larger value is embarrassingly parallel and requires no inter-model communication.
 
@@ -1058,7 +1105,7 @@ Ensemble $B$ & Std($\hat{q}_\tau$) & TPR @ FPR 0.1\% \\
 \end{small}
 \end{table}
 
-\subsection{Computational Cost}
+\section{Computational Resources}
 \label{app:cost}
 
 Table~\ref{tab:cost} summarizes the computational requirements of each component. The dominant cost is ensemble training (approximately 100 A100-hours for $B = 50$), which parallelizes trivially. At inference, $t$-error computation for 5{,}000 watermark samples takes roughly 10 minutes on a single A100, and ensemble quantile prediction adds less than 1 minute. In total, a single ownership query (from raw images to verdict) completes in under 15 minutes, making the protocol practical for on-demand verification.
@@ -1089,46 +1136,6 @@ Two-point criteria & $<$1 s & --- \\
 \end{tabular}
 \end{small}
 \end{table}
-
-\section{Perceptual Hash Evaluation}
-\label{app:phash}
-
-\begin{table}[!htbp]
-\caption{Perceptual hash (pHash) performance on CIFAR-10 train vs.\ test set deduplication. FPR: false positive rate (distinct images flagged as duplicates). FNR: false negative rate (actual duplicates missed).}
-\centering
-\begin{tabular}{lccc}
-\toprule
-Hamming Threshold & FPR (\%) & FNR (\%) & Flagged Pairs \\
-\midrule
-3 bits & 0.02 & 5.1 & 12 \\
-5 bits (ours) & 0.10 & 2.0 & 48 \\
-7 bits & 0.35 & 0.8 & 175 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-We use threshold of 5 bits as a balance between FPR and FNR. Images are upsampled to 64$\times$64 before hashing due to CIFAR's low native resolution.
-
-\section{Threshold Sensitivity Analysis}
-\label{app:threshold}
-
-\begin{table}[!htbp]
-\caption{Verification pass rate across threshold choices. All datasets pass even with stricter thresholds.}
-\centering
-\begin{tabular}{lcccc}
-\toprule
-Threshold & CIFAR-10 & CIFAR-100 & STL-10 & CelebA \\
-\midrule
-$|d| > 1.0$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$|d| > 1.5$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$|d| > 2.0$ (ours) & \checkmark & \checkmark & \checkmark & \checkmark \\
-$|d| > 2.5$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-$|d| > 3.0$ & \checkmark & \checkmark & \checkmark & \checkmark \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-All datasets achieve $|d| > 18$, providing substantial margin above our recommended threshold.
 
 
 \section{Gaussian QR Training Details}
