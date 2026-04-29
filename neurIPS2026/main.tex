@@ -339,7 +339,7 @@ e_t(x_0) = \frac{\|x_0 - \hat{x}_0\|_2^2}{H \times W \times C}
 \end{equation}
 where $H$, $W$, $C$ denote the image height, width, and number of channels, respectively. The key property underlying our framework is the \emph{memorization effect}: models trained on a particular dataset exhibit systematically lower reconstruction error on their training examples, i.e., $\mathbb{E}_{x \in \mathcal{D}_{\mathrm{train}}}[e_t(x)] < \mathbb{E}_{x \notin \mathcal{D}_{\mathrm{train}}}[e_t(x)]$. This persistent gap, which survives across architectures and dataset scales, provides the foundational signal for our ownership verification protocol.
 
-For latent diffusion models (e.g., Stable Diffusion), the $t$-error is computed in VAE latent space rather than pixel space; we defer the full treatment to Section~\ref{sec:sd}.
+For latent diffusion models that operate in VAE latent space (e.g., Stable Diffusion), the definitions above transfer directly: the $t$-error computation is moved from pixel space to latent space, while the rest of the framework remains unchanged. Full details are given in Section~\ref{sec:sd}.
 
 \subsection{Multi-Timestep Aggregation}
 \label{sec:aggregation}
@@ -376,7 +376,7 @@ Rather than relying on fixed thresholds, we model the \emph{conditional score di
 \begin{equation}
 y = \log(1 + s(x)) \sim \mathcal{N}\!\bigl(\mu(x),\, \sigma^2(x)\bigr)
 \end{equation}
-where $\mu(x)$ and $\sigma(x)$ are jointly predicted by a neural network $f_\psi$. The network uses a ResNet-18 backbone to extract image features, which are concatenated with a compact statistical summary $\phi(x) \in \mathbb{R}^3$ consisting of the mean, standard deviation, and $\ell_2$ norm of the $t$-error sequence. An MLP head maps the combined representation to $(\mu, \log\sigma)$. These auxiliary statistics provide a direct view of the $t$-error magnitude that the image features alone cannot capture, stabilizing the quantile predictions.
+where $\mu(x)$ and $\sigma(x)$ are jointly predicted by a neural network $f_\psi$. The network uses a ResNet-18 backbone to extract image features and concatenates them with a compact statistical summary $\phi(x) \in \mathbb{R}^3$. This summary comprises three quantities: the mean, standard deviation, and $\ell_2$ norm of the $t$-error sequence. An MLP head maps the combined representation to $(\mu, \log\sigma)$. These auxiliary statistics provide a direct view of the $t$-error magnitude that the image features alone cannot capture, stabilizing the quantile predictions.
 
 We train $f_\psi$ by minimizing the Gaussian negative log-likelihood over $N$ auxiliary non-member samples:
 \begin{equation}
