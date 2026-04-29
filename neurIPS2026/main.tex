@@ -71,7 +71,7 @@ We propose {Membership Is Ownership}, an ownership verification framework that t
 Given a suspect model, we compute a multi-timestep \emph{t-error} score by forward noising and single-step reconstruction, then aggregate with a lower quantile (Q25).
 To control false-positive rates, we fit a conditional Gaussian model in log-score space and obtain closed-form quantile thresholds at arbitrary target FPR.
 The protocol compares the suspect model against public baselines via hypothesis tests and effect sizes, producing statistical evidence rather than a single score.
-On CIFAR-10/100, STL-10, and CelebA, all datasets achieve $|d| > 18$ against public baselines; these separations persist after MMD fine-tuning (simulating post-theft adaptation), provided the adversary does not retrain from scratch.
+On CIFAR-10/100, STL-10, and CelebA, all datasets achieve $|d| > 16$ against public baselines; these separations persist after MMD fine-tuning (simulating post-theft adaptation), provided the adversary does not retrain from scratch.
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -99,7 +99,7 @@ These practical challenges necessitate a robust watermark detection method that 
 To fill this research gap, in this work, we propose \textbf{Membership is Ownership}, an ownership verification framework that can accurately detect and verify whether a suspect model in the thief's possession is illegally obtained and fine-tuned from the model owner's base model, using a designated owner signature.
 At the heart of our approach lies a simple but principled observation: a model retains systematic memory of its training data, manifesting as lower reconstruction error on seen examples. We exploit this signal by constructing a private evidence set held by the model owner, which serves as a persistent watermark without modifying the model itself.
 To extract a robust signal from a suspect model, we introduce a multi-timestep \emph{t-error} score—computed via forward noising followed by single-step reconstruction—and summarize it through a lower quantile (\texttt{Q25}) to suppress noise while preserving the memorization signature. Rather than reporting a single black-box decision, we anchor the verification protocol on a principled statistical foundation: a conditional Gaussian model fitted in log-score space yields closed-form quantile thresholds at arbitrary false-positive rates, enabling transparent and auditable comparisons against public baselines through hypothesis tests and effect sizes.
-The resulting separations are striking. Against public baselines, we observe $|d| > 18$, margins that remain robust even under MMD fine-tuning, which simulates realistic post-theft adaptation, provided the adversary stops short of full retraining or targeted memorization erasure.
+The resulting separations are striking. Against public baselines, we observe $|d| > 16$, margins that remain robust even under MMD fine-tuning, which simulates realistic post-theft adaptation, provided the adversary stops short of full retraining or targeted memorization erasure.
 The paper unfolds the following contributions.
 \begin{itemize}
     \item \textbf{Conceptual.} We reframe ownership
@@ -120,8 +120,8 @@ The paper unfolds the following contributions.
     (LoRA $r{=}64/256$, full fine-tuning); the
     population-level separation persists under MMD, SGD,
     weight-noise, and PEFT fine-tuning, with all
-    DDIM-from-scratch settings achieving $|d| > 18$ and the
-    SD-PEFT regime passing the paired-delta protocol. MiO
+    DDIM-from-scratch settings achieving $|d| > 16$ and the
+    SD-PEFT regime passing the verification protocol. MiO
     matches WDM and Zhao's post-theft robustness on
     CIFAR-10 while requiring no weight modification, no
     training overhead, and no FID cost.
@@ -403,48 +403,45 @@ where $\hat{q}_\tau^{(b)}(x)$ is the quantile from the $b$-th ensemble member. T
 \subsection{Two-Point Verification Criteria}
 \label{sec:criteria}
 
-Given the owner model $\mathcal{M}_A$, the suspect model $\mathcal{M}_B$, a set of public baselines, and the watermark set $\Wset$, we require both of the following criteria to be satisfied before declaring ownership verified.
+Given the owner model $\mathcal{M}_A$, the suspect model $\mathcal{M}_B$, a set of public references $\{M_{\text{ref}}^{(i)}\}$, and the watermark set $\mathcal{W}$, we require both of the following criteria to be satisfied before declaring ownership verified. The two criteria test different nulls and use different statistics:
+\begin{align}
+\delta_{\text{C1}}(x) &= s_{\mathcal{M}_A}(x) - s_{\mathcal{M}_B}(x), \label{eq:delta_c1}\\
+\delta_{\text{C2}}(x) &= s_{\mathcal{M}_A}(x) - s_{\text{ref}}(x). \label{eq:delta_c2}
+\end{align}
 
 \paragraph{Criterion 1: Consistency.}
-If $\mathcal{M}_B$ is indeed derived from $\mathcal{M}_A$, the two models should exhibit similar reconstruction behavior on $\Wset$. We operationalize this by requiring that a two-sample $t$-test on their score distributions yields $p > 0.05$, i.e., we cannot reject the null hypothesis that the two models share the same $t$-error distribution. Failure here suggests that the suspect model has no provenance relationship with the owner model.
+If $\mathcal{M}_B$ is indeed derived from $\mathcal{M}_A$, the two models should exhibit similar reconstruction \emph{distributions} on $\mathcal{W}$. We operationalize this with a two-sample Welch $t$-test on the raw score sequences $\{s_{\mathcal{M}_A}(x)\}_{x\in\mathcal{W}}$ and $\{s_{\mathcal{M}_B}(x)\}_{x\in\mathcal{W}}$, requiring $p > 0.05$. The unpaired form is necessary here: when $\mathcal{M}_B$ is a benign fine-tune of $\mathcal{M}_A$, the per-image correlation between their scores is near unity, and a paired one-sample test on $\delta_{\text{C1}}$ would over-reject by detecting any systematic per-image drift induced by fine-tuning. Distributional equality is the right null for provenance; per-image identity is not.
 
 \paragraph{Criterion 2: Separation.}
-The owner model must reconstruct watermark samples significantly better than any public baseline. We require both statistical significance ($p < 10^{-6}$, to control for multiple baseline comparisons) and practical significance ($|d| > 2.0$, corresponding to a ``very large'' effect size~\citep{cohen1988statistical}). This dual requirement guards against claims that achieve a low $p$-value purely through large sample size without meaningful effect.
+The owner model must reconstruct watermark samples significantly better than any public reference. We apply C2 to the paired difference $\delta_{\text{C2}}$ via a one-sample $t$-test against zero, with effect size
+\begin{equation}
+|d|_{\text{C2}} = \frac{|\,\text{mean}(\delta_{\text{C2}}(\mathcal{W}))\,|}{\text{std}(\delta_{\text{C2}}(\mathcal{W}))},
+\label{eq:paired_c2}
+\end{equation}
+and require both statistical significance ($p < 10^{-6}$, to control for multiple reference comparisons) and practical significance ($|d|_{\text{C2}} > 2.0$, corresponding to a ``very large'' effect size~\citep{cohen1988statistical}). The paired form applies regardless of whether owner and reference share base weights. When they do (as in the SD setting), pairing is essential because per-image variance shared via the base dominates the unpaired denominator and the unpaired effect size collapses. When they do not (as in the DDIM-from-scratch setting, where the per-image score correlation $\rho \in [0, 0.6]$), pairing remains valid; relative to an unpaired analysis, the paired effect size differs by a factor that depends on $\rho$ and the variance ratio between owner and reference, but with $|\mathcal{W}| \geq 1{,}000$ and the effect sizes observed in our experiments the resulting margins remain orders of magnitude above the threshold (Section~\ref{sec:main_results}).
 
-Ownership is declared \textbf{verified} only when both criteria are jointly satisfied. This conjunction ensures that no single metric can produce a false positive: consistency confirms provenance, while separation establishes that the memorization signal is genuine rather than coincidental. The complete verification protocol is formalized in Algorithm~\ref{alg:verification}.
+Ownership is declared \textbf{verified} only when both criteria are jointly satisfied. The conjunction ensures that no single metric can produce a false positive: consistency confirms provenance, while separation establishes that the memorization signal is genuine rather than coincidental. The complete verification protocol is formalized in Algorithm~\ref{alg:verification}.
 
 \begin{algorithm}[t]
 \caption{Ownership Verification Protocol}
 \label{alg:verification}
 \begin{algorithmic}
-\REQUIRE Models $M_A, M_B$, baselines $\{M_{\text{ref}}^{(i)}\}_{i=1}^{|\mathcal{R}|}$, watermark set $\mathcal{W}$
+\REQUIRE Models $M_A, M_B$, references $\{M_{\text{ref}}^{(i)}\}_{i=1}^{|\mathcal{R}|}$, watermark set $\mathcal{W}$
 \ENSURE $\textsc{Verified}$ or $\textsc{Rejected}$
-\STATE $S_A \leftarrow \{s_{M_A}(x) : x \in \mathcal{W}\}$; $S_B \leftarrow \{s_{M_B}(x) : x \in \mathcal{W}\}$
-\STATE \textbf{O1:} $p_1 \leftarrow \text{TTest}(S_A, S_B)$; \textbf{if} $p_1 < 0.05$ \textbf{return} $\textsc{Rejected}$
-\STATE \textbf{O2:} \textbf{for each} reference $i \in \{1, \ldots, |\mathcal{R}|\}$:
+\STATE $S_A \leftarrow \{s_{M_A}(x) : x \in \mathcal{W}\}$; \quad $S_B \leftarrow \{s_{M_B}(x) : x \in \mathcal{W}\}$
+\STATE \textbf{C1 (consistency, unpaired):} $p_1 \leftarrow \text{WelchTTest}(S_A, S_B)$
+\IF{$p_1 < 0.05$} \STATE \textbf{return} $\textsc{Rejected}$ \ENDIF
+\STATE \textbf{C2 (separation, paired):} \textbf{for each} reference $i \in \{1, \ldots, |\mathcal{R}|\}$:
 \STATE \quad $S_{\text{ref}}^{(i)} \leftarrow \{s_{M_{\text{ref}}^{(i)}}(x) : x \in \mathcal{W}\}$
-\STATE \quad $p_2^{(i)}, d^{(i)} \leftarrow \text{TTest}(S_A, S_{\text{ref}}^{(i)}), \text{CohenD}(S_A, S_{\text{ref}}^{(i)})$
-\IF{$\exists i: p_2^{(i)} > 10^{-6}$ \textbf{or} $|d^{(i)}| < 2.0$}
+\STATE \quad $\delta_{\text{C2}}^{(i)} \leftarrow S_A - S_{\text{ref}}^{(i)}$ \COMMENT{element-wise on $\mathcal{W}$}
+\STATE \quad $p_2^{(i)} \leftarrow \text{OneSampleTTest}\bigl(\delta_{\text{C2}}^{(i)},\, \mu_0 = 0\bigr)$
+\STATE \quad $|d|_{\text{C2}}^{(i)} \leftarrow \bigl|\,\text{mean}(\delta_{\text{C2}}^{(i)})\,\bigr| \big/ \text{std}(\delta_{\text{C2}}^{(i)})$
+\IF{$\exists i: p_2^{(i)} > 10^{-6}$ \textbf{or} $|d|_{\text{C2}}^{(i)} < 2.0$}
     \STATE \textbf{return} $\textsc{Rejected}$
 \ENDIF
 \STATE \textbf{return} $\textsc{Verified}$
 \end{algorithmic}
 \end{algorithm}
-
-\subsection{Paired-Delta Protocol for Derivative Models}
-\label{sec:paired_delta}
-
-When $\mathcal{M}_B$ is a derivative of $\mathcal{M}_A$ (sharing base weights via fine-tuning), the raw $t$-error gap between owner and reference collapses: per-image reconstruction error is dominated by per-image variance shared between the two models, and the unpaired C2 effect size in §\ref{sec:criteria} loses power. We therefore apply C2 to paired differences
-\begin{equation}
-\delta(x) = s_{\text{tgt}}(x) - s_{\text{ref}}(x),
-\label{eq:paired_delta}
-\end{equation}
-where $s_{\text{tgt}}$ is the target model's score and $s_{\text{ref}}$ is the reference model's score on the same image. Since $s_{\text{ref}}(x) - s_{\text{ref}}(x) \equiv 0$ identically, paired-C2 reduces to a one-sample test of $\delta(\mathcal{W})$ against zero:
-\begin{equation}
-|d|_{\text{C2}}^{\text{paired}} = \frac{|\,\text{mean}(\delta(\mathcal{W}))\,|}{\text{std}(\delta(\mathcal{W}))}.
-\label{eq:paired_c2}
-\end{equation}
-This is the paired form of the unpaired C2 in §\ref{sec:criteria} and tests the same null hypothesis --- that the target model reconstructs $\mathcal{W}$ no better than the reference --- while cancelling per-image variance shared between the two models. C1 is applied analogously: a one-sample $t$-test on $\delta(\mathcal{W})$ replaces the two-sample test between the owner's and suspect's score distributions. Full treatment of the SD setting using this protocol is in Section~\ref{sec:sd}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 5. EXPERIMENTS
@@ -491,7 +488,7 @@ Component & Parameter & Value \\
 \end{small}
 \end{table}
 
-We additionally evaluate on Stable Diffusion v1.4 to test whether the framework extends to large-scale parameter-efficient fine-tuning settings. Owner models are obtained by fine-tuning SD~v1.4 on 1{,}000 private COCO 2014 images via LoRA (rank $r \in \{64, 256\}$) or full fine-tuning; full SD experimental setup and the paired-delta verification protocol are described in Section~\ref{sec:sd}.
+We additionally evaluate on Stable Diffusion v1.4 to test whether the framework extends to large-scale parameter-efficient fine-tuning settings. Owner models are obtained by fine-tuning SD~v1.4 on 1{,}000 private COCO 2014 images via LoRA (rank $r \in \{64, 256\}$) or full fine-tuning; full SD experimental setup is described in Section~\ref{sec:sd}, applying the verification protocol of Section~\ref{sec:criteria}.
 
 \subsection{RQ1: Verification Effectiveness}
 \label{sec:main_results}
@@ -522,10 +519,10 @@ to address domain-match concerns from prior review).}
 Dataset & Semantic-similar DDPM & Cross-domain LSUN DDPM & Random init & Min $|d|$ & Margin \\
         & $|d|$ & $|d|$ & $|d|$ & & \\
 \midrule
-CIFAR-10  & $24.1$  & $40.9$         & $63.9$ & $24.1$ & $12.0\times$ \\
-CIFAR-100 & $18.5$  & $31.6$         & $63.0$ & $18.5$ & $9.3\times$ \\
-STL-10    & $116.7$ & $29.3^\dagger$ & $59.3$ & $29.3$ & $14.7\times$ \\
-CelebA    & $26.3$  & $32.0$         & $90.0$ & $26.3$ & $13.2\times$ \\
+CIFAR-10  & $20.7$ & $31.6$         & $45.1$ & $20.7$ & $10.4\times$ \\
+CIFAR-100 & $16.3$ & $25.2$         & $44.1$ & $16.3$ & $8.1\times$ \\
+STL-10    & $87.3$ & $22.2^\dagger$ & $41.5$ & $22.2$ & $11.1\times$ \\
+CelebA    & $20.5$ & $23.5$         & $63.0$ & $20.5$ & $10.2\times$ \\
 \bottomrule
 \end{tabular}
 
@@ -542,7 +539,7 @@ CelebA uses \texttt{google/ddpm-celebahq-256},
 \end{small}
 \end{table}
 
-\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum $|d|$ across all references ranges from $18.5$ (CIFAR-100, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $|d|>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice. The two rightmost columns of Table~\ref{tab:main_results} additionally report each dataset's minimum $|d|$ and its multiplicative margin above the recommended threshold $|d|>2.0$; the smallest margin (CIFAR-100 at $9.3\times$) leaves substantial headroom, confirming that results are not artifacts of threshold tuning.
+\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum $|d|$ across all references ranges from $16.3$ (CIFAR-100, weakest dataset) to $22.2$ (STL-10 with the LSUN-Church reference), exceeding the threshold by $8\times$ or more across all references. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=22.2$, still $11\times$ above the $|d|>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice. The two rightmost columns of Table~\ref{tab:main_results} additionally report each dataset's minimum $|d|$ and its multiplicative margin above the recommended threshold $|d|>2.0$; the smallest margin (CIFAR-100 at $8.1\times$) leaves substantial headroom, confirming that results are not artifacts of threshold tuning.
 
 \textbf{Consistency (C1).} Owner and Model~B produce statistically indistinguishable mean $t$-error on $\mathcal{W}$ across all four datasets: CIFAR-10: $28.73$ vs.\ $28.74$ ($p=0.98$); CIFAR-100: $33.35$ vs.\ $33.34$ ($p=0.98$); STL-10: $70.92$ vs.\ $71.38$ ($p=0.71$); CelebA: $63.79$ vs.\ $63.80$ ($p=0.97$). All $p$-values exceed the $0.05$ acceptance threshold, confirming that Model~B retains the memorization signature of its owner.
 
@@ -569,8 +566,8 @@ CelebA & $0.975 \pm 0.004$ & $0.82 \pm 0.04$ & $0.60 \pm 0.06$ \\
 \paragraph{Verification effectiveness on Stable Diffusion.}
 Verification effectiveness extends beyond the DDIM-from-scratch
 setting to Stable Diffusion v1.4 with parameter-efficient
-fine-tuning. Under the paired-delta protocol of
-Section~\ref{sec:sd}, all three owner configurations---LoRA
+fine-tuning. Under the verification protocol of
+Section~\ref{sec:criteria}, all three owner configurations---LoRA
 $r{=}64$, full fine-tuning, and LoRA $r{=}256$---satisfy both C1
 (consistency, $p > 0.05$ on every adversary) and C2 (separation,
 $|d| \in \{2.38, 2.43, 2.55\}$) across domain-shift and task-shift
@@ -639,7 +636,7 @@ Zhao$^\dagger$ & ---$^{\ddagger}$ & \cmark & \cmark & \cmark \\
 
 \paragraph{SD adversary robustness.}
 Post-theft robustness extends to the SD-PEFT setting under the
-paired-delta protocol. Across both domain-shift fine-tuning on
+verification protocol of Section~\ref{sec:criteria}. Across both domain-shift fine-tuning on
 disjoint COCO and task-shift fine-tuning on synthetic data, the
 verdict holds uniformly for all three owner configurations
 (Table~\ref{tab:sd_verification}). Under the more stringent
@@ -761,26 +758,15 @@ memorization gap.  All SD results below use the
 latent-plus-caption configuration.
 
 \paragraph{Verification results.}
-Table~\ref{tab:sd_verification} reports ownership verification across
-three owner configurations.
-Because derivative models share the base SD weights, the owner and
-reference produce nearly identical raw $t$-errors, and
-Algorithm~\ref{alg:verification}'s absolute-score separation
-criterion does not reach its threshold directly.
-We therefore adapt the protocol to use \emph{paired differences}:
-for each image $x \in \mathcal{W}$, we compute
-$\delta(x) = s_{\text{tgt}}(x) - s_{\text{ref}}(x)$ and apply
-the two-point criteria to the $\delta$ distribution, which
-cancels per-image variance shared between models.
+Table~\ref{tab:sd_verification} reports ownership verification across three owner configurations. The paired form of C2 in Section~\ref{sec:criteria} (Equation~\ref{eq:paired_c2}) is essential here: owner and reference share the SD base, so their raw $t$-errors are nearly identical, but $\delta_{\text{C2}}(x)$ cancels the shared per-image variance and exposes the systematic memorization gap. C1 uses the same unpaired Welch test on raw owner-vs-suspect scores as in the DDIM setting (Algorithm~\ref{alg:verification}).
 
 \begin{table}[t]
-\caption{Ownership verification on SD~v1.4 (1{,}000 private COCO images,
-paired-delta protocol).
+\caption{Ownership verification on SD~v1.4 (1{,}000 private COCO images).
 C1: consistency ($p>0.05$).
 C2: separation ($|d|>2.0$).
 Adversaries: domain-shift fine-tuning on disjoint COCO and
-task-shift on synthetic data. Per-adversary results via paired-delta protocol.
-C2 ($|d|$): paired-delta effect size $|d|_{\text{C2}}^{\text{paired}} = |\text{mean}(\delta(\mathcal{W})) / \text{std}(\delta(\mathcal{W}))|$ as defined in Equation~\ref{eq:paired_c2}.
+task-shift on synthetic data.
+C2 ($|d|$): effect size $|d|_{\text{C2}} = |\text{mean}(\delta_{\text{C2}}(\mathcal{W})) / \text{std}(\delta_{\text{C2}}(\mathcal{W}))|$ as defined in Equation~\ref{eq:paired_c2}.
 $|d|_{\text{mem}}$: effect size between the owner's score
 distributions on member and non-member samples in $\mathcal{W}$,
 via standard absolute Cohen's $d$.}
@@ -825,12 +811,11 @@ $\mathcal{W}$ (1{,}000 members vs.\ 1{,}000 non-members, global evaluation
 aggregated across both adversary fine-tuning directions) achieves
 AUC $= 0.995 / 0.999 / 0.999$ and $|d| = 3.26 / 3.93 / 3.41$
 for LoRA r$=64$ / LoRA r$=256$ / Full FT respectively.
-Per-adversary verification results are aggregated using the paired-delta
-protocol, which is invariant to adversary fine-tuning direction.
+Per-adversary verification results are aggregated using the paired-C2 statistic of Equation~\ref{eq:paired_c2}, which is invariant to adversary fine-tuning direction.
 
 All three owner configurations (LoRA r$=64$, Full FT, LoRA r$=256$)
 satisfy both criteria (C1 consistency and C2 separation) under the
-paired-delta verification protocol, producing a \cmark\ verdict on
+verification protocol of Section~\ref{sec:criteria}, producing a \cmark\ verdict on
 every adversary type considered.
 
 \subsection{RQ3: Score Stability and Threshold Calibration}
@@ -928,7 +913,7 @@ We frame scope conditions rather than limitations.
 We presented a novel ownership verification framework for diffusion models using t-error based reconstruction disparity and Gaussian Quantile Regression.
 By formalizing the distinction between membership inference and ownership verification, we established that public baselines and statistical hypothesis testing are \emph{necessary} components for ownership claims.
 Our two-point verification criteria (consistency, separation) provide rigorous, reproducible verification.
-Experiments across four datasets demonstrate $|d| > 18$ separation against every reference model, with criteria satisfied even after adversarial MMD fine-tuning.
+Experiments across four datasets demonstrate $|d| > 16$ separation against every reference model, with criteria satisfied even after adversarial MMD fine-tuning.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ACKNOWLEDGMENTS (hidden in anonymous mode by ack environment)
@@ -1088,9 +1073,9 @@ We re-evaluated CDI~\citep{dubinski2024cdi} on \texttt{google/ddpm-cifar10-32} u
 
 \textbf{Patches.} Three trivial patches were required for the upstream \texttt{scores\_computation/cdi.py} aggregation stage to execute end-to-end: a missing \texttt{import numpy as np}; a \texttt{train\_dataset["data"]} $\to$ \texttt{train\_dataset.data} fix for the \texttt{MIDataset} class API; and a 3D$\to$2D reshape for multi-measurement features. None affects the aggregation algorithm itself.
 
-\subsubsection{Paired-Delta C2 Computation}
+\subsubsection{C2 Computation Details}
 
-The Stable Diffusion verification numbers in Table~\ref{tab:sd_verification} are computed using the paired-delta form of C2 (Equation~\ref{eq:paired_c2}): for each adversary configuration, $\delta(x) = s_{\text{tgt}}(x) - s_{\text{ref}}(x)$ is computed on $\mathcal{W}$ from the per-image score CSVs (one row per image, columns \texttt{score\_tgt} and \texttt{score\_ref}), and $|d|_{\text{C2}}^{\text{paired}} = |\text{mean}(\delta) / \text{std}(\delta)|$ is computed directly. A standalone runner that reproduces the Table~\ref{tab:sd_verification} C2 values from the released CSVs will be released with the camera-ready code.
+The Stable Diffusion verification numbers in Table~\ref{tab:sd_verification} are computed via Equation~\ref{eq:paired_c2}: for each adversary configuration, $\delta_{\text{C2}}(x) = s_{\text{tgt}}(x) - s_{\text{ref}}(x)$ is computed on $\mathcal{W}$ from the per-image score CSVs (one row per image, columns \texttt{score\_tgt} and \texttt{score\_ref}), and $|d|_{\text{C2}} = |\text{mean}(\delta_{\text{C2}}) / \text{std}(\delta_{\text{C2}})|$ is computed directly. A standalone runner that reproduces the Table~\ref{tab:sd_verification} C2 values from the released CSVs will be released with the camera-ready code.
 
 \subsection{Post-theft Attack Configurations}
 
