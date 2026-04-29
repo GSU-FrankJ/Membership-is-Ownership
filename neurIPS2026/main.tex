@@ -339,7 +339,7 @@ e_t(x_0) = \frac{\|x_0 - \hat{x}_0\|_2^2}{H \times W \times C}
 \end{equation}
 where $H$, $W$, $C$ denote the image height, width, and number of channels, respectively. The key property underlying our framework is the \emph{memorization effect}: models trained on a particular dataset exhibit systematically lower reconstruction error on their training examples, i.e., $\mathbb{E}_{x \in \mathcal{D}_{\mathrm{train}}}[e_t(x)] < \mathbb{E}_{x \notin \mathcal{D}_{\mathrm{train}}}[e_t(x)]$. This persistent gap, which survives across architectures and dataset scales, provides the foundational signal for our ownership verification protocol.
 
-For latent diffusion models that operate in VAE latent space (e.g., Stable Diffusion), the definitions above transfer directly: the $t$-error computation is moved from pixel space to latent space, while the rest of the framework remains unchanged. Full details are given in Section~\ref{sec:sd}.
+For latent diffusion models that operate in VAE latent space (e.g., Stable Diffusion), the definitions above transfer directly: the $t$-error computation is moved from pixel space to latent space, while the rest of the framework remains unchanged. The latent-vs-pixel design choice and its empirical justification are in Section~\ref{sec:sd_ablation}.
 
 \subsection{Multi-Timestep Aggregation}
 \label{sec:aggregation}
@@ -452,14 +452,29 @@ Ownership is declared \textbf{verified} only when both criteria are jointly sati
 \subsection{Experimental Setup}
 \label{sec:setup}
 
+\subsubsection{Evaluation Scenarios}
+\label{sec:setup_scenarios}
+
+We evaluate the verification protocol in two distinct scenarios chosen for complementary purposes.
+
+The first scenario uses DDIM models trained from scratch on four standard datasets. Training every component end-to-end gives us interpretable model architecture, controlled training data, and minimal statistical noise---necessary conditions for measuring the protocol's quantitative properties with precision. This scenario also enables controlled comparison against existing baselines (Section~\ref{sec:baseline_comparison}), since the owner training pipeline matches what those baselines were designed for.
+
+The second scenario evaluates Stable Diffusion v1.4 with parameter-efficient fine-tuning. The owner is a production-scale pretrained model adapted to a private dataset, with adversaries operating via PEFT on disjoint data---the threat surface where actual diffusion-model IP theft occurs. This scenario is necessary for external validity: a protocol evaluated only on DDIM trained from scratch leaves open whether it works on the kind of model that gets stolen. The SD scenario closes that gap.
+
+\subsubsection{Datasets and Models}
+\label{sec:setup_datasets}
+
 We evaluate our framework on four datasets spanning different resolutions and scales: CIFAR-10 and CIFAR-100 (both 32$\times$32, 50k training images with 5k reserved as the watermark set), STL-10 (96$\times$96, 5k training images with 1k as watermark), and CelebA (64$\times$64, 162k training images with 5k as watermark). All splits are deterministic and stratified with a fixed seed to ensure reproducibility.
+
+For the Stable Diffusion experiments, the owner's private training set consists of 1{,}000 images from COCO 2014; per-image captions are retained for use in latent-space scoring (Section~\ref{sec:setup_training}). Adversaries fine-tune on a disjoint COCO subset (also 1{,}000 images) plus a synthetic-image set; details appear in Section~\ref{sec:setup_adversary}.
+
+\subsubsection{Owner Training Protocols}
+\label{sec:setup_training}
 
 For each dataset, we train a DDIM model using a U-Net backbone with 128 base channels, a cosine noise schedule, and the AdamW optimizer at a learning rate of $2\times10^{-4}$ with EMA decay 0.9999. Training runs for 400k iterations in all cases. The Gaussian QR component uses an ensemble of $B{=}50$ models, each trained on a bootstrap sample of the auxiliary non-member data. Table~\ref{tab:hyperparams} summarizes the key hyperparameters; full architectural and optimization details are deferred to Appendix~\ref{app:details}.
 
-As public baselines for the verification protocol, we use pretrained checkpoints from HuggingFace: \texttt{google/ddpm-cifar10-32} serves as the reference for both CIFAR-10 and CIFAR-100, \texttt{google/ddpm-ema-bedroom-256} (resized) for STL-10, and \texttt{google/ddpm-celebahq-256} for CelebA. These baselines are trained on disjoint data from our watermark sets and represent the null hypothesis in the two-point verification protocol: a model that has never seen the owner's private evidence should exhibit substantially higher reconstruction error on that set.
-
 \begin{table}[t]
-\caption{Key hyperparameters for reproducibility.}
+\caption{Key hyperparameters for reproducibility. The DDIM and Gaussian QR rows are described in this subsection; the Stable Diffusion rows are split between owner training (described here) and adversary fine-tuning (described in Section~\ref{sec:setup_adversary} and Section~\ref{sec:theft}).}
 \label{tab:hyperparams}
 \centering
 \begin{small}
@@ -488,7 +503,39 @@ Component & Parameter & Value \\
 \end{small}
 \end{table}
 
-We additionally evaluate on Stable Diffusion v1.4 to test whether the framework extends to large-scale parameter-efficient fine-tuning settings. Owner models are obtained by fine-tuning SD~v1.4 on 1{,}000 private COCO 2014 images via LoRA (rank $r \in \{64, 256\}$) or full fine-tuning; full SD experimental setup is described in Section~\ref{sec:sd}, applying the verification protocol of Section~\ref{sec:criteria}.
+For Stable Diffusion v1.4, owner models are produced by fine-tuning the base checkpoint on the COCO subset described in Section~\ref{sec:setup_datasets}. We consider three owner configurations: LoRA at rank $r{=}64$ (33.5M trainable parameters, 3.9\% of the UNet), LoRA at rank $r{=}256$ (134M, 15.6\%), and full UNet fine-tuning (860M, 100\%). Common settings are AdamW, cosine schedule with 500 warmup steps, batch size 4, fp16 mixed precision, seed 42; per-variant differences (steps, learning rate, augmentation) appear in Table~\ref{tab:hyperparams_sd} of Appendix~\ref{app:hyperparams}. The $t$-error is scored in VAE latent space rather than pixel space; the latent-vs-pixel ablation that motivates this choice is in Section~\ref{sec:ablation}.
+
+\subsubsection{Adversary Protocols}
+\label{sec:setup_adversary}
+
+We consider four post-theft attacks on the DDIM owner. \textbf{MMD fine-tuning} runs 500 iterations of CLIP-feature distribution matching (cubic polynomial kernel over CLIP ViT-B/32 embeddings, $\mathcal{D}_{\text{train}}$ as the target distribution, lr $5{\times}10^{-6}$, EMA 0.9999) and represents an adversary attempting to alter the model's generation distribution while leaving the architecture intact. \textbf{SGD fine-tuning} (500 iterations, lr $5{\times}10^{-6}$, batch 128) on clean data represents a domain-preserving adversarial fine-tune. \textbf{Gaussian weight noise} at $\sigma \in \{10^{-3}, 10^{-2}\}$ applied in-place to all parameter tensors models a quantization or noise-perturbation adversary. The four attacks span the most plausible post-theft modifications under our threat model; quantitative results are in Section~\ref{sec:theft}.
+
+For Stable Diffusion adversaries, a single 2{,}000-step LoRA fine-tune protocol (lr $5{\times}10^{-5}$, cross-attention modules only, $\epsilon$-prediction MSE loss) is instantiated across two axes. The data axis yields two threat scenarios: \textbf{domain-shift} on a disjoint 1{,}000-image COCO subset (the adversary adapts the stolen model to a different but distributionally similar dataset), and \textbf{task-shift} on synthetic data (the adversary repurposes the model toward a generation task different from the owner's). The rank axis varies the adversary's LoRA rank, $r \in \{64, 256\}$. The resulting $2{\times}2$ grid of (rank, scenario) adversary configurations is applied to each of the three owner configurations from Section~\ref{sec:setup_training}. Verification results across owners and scenarios are reported in Table~\ref{tab:sd_verification} of Section~\ref{sec:theft} (rank dimension collapsed); the SleeperMark comparison under the same adversary protocol is in Section~\ref{sec:baseline_comparison}.
+
+\subsubsection{Baselines and Reference Models}
+\label{sec:setup_baselines}
+
+The verification protocol uses two categories of external models: public reference checkpoints serving as the null hypothesis in the C2 separation criterion (used throughout Sections~\ref{sec:main_results}--\ref{sec:theft}), and comparison methods used in the controlled baseline evaluation of Section~\ref{sec:baseline_comparison}.
+
+\paragraph{Public reference baselines.}
+As public baselines for the verification protocol, we use pretrained checkpoints from HuggingFace: \texttt{google/ddpm-cifar10-32} serves as the reference for both CIFAR-10 and CIFAR-100, \texttt{google/ddpm-ema-bedroom-256} (resized) for STL-10, and \texttt{google/ddpm-celebahq-256} for CelebA. These baselines are trained on disjoint data from our watermark sets and represent the null hypothesis in the two-point verification protocol: a model that has never seen the owner's private evidence should exhibit substantially higher reconstruction error on that set.
+
+\paragraph{Comparison methods.}
+For the controlled baseline comparison in Section~\ref{sec:baseline_comparison}, we compare MiO against three diffusion-model IP protection methods: \textbf{WDM}~\citep{peng2023watermark}, a training-time watermarking method that learns a secondary watermark diffusion process; \textbf{Zhao et~al.}~\citep{zhao2023recipe}, which embeds StegaStamp fingerprints into training images before EDM training; and \textbf{CDI}~\citep{dubinski2024cdi}, an inference-time MIA-aggregation method. For Stable Diffusion, we additionally compare against \textbf{SleeperMark}~\citep{wang2025sleepermark}, a trigger-prompt-coupled, LoRA-resistant watermark. Implementation details and hyperparameters appear in Appendix~\ref{app:hyperparams}.
+
+\subsubsection{Evaluation Metrics}
+\label{sec:setup_metrics}
+
+We report three families of evaluation metrics.
+
+\paragraph{Verification verdicts.}
+The two-point criteria of Section~\ref{sec:criteria} produce a binary $\{\textsc{Verified}, \textsc{Rejected}\}$ verdict per (owner, suspect) pair, together with the supporting C1 $p$-value and C2 effect size $|d|_{\text{C2}}$. A verdict of \textsc{Verified} requires C1 ($p > 0.05$) and C2 ($|d|_{\text{C2}} > 2.0$ against every reference, with $p < 10^{-6}$).
+
+\paragraph{Per-sample membership inference.}
+To characterize the underlying signal, we report ROC-AUC and TPR at fixed FPR levels ($0.1\%$ and $0.01\%$) using the Gaussian QR ensemble margins of Section~\ref{sec:gaussian_qr}.
+
+\paragraph{Effect sizes.}
+Throughout, $|d|_{\text{C2}}$ denotes the paired Cohen's $d$ as defined in Equation~\ref{eq:paired_c2}. For per-sample membership analyses (e.g., owner-level AUC), we additionally report unpaired Cohen's $d$ between member and non-member score distributions, denoted $|d|_{\text{mem}}$.
 
 \subsection{RQ1: Verification Effectiveness}
 \label{sec:main_results}
@@ -543,7 +590,48 @@ CelebA uses \texttt{google/ddpm-celebahq-256},
 
 \textbf{Consistency (C1).} Owner and Model~B produce statistically indistinguishable mean $t$-error on $\mathcal{W}$ across all four datasets: CIFAR-10: $28.73$ vs.\ $28.74$ ($p=0.98$); CIFAR-100: $33.35$ vs.\ $33.34$ ($p=0.98$); STL-10: $70.92$ vs.\ $71.38$ ($p=0.71$); CelebA: $63.79$ vs.\ $63.80$ ($p=0.97$). All $p$-values exceed the $0.05$ acceptance threshold, confirming that Model~B retains the memorization signature of its owner.
 
-Table~\ref{tab:mia_results} reports per-sample membership inference accuracy using Gaussian QR margins.
+\paragraph{Stable Diffusion verification.}
+We now apply the verification protocol to the SD scenario described in Section~\ref{sec:setup_scenarios}, where the owner is SD~v1.4 with private fine-tuning and the reference is the original SD~v1.4 base. Table~\ref{tab:sd_verification} reports ownership verification across three owner configurations. The paired form of C2 in Section~\ref{sec:criteria} (Equation~\ref{eq:paired_c2}) is essential here: owner and reference share the SD base, so their raw $t$-errors are nearly identical, but $\delta_{\text{C2}}(x)$ cancels the shared per-image variance and exposes the systematic memorization gap. C1 uses the same unpaired Welch test on raw owner-vs-suspect scores as in the DDIM setting (Algorithm~\ref{alg:verification}).
+
+\begin{table}[t]
+\caption{Ownership verification on SD~v1.4 (1{,}000 private COCO images).
+C1: consistency ($p>0.05$).
+C2: separation ($|d|>2.0$).
+Adversaries: domain-shift fine-tuning on disjoint COCO and
+task-shift on synthetic data.
+C2 ($|d|$): effect size $|d|_{\text{C2}} = |\text{mean}(\delta_{\text{C2}}(\mathcal{W})) / \text{std}(\delta_{\text{C2}}(\mathcal{W}))|$ as defined in Equation~\ref{eq:paired_c2}.
+$|d|_{\text{mem}}$: effect size between the owner's score
+distributions on member and non-member samples in $\mathcal{W}$,
+via standard absolute Cohen's $d$.}
+\label{tab:sd_verification}
+\centering
+\small
+\begin{tabular}{@{}llccccc@{}}
+\toprule
+Owner & Adversary & C1 & C2 ($|d|$) & AUC & $|d|_{\text{mem}}$ & Verdict \\
+\midrule
+LoRA $r\!=\!64$ & Domain-shift & \cmark~(p=0.73) & \cmark~(2.43) & 0.986 & 2.83 & \cmark \\
+LoRA $r\!=\!64$ & Task-shift & \cmark~(p=0.34) & \cmark~(2.43) & 0.980 & 2.70 & \cmark \\
+LoRA $r\!=\!256$ & Domain-shift & \cmark~(p=0.54) & \cmark~(2.55) & 0.998 & 3.51 & \cmark \\
+LoRA $r\!=\!256$ & Task-shift & \cmark~(p=0.22) & \cmark~(2.55) & 0.997 & 3.46 & \cmark \\
+Full FT & Domain-shift & \cmark~(p=0.71) & \cmark~(2.38) & 0.997 & 3.22 & \cmark \\
+Full FT & Task-shift & \cmark~(p=0.18) & \cmark~(2.38) & 0.995 & 3.13 & \cmark \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For reference, owner-level membership detection on the watermark set $\mathcal{W}$ (1{,}000 members vs.\ 1{,}000 non-members, global evaluation aggregated across both adversary fine-tuning directions) achieves AUC $= 0.995 / 0.999 / 0.999$ and $|d|_{\text{mem}} = 3.26 / 3.93 / 3.41$ for LoRA $r{=}64$ / LoRA $r{=}256$ / Full FT respectively. Per-adversary verification results are aggregated using the paired-C2 statistic of Equation~\ref{eq:paired_c2}, which is invariant to adversary fine-tuning direction.
+
+All three owner configurations satisfy both criteria across both adversary scenarios ($|d|_{\text{C2}} \in \{2.38, 2.43, 2.55\}$, $p_{\text{C1}} > 0.05$ uniformly), producing a \cmark\ verdict on all six (owner, adversary) cells of Table~\ref{tab:sd_verification}.
+
+\subsection{RQ2: False Positive Control}
+\label{sec:fpr_control}
+
+The C2 separation criterion requires significance at $p < 10^{-6}$ against every reference, and Section~\ref{sec:main_results} demonstrated that owner models satisfy this threshold by large margins. The complementary question this section asks is whether the protocol \emph{rejects} candidate models that are \emph{not} the owner: given an arbitrary FPR budget $\alpha$, can the protocol be calibrated so that an independent (non-derivative) model is mistaken for the owner with probability at most $\alpha$? The answer rests on the analytical FPR control built into the Gaussian quantile regression of Section~\ref{sec:gaussian_qr}.
+
+Recall that the Gaussian QR component models the conditional log-score distribution for non-members as a Gaussian with input-dependent mean and variance, parametrized by a network $f_\psi$ trained on auxiliary non-member data (Section~\ref{sec:gaussian_qr}). Because the conditional distribution is Gaussian, the $(1-\alpha)$-quantile $\hat{q}_{\tau}(x) = \mu(x) + \sigma(x) \Phi^{-1}(\tau)$ with $\tau = 1 - \alpha$ admits a closed-form expression at any target FPR $\alpha$ without retraining. This is the analytical FPR control mechanism: the threshold separating ``likely member'' from ``likely non-member'' adapts to each input via $\mu(x), \sigma(x)$ rather than relying on a single global cutoff.
+
+Table~\ref{tab:mia_results} reports per-sample membership inference performance under this analytical calibration. We measure ROC-AUC and TPR at fixed FPR levels of $0.1\%$ and $0.01\%$ on each dataset's owner model, with $95\%$ bootstrap confidence intervals over 200 resamples. AUC remains above $0.96$ on all four datasets, and at the most stringent FPR budget ($0.01\%$, i.e., one false positive per ten thousand non-members), TPR remains above $0.55$ uniformly. Analytical FPR control thus delivers practically usable detection at the budgets relevant to ownership disputes (where false-positive rates of even $1\%$ would be intolerable).
 
 \begin{table}[t]
 \caption{Membership inference performance using Gaussian QR margins on DDIM owner models. TPR computed at fixed FPR with 95\% bootstrap CI (200 iterations).}
@@ -563,18 +651,9 @@ CelebA & $0.975 \pm 0.004$ & $0.82 \pm 0.04$ & $0.60 \pm 0.06$ \\
 \end{small}
 \end{table}
 
-\paragraph{Verification effectiveness on Stable Diffusion.}
-Verification effectiveness extends beyond the DDIM-from-scratch
-setting to Stable Diffusion v1.4 with parameter-efficient
-fine-tuning. Under the verification protocol of
-Section~\ref{sec:criteria}, all three owner configurations---LoRA
-$r{=}64$, full fine-tuning, and LoRA $r{=}256$---satisfy both C1
-(consistency, $p > 0.05$ on every adversary) and C2 (separation,
-$|d| \in \{2.38, 2.43, 2.55\}$) across domain-shift and task-shift
-adversaries (Table~\ref{tab:sd_verification}), producing a
-\cmark\ verdict on all six (owner, adversary) pairs.
+\paragraph{Scope of this analysis.} The FPR control reported here is \emph{analytical}: it derives from the Gaussian assumption in the QR model, and the empirical evidence in Table~\ref{tab:mia_results} validates the assumption only indirectly via the AUC and TPR statistics. A direct empirical FPR audit---running a battery of independently trained (non-derivative) models through the verification protocol as candidate owners and measuring the per-trial rejection rate---would constitute a stronger guarantee. We leave that audit to future work; the current paper relies on the analytical control plus the AUC/TPR validation.
 
-\subsection{RQ2: Post-Theft Robustness Across Multiple Attacks and Methods}
+\subsection{RQ3: Post-Theft Robustness}
 \label{sec:theft}
 
 A practical adversary who obtains a stolen model will typically fine-tune it to a new domain or task before deployment. The ownership signal must survive such adaptation. To evaluate this, we simulate post-theft modification via MMD fine-tuning~\citep{gretton2012kernel}. MMD fine-tuning contrasts CLIP features of the model's DDIM-generated samples against those of real training images sampled fresh each step from $\mathcal{D}_{\mathrm{train}}$ (which includes $\mathcal{W}$), via a cubic polynomial kernel. Starting from Model~A, we fine-tune for 500 iterations using 10-step DDIM sampling, CLIP ViT-B/32 as the feature encoder, a learning rate of $5{\times}10^{-6}$, and EMA decay 0.9999.
@@ -634,21 +713,10 @@ Zhao$^\dagger$ & ---$^{\ddagger}$ & \cmark & \cmark & \cmark \\
 \end{tabular}
 \end{table}
 
-\paragraph{SD adversary robustness.}
-Post-theft robustness extends to the SD-PEFT setting under the
-verification protocol of Section~\ref{sec:criteria}. Across both domain-shift fine-tuning on
-disjoint COCO and task-shift fine-tuning on synthetic data, the
-verdict holds uniformly for all three owner configurations
-(Table~\ref{tab:sd_verification}). Under the more stringent
-2{,}000-step LoRA fine-tune on disjoint COCO data
-(rank $r \in \{64, 256\}$, lr $5{\times}10^{-5}$, cross-attention
-modules only, $\epsilon$-prediction MSE) that simulates post-theft
-adaptation, MiO retains the verification verdict for both
-$r{=}64$ and $r{=}256$ adapters, matching SleeperMark's
-trigger-based bit-accuracy threshold on the same threat model
-(Table~\ref{tab:sd_watermark_robustness}).
+\paragraph{Stable Diffusion adversary robustness.}
+We evaluate adversary robustness in the SD scenario by applying the $2{\times}2$ (rank, scenario) grid of adversaries from Section~\ref{sec:setup_adversary} to each owner configuration. The full verification verdict matrix is the SD column of Table~\ref{tab:sd_verification} reported in Section~\ref{sec:main_results}: all three owner configurations (LoRA $r{=}64$, LoRA $r{=}256$, Full FT) retain a \cmark\ verdict across both adversary scenarios, with C2 effect sizes $|d|_{\text{C2}} \in \{2.38, 2.43, 2.55\}$ depending only on the owner configuration (the paired-C2 statistic is invariant to adversary fine-tuning direction by construction). The SD scenario therefore exhibits the same robustness pattern as the DDIM-from-scratch setting: post-theft adaptation does not displace the memorization signal in the watermark set.
 
-\subsection{Controlled Baseline Comparison}
+\subsection{RQ4: Controlled Baseline Comparison}
 \label{sec:baseline_comparison}
 
 Whereas Section~\ref{sec:theft} shows that MiO matches WDM and Zhao
@@ -732,60 +800,8 @@ CDI & \xmark & $0$ & $0$ & $0.586$ \\
 \end{table}
 
 
-\subsection{Extension to Stable Diffusion}
-\label{sec:sd}
-
-The preceding experiments use DDIM models trained from scratch.
-Modern practice, however, centres on adapting large pretrained models
-via parameter-efficient fine-tuning.
-We therefore evaluate MiO on Stable Diffusion v1.4, where the owner
-fine-tunes the base model on a private set of 1{,}000 COCO\,2014
-images using LoRA or full fine-tuning, and the adversary produces
-derivative models via continued LoRA training on disjoint data.
-
-\paragraph{Measurement recipe.}
-Because SD operates in VAE latent space, the $t$-error can be measured
-either in latent space (before the decoder) or in pixel space (after
-decoding).  We find that \emph{latent-space scoring with per-image
-caption conditioning} yields AUC${}\!=\!0.9956$ on the owner model,
-compared to $0.959$ for pixel-space scoring---a $3.7$ percentage-point
-gap.  Two factors explain this difference.  First, the VAE decode step
-introduces a lossy reconstruction floor that dilutes the membership
-signal in pixel space.  Second, SD learned image-caption associations
-during training; using empty prompts bypasses the cross-attention
-pathway where LoRA adapters operate, reducing the observable
-memorization gap.  All SD results below use the
-latent-plus-caption configuration.
-
-\paragraph{Verification results.}
-Table~\ref{tab:sd_verification} reports ownership verification across three owner configurations. The paired form of C2 in Section~\ref{sec:criteria} (Equation~\ref{eq:paired_c2}) is essential here: owner and reference share the SD base, so their raw $t$-errors are nearly identical, but $\delta_{\text{C2}}(x)$ cancels the shared per-image variance and exposes the systematic memorization gap. C1 uses the same unpaired Welch test on raw owner-vs-suspect scores as in the DDIM setting (Algorithm~\ref{alg:verification}).
-
-\begin{table}[t]
-\caption{Ownership verification on SD~v1.4 (1{,}000 private COCO images).
-C1: consistency ($p>0.05$).
-C2: separation ($|d|>2.0$).
-Adversaries: domain-shift fine-tuning on disjoint COCO and
-task-shift on synthetic data.
-C2 ($|d|$): effect size $|d|_{\text{C2}} = |\text{mean}(\delta_{\text{C2}}(\mathcal{W})) / \text{std}(\delta_{\text{C2}}(\mathcal{W}))|$ as defined in Equation~\ref{eq:paired_c2}.
-$|d|_{\text{mem}}$: effect size between the owner's score
-distributions on member and non-member samples in $\mathcal{W}$,
-via standard absolute Cohen's $d$.}
-\label{tab:sd_verification}
-\centering
-\small
-\begin{tabular}{@{}llccccc@{}}
-\toprule
-Owner & Adversary & C1 & C2 ($|d|$) & AUC & $|d|_{\text{mem}}$ & Verdict \\
-\midrule
-LoRA $r\!=\!64$ & Domain-shift & \cmark~(p=0.73) & \cmark~(2.43) & 0.986 & 2.83 & \cmark \\
-LoRA $r\!=\!64$ & Task-shift & \cmark~(p=0.34) & \cmark~(2.43) & 0.980 & 2.70 & \cmark \\
-LoRA $r\!=\!256$ & Domain-shift & \cmark~(p=0.54) & \cmark~(2.55) & 0.998 & 3.51 & \cmark \\
-LoRA $r\!=\!256$ & Task-shift & \cmark~(p=0.22) & \cmark~(2.55) & 0.997 & 3.46 & \cmark \\
-Full FT & Domain-shift & \cmark~(p=0.71) & \cmark~(2.38) & 0.997 & 3.22 & \cmark \\
-Full FT & Task-shift & \cmark~(p=0.18) & \cmark~(2.38) & 0.995 & 3.13 & \cmark \\
-\bottomrule
-\end{tabular}
-\end{table}
+\paragraph{SleeperMark comparison on Stable Diffusion.}
+Stable Diffusion has its own dedicated watermarking baseline, SleeperMark~\citep{wang2025sleepermark}, designed for LoRA-adapted SD. We compare under the 2{,}000-step LoRA adversary protocol described in Section~\ref{sec:setup_adversary}: SleeperMark passes if the recovered bit-accuracy exceeds $0.9$, and MiO passes if both two-point criteria (C1 + C2) hold. Both methods pass their respective thresholds for LoRA $r{=}64$ and $r{=}256$ adversaries (Table~\ref{tab:sd_watermark_robustness}); MiO matches SleeperMark's verdict without modifying the owner's model weights or incurring training-time watermarking cost.
 
 \begin{table}[t]
 \caption{Watermark robustness on SD~v1.4: SleeperMark vs.\ MiO.
@@ -805,27 +821,16 @@ SleeperMark & \cmark & \cmark \\
 \end{tabular}
 \end{table}
 
-\paragraph{Owner-level global membership detection.}
-For reference, owner-level membership detection on the watermark set
-$\mathcal{W}$ (1{,}000 members vs.\ 1{,}000 non-members, global evaluation
-aggregated across both adversary fine-tuning directions) achieves
-AUC $= 0.995 / 0.999 / 0.999$ and $|d| = 3.26 / 3.93 / 3.41$
-for LoRA r$=64$ / LoRA r$=256$ / Full FT respectively.
-Per-adversary verification results are aggregated using the paired-C2 statistic of Equation~\ref{eq:paired_c2}, which is invariant to adversary fine-tuning direction.
-
-All three owner configurations (LoRA r$=64$, Full FT, LoRA r$=256$)
-satisfy both criteria (C1 consistency and C2 separation) under the
-verification protocol of Section~\ref{sec:criteria}, producing a \cmark\ verdict on
-every adversary type considered.
-
-\subsection{RQ3: Score Stability and Threshold Calibration}
+\subsection{Ablations and Robustness Studies}
 \label{sec:ablation}
 
 Several design choices underlie the verification pipeline---how to
 collapse a sequence of per-timestep errors into a single score, how
-many timesteps are needed for that score to be reliable, and whether
+many timesteps are needed for that score to be reliable, whether
 the Gaussian assumption in our quantile regression is worth the
-modelling commitment.  We address each in turn on CIFAR-10; ensemble
+modelling commitment, and (for the SD scenario) the choice of
+measurement space and prompt conditioning.  We address each in turn
+on CIFAR-10 (and on SD~v1.4 for the latent-vs-pixel choice); ensemble
 size and wall-clock breakdowns appear in
 Appendix~\ref{app:ablation}.
 
@@ -881,6 +886,10 @@ parameter count and the retraining burden roughly in half.  For a
 verifier who may need to assess ownership claims at several
 significance levels---exactly the setting envisioned by our
 protocol---this is a meaningful convenience.
+
+\paragraph{Stable Diffusion: latent vs pixel space.}
+\label{sec:sd_ablation}
+SD operates in VAE latent space, so the $t$-error can be measured either in latent space (before the decoder) or in pixel space (after decoding); prompt conditioning likewise admits two choices (per-image caption or empty). On the SD~v1.4 owner model, latent-space scoring with per-image caption conditioning yields AUC${}\!=\!0.9956$, compared to $0.959$ for pixel-space scoring---a $3.7$ percentage-point gap. Two factors explain the difference. First, the VAE decode step introduces a lossy reconstruction floor that dilutes the membership signal in pixel space. Second, SD learned image-caption associations during training; using empty prompts bypasses the cross-attention pathway where LoRA adapters operate, reducing the observable memorization gap. All SD experiments in this paper use the latent-plus-caption configuration.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 6. DISCUSSION AND LIMITATIONS
