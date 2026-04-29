@@ -506,22 +506,24 @@ Verification requires \emph{every} reference to satisfy $|d|>2.0$
 (ALL-must-pass).
 All $12$ (dataset, reference) pairs satisfy the threshold;
 verification passes on all four datasets.
+The rightmost two columns report the minimum $|d|$ achieved per dataset
+and the multiplicative margin above the recommended threshold $|d|>2.0$.
 All pairwise $p < 10^{-100}$.
 $^\dagger$Conservative reference (LSUN-Church, replacing LSUN-Bedroom
 to address domain-match concerns from prior review).}
 \label{tab:main_results}
 \centering
 \begin{small}
-\setlength{\tabcolsep}{6pt}
-\begin{tabular}{@{}lccc@{}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lccccc@{}}
 \toprule
-Dataset & Semantic-similar DDPM & Cross-domain LSUN DDPM & Random init \\
-        & $|d|$ & $|d|$ & $|d|$ \\
+Dataset & Semantic-similar DDPM & Cross-domain LSUN DDPM & Random init & Min $|d|$ & Margin \\
+        & $|d|$ & $|d|$ & $|d|$ & & \\
 \midrule
-CIFAR-10  & $24.1$  & $40.9$        & $63.9$ \\
-CIFAR-100 & $18.5$  & $31.6$        & $63.0$ \\
-STL-10    & $116.7$ & $29.3^\dagger$ & $59.3$ \\
-CelebA    & $26.3$  & $32.0$        & $90.0$ \\
+CIFAR-10  & $24.1$  & $40.9$         & $63.9$ & $24.1$ & $12.0\times$ \\
+CIFAR-100 & $18.5$  & $31.6$         & $63.0$ & $18.5$ & $9.3\times$ \\
+STL-10    & $116.7$ & $29.3^\dagger$ & $59.3$ & $29.3$ & $14.7\times$ \\
+CelebA    & $26.3$  & $32.0$         & $90.0$ & $26.3$ & $13.2\times$ \\
 \bottomrule
 \end{tabular}
 
@@ -538,14 +540,14 @@ CelebA uses \texttt{google/ddpm-celebahq-256},
 \end{small}
 \end{table}
 
-\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum $|d|$ across all references ranges from $18.5$ (CIFAR-100, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $|d|>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice.
+\textbf{Results}: Table~\ref{tab:main_results} reports verification under the ALL-must-pass criterion: every public reference model must individually satisfy $|d|>2.0$. We test each owner model against 3 reference models spanning a semantic-similar DDPM, a cross-domain LSUN DDPM, and a random initialization. The minimum $|d|$ across all references ranges from $18.5$ (CIFAR-100, weakest dataset) to $29.3$ (STL-10 with the LSUN-Church reference), exceeding the threshold by an order of magnitude. For STL-10, we use LSUN-Church as a conservative replacement for LSUN-Bedroom, which a prior reviewer flagged as a potential domain-match confound; the church reference yields $|d|=29.3$, still $14\times$ above the $|d|>2.0$ threshold. These margins confirm that the verification signal is an intrinsic property of the training data, not an artifact of a particular reference model choice. The two rightmost columns of Table~\ref{tab:main_results} additionally report each dataset's minimum $|d|$ and its multiplicative margin above the recommended threshold $|d|>2.0$; the smallest margin (CIFAR-100 at $9.3\times$) leaves substantial headroom, confirming that results are not artifacts of threshold tuning.
 
 \textbf{Consistency (C1).} Owner and Model~B produce statistically indistinguishable mean $t$-error on $\mathcal{W}$ across all four datasets: CIFAR-10: $28.73$ vs.\ $28.74$ ($p=0.98$); CIFAR-100: $33.35$ vs.\ $33.34$ ($p=0.98$); STL-10: $70.92$ vs.\ $71.38$ ($p=0.71$); CelebA: $63.79$ vs.\ $63.80$ ($p=0.97$). All $p$-values exceed the $0.05$ acceptance threshold, confirming that Model~B retains the memorization signature of its owner.
 
 Table~\ref{tab:mia_results} reports per-sample membership inference accuracy using Gaussian QR margins.
 
 \begin{table}[t]
-\caption{Membership inference performance. DDIM rows use Gaussian QR margins (TPR computed at fixed FPR with 95\% bootstrap CI, 200 iterations). SD rows use latent-space paired-delta scores evaluated on 1{,}000 members + 1{,}000 non-members; TPR at $0.01\%$ FPR is omitted as it falls below the discretization floor (1 false positive at this split size).}
+\caption{Membership inference performance using Gaussian QR margins on DDIM owner models. TPR computed at fixed FPR with 95\% bootstrap CI (200 iterations).}
 \label{tab:mia_results}
 \centering
 \begin{small}
@@ -557,30 +559,6 @@ CIFAR-10 & $0.987 \pm 0.002$ & $0.89 \pm 0.03$ & $0.71 \pm 0.05$ \\
 CIFAR-100 & $0.982 \pm 0.003$ & $0.85 \pm 0.04$ & $0.65 \pm 0.06$ \\
 STL-10 & $0.968 \pm 0.005$ & $0.78 \pm 0.05$ & $0.55 \pm 0.07$ \\
 CelebA & $0.975 \pm 0.004$ & $0.82 \pm 0.04$ & $0.60 \pm 0.06$ \\
-\addlinespace
-SD v1.4 (LoRA $r\!=\!64$) & $0.995$ & $0.582$ & — \\
-SD v1.4 (LoRA $r\!=\!256$) & $0.999$ & $0.879$ & — \\
-SD v1.4 (Full FT) & $0.999$ & $0.847$ & — \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{table}
-
-\textbf{Threshold Sensitivity}: The threshold $|d| > 2.0$ is conservative. Table~\ref{tab:threshold_sens} reports the minimum $|d|$ each dataset achieves and the strictest integer threshold it still passes. The smallest margin (CIFAR-100 at $9.3\times$) leaves substantial headroom above the recommended threshold, confirming that results are not artifacts of threshold tuning.
-
-\begin{table}[t]
-\caption{Verification margin per dataset. Each row reports the minimum $|d|$ across all three reference models (semantic-similar / cross-domain LSUN / random initialization), the strictest integer $|d|$ threshold that the dataset still passes, and the multiplicative margin above our recommended threshold $|d| > 2.0$.}
-\label{tab:threshold_sens}
-\centering
-\begin{small}
-\begin{tabular}{@{}lccc@{}}
-\toprule
-Dataset & Min $|d|$ achieved & Strictest threshold passed & Margin above $|d|>2.0$ \\
-\midrule
-CIFAR-10  & 24.1 & $|d| > 24$ & 12.0$\times$ \\
-CIFAR-100 & 18.5 & $|d| > 18$ & 9.3$\times$ \\
-STL-10    & 29.3 & $|d| > 29$ & 14.7$\times$ \\
-CelebA    & 26.3 & $|d| > 26$ & 13.2$\times$ \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -973,10 +951,13 @@ Experiments across four datasets demonstrate $|d| > 18$ separation against every
 \subsection{Hyperparameters}
 \label{app:hyperparams}
 
-\subsubsection{DDIM Owner Model Training}
+\subsubsection{Owner Model Training}
+
+\paragraph{DDIM owner training.} We train DDIM owner models for the four datasets in Section~\ref{sec:setup} using the configuration in Table~\ref{tab:hyperparams_ddim}.
 
 \begin{table}[!htbp]
 \caption{Training hyperparameters for DDIM models.}
+\label{tab:hyperparams_ddim}
 \centering
 \begin{tabular}{ll}
 \toprule
@@ -1000,6 +981,15 @@ Dropout & 0.1 \\
 \end{tabular}
 \end{table}
 
+\paragraph{Stable Diffusion fine-tuning.} All three configurations share the same 1{,}000-image private subset of COCO 2014 as the watermark set $\mathcal{W}$; no per-configuration data resampling. We fine-tune Stable Diffusion v1.4 from the official base checkpoint. Common settings: AdamW optimizer, mixed-precision fp16, batch size 4, gradient accumulation 1, $512{\times}512$ resize with center crop, per-image COCO captions used as text conditioning, cosine learning-rate schedule with 500 warmup steps, seed 42.
+
+Variants:
+\begin{itemize}
+\item \textbf{LoRA $r{=}64$ (A6):} 20{,}000 steps, lr $1{\times}10^{-4}$, rank/$\alpha = 64/64$, target modules \{\texttt{to\_q}, \texttt{to\_k}, \texttt{to\_v}, \texttt{to\_out.0}\}, with random horizontal flip during data loading.
+\item \textbf{LoRA $r{=}256$ (A8):} 20{,}000 steps, lr $1{\times}10^{-4}$, rank/$\alpha = 256/256$, same target modules as A6.
+\item \textbf{Full FT (A7):} 10{,}000 steps, lr $5{\times}10^{-6}$, all 860M U-Net parameters trainable.
+\end{itemize}
+
 \subsubsection{Gaussian QR Training}
 
 \begin{table}[!htbp]
@@ -1021,30 +1011,50 @@ Early stopping patience & 10 epochs \\
 \end{tabular}
 \end{table}
 
-\subsubsection{Stable Diffusion Owner Fine-tuning}
-
-All three configurations share the same 1{,}000-image private subset of COCO 2014 as the watermark set $\mathcal{W}$; no per-configuration data resampling.
-
-We fine-tune Stable Diffusion v1.4 from the official base checkpoint. Common settings: AdamW optimizer, mixed-precision fp16, batch size 4, gradient accumulation 1, $512{\times}512$ resize with center crop, per-image COCO captions used as text conditioning, cosine learning-rate schedule with 500 warmup steps, seed 42.
-
-Variants:
-\begin{itemize}
-\item \textbf{LoRA $r{=}64$ (A6):} 20{,}000 steps, lr $1{\times}10^{-4}$, rank/$\alpha = 64/64$, target modules \{\texttt{to\_q}, \texttt{to\_k}, \texttt{to\_v}, \texttt{to\_out.0}\}, with random horizontal flip during data loading.
-\item \textbf{LoRA $r{=}256$ (A8):} 20{,}000 steps, lr $1{\times}10^{-4}$, rank/$\alpha = 256/256$, same target modules as A6.
-\item \textbf{Full FT (A7):} 10{,}000 steps, lr $5{\times}10^{-6}$, all 860M U-Net parameters trainable.
-\end{itemize}
-
 \subsubsection{Adversary Fine-tuning}
 
 The adversary applies LoRA fine-tuning to either the owner's fine-tuned SD model (Table~\ref{tab:sd_verification}) or the SleeperMark watermarked checkpoint (Table~\ref{tab:sd_watermark_robustness}). Identical settings in both cases: 2{,}000 steps, AdamW (weight decay $10^{-2}$), lr $5{\times}10^{-5}$, batch size 4, gradient clipping at norm 1.0, $\epsilon$-prediction MSE loss on 1{,}000 disjoint COCO images, seed 42. LoRA targets cross-attention modules \{\texttt{to\_q}, \texttt{to\_k}, \texttt{to\_v}, \texttt{to\_out.0}\} with rank/$\alpha \in \{64/64,\ 256/256\}$.
 
-\subsubsection{WDM Baseline}
+\subsubsection{Generative Baseline Training: WDM and Zhao}
 
-Architecture: U-Net with 128 base channels, multipliers $[1,2,2,2]$, 3 residual blocks per stage, attention at resolutions $\{16, 8\}$, 4 attention heads, GroupNorm(32), SiLU activation, dropout 0.1. Noise schedule: linear $\beta$ over $T{=}1000$ (note: differs from MiO's cosine schedule). Prediction: $\epsilon$-prediction. Training: 300{,}000 steps, batch 32, lr $1{\times}10^{-4}$, EMA 0.999, AdamW. Watermark-specific: $\gamma_1 = 0.8$ (training blend factor), $\gamma_2 = 0.1$ (training loss weight on watermarked samples; $\gamma_2 = 0.2$ at extraction), watermark seed 1998, fixed trigger image. Loss: $\mathcal{L} = \mathrm{MSE}(\epsilon) + \gamma_2 \cdot \mathrm{MSE}(\epsilon_{\text{wm}})$. FID sampling uses DDIM 50 steps.
+Table~\ref{tab:baseline_training} summarizes the training configurations for the two generative-model baselines (WDM and Zhao). Method-specific watermark mechanisms are described after the table.
 
-\subsubsection{Zhao Baseline}
+\begin{table}[!htbp]
+\caption{Training configurations for generative baselines (CIFAR-10).}
+\label{tab:baseline_training}
+\centering
+\begin{small}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Parameter & WDM & Zhao (EDM stage) \\
+\midrule
+Architecture            & U-Net 128ch                & SongUNet (ddpmpp) 128ch \\
+Channel multipliers     & $[1,2,2,2]$                & $[2,2,2]$ \\
+Residual blocks/stage   & 3                          & 4 \\
+Attention resolutions   & $\{16, 8\}$, 4 heads       & $\{16\}$ \\
+Activation / Norm       & SiLU / GroupNorm(32)       & (default EDM) \\
+Dropout                 & 0.1                        & 0.13 \\
+Noise schedule          & linear $\beta$, $T{=}1000$ & EDMPrecond \\
+Prediction              & $\epsilon$                 & $\hat{x}_0$ ($\sigma$-weighted MSE) \\
+Training duration       & 300{,}000 steps            & 15 Mimg (early-stopped)$^\dagger$ \\
+Batch size              & 32                         & 512 (8 GPUs $\times$ 64) \\
+Learning rate           & $1{\times}10^{-4}$         & $1{\times}10^{-3}$ \\
+EMA decay               & 0.999                      & 0.5 \\
+Optimizer               & AdamW                      & AdamW \\
+Augmentation prob.      & ---                        & 0.12 \\
+Seed                    & 42                         & 42 \\
+FID sampling            & DDIM 50 steps              & Heun 18 steps \\
+\bottomrule
+\multicolumn{3}{l}{\footnotesize $^\dagger$Original Zhao paper trains to 200 Mimg; full duration would require approximately} \\
+\multicolumn{3}{l}{\footnotesize 57 single-GPU-days. The 15 Mimg checkpoint achieves 100\% fingerprint bit accuracy,} \\
+\multicolumn{3}{l}{\footnotesize sufficient for the baseline comparison.} \\
+\end{tabular}
+\end{small}
+\end{table}
 
-Three-stage pipeline. \textbf{Stage 1}: train StegaStamp encoder/decoder at $32{\times}32$ resolution, batch 64, 100 epochs, 64-bit fingerprint. \textbf{Stage 2}: embed a fixed 64-bit fingerprint (seed 42) into all 50K CIFAR-10 training images. \textbf{Stage 3}: train EDM with SongUNet (ddpmpp) backbone, 128 channels, multipliers $[2,2,2]$, 4 blocks per stage, attention at resolution 16; EDMPrecond head with $\sigma$-weighted $\hat{x}_0$-prediction MSE loss; total batch 512, dropout 0.13, augmentation probability 0.12, lr $10^{-3}$, EMA 0.5, seed 42. Training duration was early-stopped at 15 Mimg (the original paper trains to 200 Mimg; full duration would require approximately 57 single-GPU-days). The 15 Mimg checkpoint achieves 100\% fingerprint bit accuracy on watermark detection, sufficient for the baseline comparison. FID sampling uses Heun 18 steps.
+\paragraph{WDM watermark configuration.} Watermark blend factor $\gamma_1 = 0.8$, training loss weight $\gamma_2 = 0.1$ on watermarked samples ($\gamma_2 = 0.2$ at extraction), watermark seed 1998, fixed trigger image. Loss: $\mathcal{L} = \mathrm{MSE}(\epsilon) + \gamma_2 \cdot \mathrm{MSE}(\epsilon_{\text{wm}})$.
+
+\paragraph{Zhao three-stage pipeline.} \textbf{Stage 1}: train StegaStamp encoder/decoder at $32{\times}32$ resolution, batch 64, 100 epochs, 64-bit fingerprint. \textbf{Stage 2}: embed a fixed 64-bit fingerprint (seed 42) into all 50K CIFAR-10 training images. \textbf{Stage 3}: train EDM with the configuration in Table~\ref{tab:baseline_training}.
 
 \subsubsection{SleeperMark Baseline}
 
@@ -1081,10 +1091,10 @@ Feature extractor & CLIP ViT-B/32 (frozen) \\
 
 \paragraph{Gaussian weight noise.} Additive isotropic Gaussian noise of standard deviation $\sigma \in \{10^{-3}, 10^{-2}\}$ applied in-place to all parameter tensors of each method's native network. No retraining; the perturbed checkpoint is evaluated directly.
 
-\section{Ensemble Size Ablation}
+\section{Gaussian QR Ensemble Size Ablation}
 \label{app:ablation}
 
-We vary the ensemble size $B$ from 1 to 100 and measure the standard deviation of the predicted quantile $\hat{q}_\tau(x)$ across five independent runs on the CIFAR-10 watermark set at $\tau = 0.999$ (FPR $= 0.1\%$). Table~\ref{tab:ensemble_ablation} reports the results. Prediction variance drops sharply from $B = 1$ to $B = 20$, continues to decrease up to $B = 50$, and plateaus beyond that point. We adopt $B = 50$ as the default, which offers a favorable trade-off between stability and computational cost. Since ensemble members are trained independently, scaling from $B = 50$ to any larger value is embarrassingly parallel and requires no inter-model communication.
+We vary the bagging ensemble size $B$ (introduced in Section~\ref{sec:gaussian_qr}) from 1 to 100 and measure the standard deviation of the predicted quantile $\hat{q}_\tau(x)$ across five independent runs on the CIFAR-10 watermark set at $\tau = 0.999$ (FPR $= 0.1\%$). Table~\ref{tab:ensemble_ablation} reports the results. Prediction variance drops sharply from $B = 1$ to $B = 20$, continues to decrease up to $B = 50$, and plateaus beyond that point. We adopt $B = 50$ as the default, which offers a favorable trade-off between stability and computational cost. Since ensemble members are trained independently, scaling from $B = 50$ to any larger value is embarrassingly parallel and requires no inter-model communication.
 
 \begin{table}[!htbp]
 \caption{Effect of ensemble size $B$ on quantile prediction stability (CIFAR-10, $\tau = 0.999$). Std.\ dev.\ computed over 5 independent runs.}
