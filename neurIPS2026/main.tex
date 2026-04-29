@@ -984,14 +984,33 @@ Dropout & 0.1 \\
 \end{tabular}
 \end{table}
 
-\paragraph{Stable Diffusion fine-tuning.} All three configurations share the same 1{,}000-image private subset of COCO 2014 as the watermark set $\mathcal{W}$; no per-configuration data resampling. We fine-tune Stable Diffusion v1.4 from the official base checkpoint. Common settings: AdamW optimizer, mixed-precision fp16, batch size 4, gradient accumulation 1, $512{\times}512$ resize with center crop, per-image COCO captions used as text conditioning, cosine learning-rate schedule with 500 warmup steps, seed 42.
+\paragraph{Stable Diffusion fine-tuning.}
+All three configurations share the same 1{,}000-image private subset of COCO 2014 as the watermark set $\mathcal{W}$; no per-configuration data resampling. We fine-tune SD~v1.4 from the official base checkpoint. Per-variant differences are summarized in Table~\ref{tab:hyperparams_sd}.
 
-Variants:
-\begin{itemize}
-\item \textbf{LoRA $r{=}64$ (A6):} 20{,}000 steps, lr $1{\times}10^{-4}$, rank/$\alpha = 64/64$, target modules \{\texttt{to\_q}, \texttt{to\_k}, \texttt{to\_v}, \texttt{to\_out.0}\}, with random horizontal flip during data loading.
-\item \textbf{LoRA $r{=}256$ (A8):} 20{,}000 steps, lr $1{\times}10^{-4}$, rank/$\alpha = 256/256$, same target modules as A6.
-\item \textbf{Full FT (A7):} 10{,}000 steps, lr $5{\times}10^{-6}$, all 860M U-Net parameters trainable.
-\end{itemize}
+\begin{table}[!htbp]
+\caption{Stable Diffusion owner fine-tuning configurations. Per-variant differences are listed above the rule; common settings shared by all three variants are listed below.}
+\label{tab:hyperparams_sd}
+\centering
+\begin{small}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Parameter & LoRA $r{=}64$ (A6) & LoRA $r{=}256$ (A8) & Full FT (A7) \\
+\midrule
+Trainable params       & 12.7M (1.46\%)    & 51.0M (5.60\%)    & 860M (100\%) \\
+Steps                  & 20{,}000          & 20{,}000          & 10{,}000 \\
+Learning rate          & $1{\times}10^{-4}$ & $1{\times}10^{-4}$ & $5{\times}10^{-6}$ \\
+LoRA rank / $\alpha$   & 64 / 64           & 256 / 256         & --- \\
+LoRA target modules    & cross-attn        & cross-attn        & --- \\
+Random horizontal flip & yes               & no                & no \\
+\midrule
+\multicolumn{4}{c}{\textit{Common settings (all three variants)}} \\
+\multicolumn{4}{l}{Base model: SD~v1.4 \quad Optimizer: AdamW \quad Batch size: 4 \quad Gradient accumulation: 1} \\
+\multicolumn{4}{l}{Resolution: $512{\times}512$ resize with center crop \quad Captions: per-image COCO} \\
+\multicolumn{4}{l}{LR schedule: cosine with 500 warmup steps \quad Mixed precision: fp16 \quad Seed: 42} \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{table}
 
 \subsubsection{Gaussian QR Training}
 
@@ -1075,24 +1094,7 @@ The Stable Diffusion verification numbers in Table~\ref{tab:sd_verification} are
 
 \subsection{Post-theft Attack Configurations}
 
-\begin{table}[!htbp]
-\caption{MMD fine-tuning hyperparameters.}
-\centering
-\begin{tabular}{ll}
-\toprule
-Parameter & Value \\
-\midrule
-Iterations & 500 \\
-Learning rate & $5 \times 10^{-6}$ \\
-Batch size & 128 \\
-DDIM steps & 10 \\
-$t_{\text{start}}$ & 900 \\
-EMA decay & 0.9999 \\
-Kernel & Cubic polynomial \\
-Feature extractor & CLIP ViT-B/32 (frozen) \\
-\bottomrule
-\end{tabular}
-\end{table}
+\paragraph{MMD fine-tuning.} 500 iterations on Model~A using a cubic polynomial kernel over CLIP ViT-B/32 (frozen) features. Optimizer: AdamW at lr $5{\times}10^{-6}$, batch size 128, EMA decay 0.9999. Generation pipeline: 10-step DDIM sampling from $t_{\text{start}}{=}900$. The MMD target distribution is $\mathcal{D}_{\text{train}}$ (which includes $\mathcal{W}$); see Section~\ref{sec:theft} for the rationale.
 
 \paragraph{SGD fine-tuning.} 500 iterations, lr $5{\times}10^{-6}$, batch 128, applied on clean CIFAR-10 using each method's native training objective: $\epsilon$-prediction MSE for the DDPM-parameterized WDM and MiO; $\sigma$-weighted $\hat{x}_0$-prediction MSE for Zhao's EDM backbone. The choice of native objectives avoids introducing a parameterization mismatch.
 
