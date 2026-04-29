@@ -542,9 +542,9 @@ A6 和 A7 全部通过。A8 的 C3 fail（3.62x < 5.0），因 r256 高容量对
 
 ## Deferred — Table 7 row reorder
 
-**Status**: BLOCKED on protocol-level decision (see below)
+**Status**: ✅ **RESOLVED** (2026-04-29) — paired-delta C2 \|d\| documented as Eq. \ref{eq:paired_c2} in §4.5 (paired form of unpaired C2 in §4.4, not a redefinition); Table 7 caption now defines the C2 column; row reorder applied (LoRA r=64 / r=256 / Full FT). §5.5 "Owner-level membership detection" \|d\| respectively-list (3.26 / 3.93 / 3.41) verified consistent with new row order. Reproducibility note added in Appendix A noting the runner will be released with camera-ready code. Original deferred plan retained below for record.
 
-**Date deferred**: 2026-04-28
+**Original date deferred**: 2026-04-28
 
 **Task**: In `tab:sd_verification` (Table 7) and `tab:mia_results` (Table 3 SD rows),
 reorder configurations from current "LoRA r=64 / Full FT / LoRA r=256" to
