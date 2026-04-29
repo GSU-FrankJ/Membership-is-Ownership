@@ -292,7 +292,7 @@ training samples is feasible with probability at most
     \;\leq\; \left(\frac{|\mathcal{W}|}{N}\right)^{|\mathcal{W}|},
 \end{equation}
 %
-which evaluates to $10^{-5000}$ under the CIFAR-10 setting
+which is upper-bounded by $10^{-5000}$ under the CIFAR-10 setting
 ($N=50{,}000$, $|\mathcal{W}|=5{,}000$), making exhaustive guessing
 computationally infeasible. This is a counting argument and does
 not claim resistance to side-channel leakage of $\mathcal{W}$.
@@ -996,7 +996,7 @@ All three configurations share the same 1{,}000-image private subset of COCO 201
 \toprule
 Parameter & LoRA $r{=}64$ (A6) & LoRA $r{=}256$ (A8) & Full FT (A7) \\
 \midrule
-Trainable params       & 12.7M (1.46\%)    & 51.0M (5.60\%)    & 860M (100\%) \\
+Trainable params       & 33.5M (3.9\%)     & 134M (15.6\%)     & 860M (100\%) \\
 Steps                  & 20{,}000          & 20{,}000          & 10{,}000 \\
 Learning rate          & $1{\times}10^{-4}$ & $1{\times}10^{-4}$ & $5{\times}10^{-6}$ \\
 LoRA rank / $\alpha$   & 64 / 64           & 256 / 256         & --- \\
