@@ -434,15 +434,17 @@ Ownership is declared \textbf{verified} only when both criteria are jointly sati
 \subsection{Paired-Delta Protocol for Derivative Models}
 \label{sec:paired_delta}
 
-When $\mathcal{M}_B$ is a derivative of $\mathcal{M}_A$ (shared
-base weights via fine-tuning), the raw $t$-error gap between
-owner and reference collapses and
-Algorithm~\ref{alg:verification}'s absolute-score separation
-criterion no longer applies directly.  We replace per-sample scores $s(x)$
-with paired differences
-$\delta(x) = s_{\text{tgt}}(x) - s_{\text{ref}}(x)$ and apply
-C1/C2 to the $\delta$ distribution (see
-Section~\ref{sec:sd} for full treatment).
+When $\mathcal{M}_B$ is a derivative of $\mathcal{M}_A$ (sharing base weights via fine-tuning), the raw $t$-error gap between owner and reference collapses: per-image reconstruction error is dominated by per-image variance shared between the two models, and the unpaired C2 effect size in §\ref{sec:criteria} loses power. We therefore apply C2 to paired differences
+\begin{equation}
+\delta(x) = s_{\text{tgt}}(x) - s_{\text{ref}}(x),
+\label{eq:paired_delta}
+\end{equation}
+where $s_{\text{tgt}}$ is the target model's score and $s_{\text{ref}}$ is the reference model's score on the same image. Since $s_{\text{ref}}(x) - s_{\text{ref}}(x) \equiv 0$ identically, paired-C2 reduces to a one-sample test of $\delta(\mathcal{W})$ against zero:
+\begin{equation}
+|d|_{\text{C2}}^{\text{paired}} = \frac{|\,\text{mean}(\delta(\mathcal{W}))\,|}{\text{std}(\delta(\mathcal{W}))}.
+\label{eq:paired_c2}
+\end{equation}
+This is the paired form of the unpaired C2 in §\ref{sec:criteria} and tests the same null hypothesis --- that the target model reconstructs $\mathcal{W}$ no better than the reference --- while cancelling per-image variance shared between the two models. C1 is applied analogously: a one-sample $t$-test on $\delta(\mathcal{W})$ replaces the two-sample test between the owner's and suspect's score distributions. Full treatment of the SD setting using this protocol is in Section~\ref{sec:sd}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 5. EXPERIMENTS
@@ -778,6 +780,7 @@ C1: consistency ($p>0.05$).
 C2: separation ($|d|>2.0$).
 Adversaries: domain-shift fine-tuning on disjoint COCO and
 task-shift on synthetic data. Per-adversary results via paired-delta protocol.
+C2 ($|d|$): paired-delta effect size $|d|_{\text{C2}}^{\text{paired}} = |\text{mean}(\delta(\mathcal{W})) / \text{std}(\delta(\mathcal{W}))|$ as defined in Equation~\ref{eq:paired_c2}.
 $|d|_{\text{mem}}$: effect size between the owner's score
 distributions on member and non-member samples in $\mathcal{W}$,
 via standard absolute Cohen's $d$.}
@@ -790,10 +793,10 @@ Owner & Adversary & C1 & C2 ($|d|$) & AUC & $|d|_{\text{mem}}$ & Verdict \\
 \midrule
 LoRA $r\!=\!64$ & Domain-shift & \cmark~(p=0.73) & \cmark~(2.43) & 0.986 & 2.83 & \cmark \\
 LoRA $r\!=\!64$ & Task-shift & \cmark~(p=0.34) & \cmark~(2.43) & 0.980 & 2.70 & \cmark \\
-Full FT & Domain-shift & \cmark~(p=0.71) & \cmark~(2.38) & 0.997 & 3.22 & \cmark \\
-Full FT & Task-shift & \cmark~(p=0.18) & \cmark~(2.38) & 0.995 & 3.13 & \cmark \\
 LoRA $r\!=\!256$ & Domain-shift & \cmark~(p=0.54) & \cmark~(2.55) & 0.998 & 3.51 & \cmark \\
 LoRA $r\!=\!256$ & Task-shift & \cmark~(p=0.22) & \cmark~(2.55) & 0.997 & 3.46 & \cmark \\
+Full FT & Domain-shift & \cmark~(p=0.71) & \cmark~(2.38) & 0.997 & 3.22 & \cmark \\
+Full FT & Task-shift & \cmark~(p=0.18) & \cmark~(2.38) & 0.995 & 3.13 & \cmark \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1065,6 +1068,10 @@ We use the pretrained SleeperMark U-Net checkpoint released by the authors (appr
 We re-evaluated CDI~\citep{dubinski2024cdi} on \texttt{google/ddpm-cifar10-32} using the authors' codebase\footnote{\url{https://github.com/sprintml/copyrighted_data_identification}} on a single GPU (Python 3.8.18, PyTorch 2.4.1+cu121, diffusers 0.36.0; total wall-clock $\approx$49 minutes). \textbf{Configuration}: 5{,}000 members and 5{,}000 non-members sampled from CIFAR-10; batch size 100; seed 0; three-stage Hydra pipeline (features\_extraction $\to$ scores\_computation $\to$ evaluation). \textbf{Aggregation}: logistic regression (max\_iter 1000) over the union of four score-based attacks (denoising loss, SecMI-stat, PIA, PIAN) and three feature-based attacks (gradient masking, noise optimization, multiple-loss). Individual attack AUCs ranged from 0.491 (PIAN) to 0.557 (noise optimization); the aggregated CDI AUC reported in Table~\ref{tab:watermark_comparison} is 0.586.
 
 \textbf{Patches.} Three trivial patches were required for the upstream \texttt{scores\_computation/cdi.py} aggregation stage to execute end-to-end: a missing \texttt{import numpy as np}; a \texttt{train\_dataset["data"]} $\to$ \texttt{train\_dataset.data} fix for the \texttt{MIDataset} class API; and a 3D$\to$2D reshape for multi-measurement features. None affects the aggregation algorithm itself.
+
+\subsubsection{Paired-Delta C2 Computation}
+
+The Stable Diffusion verification numbers in Table~\ref{tab:sd_verification} are computed using the paired-delta form of C2 (Equation~\ref{eq:paired_c2}): for each adversary configuration, $\delta(x) = s_{\text{tgt}}(x) - s_{\text{ref}}(x)$ is computed on $\mathcal{W}$ from the per-image score CSVs (one row per image, columns \texttt{score\_tgt} and \texttt{score\_ref}), and $|d|_{\text{C2}}^{\text{paired}} = |\text{mean}(\delta) / \text{std}(\delta)|$ is computed directly. A standalone runner that reproduces the Table~\ref{tab:sd_verification} C2 values from the released CSVs will be released with the camera-ready code.
 
 \subsection{Post-theft Attack Configurations}
 
